@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MecatroniCar - Histórico de Veículos e Serviços</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +12,7 @@
     <header class="app-header">
         <div class="header-container">
             <div class="logo-area">
-                <div class="logo-icon">🔧</div>
+                <img src="logo.png" alt="MecatroniCar Logo" class="logo-img">
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h1 class="logo-title">MecatroniCar</h1>
@@ -144,7 +145,7 @@
         <!-- Empty / Welcome State -->
         <section id="welcome-section" class="welcome-section">
             <div class="welcome-card">
-                <div class="welcome-icon">🚘</div>
+                <img src="logo.png" alt="MecatroniCar" class="welcome-logo">
                 <h2>Bem-vindo ao MecatroniCar</h2>
                 <p>Digite uma placa ou nome de cliente acima para consultar todo o histórico de visitas, serviços feitos, peças trocadas e notas de diagnóstico.</p>
                 <div class="welcome-tips">
@@ -204,7 +205,7 @@
         <div class="modal-dialog" style="max-width: 520px;">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <span class="modal-icon">🚀</span>
+                    <img src="logo.png" style="width: 24px; height: 24px; object-fit: contain;">
                     <h3 id="update-modal-title">Atualização do MecatroniCar</h3>
                 </div>
                 <button id="update-modal-close-btn" class="modal-close" title="Fechar">✕</button>
@@ -223,11 +224,11 @@
                 </div>
 
                 <div id="update-available-state" style="display: none;">
-                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                        <div style="font-size: 15px; font-weight: 700; color: #1d4ed8; margin-bottom: 4px;">
+                    <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <div style="font-size: 15px; font-weight: 700; color: #854d0e; margin-bottom: 4px;">
                             🎉 Nova versão encontrada: <span id="new-version-tag">v1.0.1</span>
                         </div>
-                        <p style="font-size: 13px; color: #3b82f6;">Sua versão atual: <span id="current-version-tag">v1.0.0</span></p>
+                        <p style="font-size: 13px; color: #a16207;">Sua versão atual: <span id="current-version-tag">v1.0.0</span></p>
                     </div>
 
                     <div style="margin-bottom: 14px;">
@@ -241,7 +242,7 @@
                             <span id="update-progress-percent">0%</span>
                         </div>
                         <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden;">
-                            <div id="update-progress-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+                            <div id="update-progress-bar" style="width: 0%; height: 100%; background: #f9cc01; transition: width 0.3s;"></div>
                         </div>
                     </div>
                 </div>
@@ -250,7 +251,7 @@
                 <button id="update-cancel-btn" class="btn btn-secondary">
                     Fechar
                 </button>
-                <button id="update-apply-btn" class="btn btn-primary" style="display: none; background: #16a34a;">
+                <button id="update-apply-btn" class="btn btn-primary" style="display: none;">
                     🚀 Atualizar Agora Automaticamente
                 </button>
             </div>
