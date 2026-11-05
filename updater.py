@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import threading
 
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "1.0.1"
 REPO_OWNER = "BrenoSGTO"
 REPO_NAME = "app-mecatronicar"
 
@@ -188,7 +188,11 @@ timeout /t 1 /nobreak > nul
 
 :: Reabrir o aplicativo atualizado
 cd /d "{base_dir}"
-start "" python app.py
+if exist "MecatroniCar.exe" (
+    start "" "MecatroniCar.exe"
+) else (
+    start "" python app.py
+)
 
 exit
 """

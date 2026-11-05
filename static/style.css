@@ -796,7 +796,7 @@ body {
     color: var(--text-muted);
     font-size: 15px;
     max-width: 600px;
-    margin: 0 auto 30px auto;
+    margin: 0 auto;
 }
 
 .welcome-tips {

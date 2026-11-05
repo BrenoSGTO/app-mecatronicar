@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "MecatroniCar",
-  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.0/MecatroniCar-v1.0.0.zip",
-  "release_notes": "Versão 1.0.0:\n- Busca rápida por Placa ou Nome do Cliente\n- Preservação exata das cores de preenchimento das células do Excel (.xlsx e .xls)\n- Leitura e visualização de notas e relatórios de scanner nas células (triângulo vermelho do Excel)\n- Abertura da planilha original no Excel com 1 clique\n- Sistema de verificação e atualização automática embutido no app\n- Interface moderna e responsiva sem necessidade de internet",
+  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.1/MecatroniCar-v1.0.1.zip",
+  "release_notes": "Versão 1.0.1:\n- Tela inicial limpa e simplificada sem caixas extras\n- Busca direta: \"Digite a placa ou nome do cliente\"\n- Aprimoramento na reinicialização automática pós-atualização",
   "published_at": "2026-11-05"
 }
