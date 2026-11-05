@@ -48,7 +48,7 @@
 
     <!-- Main Container -->
     <main class="main-container">
-        <!-- Search and Quick Filter Section -->
+        <!-- Search Section -->
         <section class="search-section">
             <div class="search-box-wrapper">
                 <div class="search-icon">🔍</div>
@@ -61,23 +61,6 @@
                     autofocus
                 >
                 <button id="btn-clear-search" class="btn-clear" title="Limpar busca" style="display: none;">✕</button>
-            </div>
-
-            <!-- Stats Bar -->
-            <div class="stats-bar" id="stats-bar">
-                <span id="stat-files">0 planilhas</span>
-                <span class="dot">•</span>
-                <span id="stat-cars">0 veículos</span>
-                <span class="dot">•</span>
-                <span id="stat-clients">0 clientes</span>
-            </div>
-
-            <!-- Quick Vehicle Chips Carousel -->
-            <div class="quick-vehicles-wrapper">
-                <div class="quick-vehicles-label">Veículos Cadastrados:</div>
-                <div id="quick-vehicles-list" class="quick-vehicles-list">
-                    <!-- Populated dynamically via JS -->
-                </div>
             </div>
         </section>
 
@@ -137,11 +120,11 @@
                 </div>
 
                 <div class="vehicle-actions-block">
-                    <button id="btn-print" class="btn btn-secondary" title="Imprimir histórico ou salvar em PDF">
+                    <button id="btn-print" class="btn btn-secondary" title="Imprimir histórico completo com valores">
                         🖨️ Imprimir
                     </button>
-                    <button id="btn-toggle-sort" class="btn btn-outline" title="Inverter ordem das visitas">
-                        🔃 Mais Recentes
+                    <button id="btn-print-no-prices" class="btn btn-outline-print" title="Imprimir sem os valores das peças e serviços">
+                        📄 Imprimir sem Valores
                     </button>
                 </div>
             </div>
@@ -150,13 +133,6 @@
             <div class="timeline-container">
                 <div class="timeline-header">
                     <h3>Linha do Tempo das Visitas na Oficina</h3>
-                    <div class="color-legend">
-                        <span class="legend-title">Cores das Células:</span>
-                        <span class="legend-badge legend-yellow">Destaque</span>
-                        <span class="legend-badge legend-purple">Mecânica / Câmbio</span>
-                        <span class="legend-badge legend-pink">Pendente / Retorno</span>
-                        <span class="legend-badge legend-note"><span class="red-triangle-icon"></span> Tem Comentário</span>
-                    </div>
                 </div>
 
                 <div id="visits-list-container" class="visits-list">
@@ -223,7 +199,7 @@
         </div>
     </div>
 
-    <!-- Modal for Software Updates (Super simple for the secretary aunt) -->
+    <!-- Modal for Software Updates -->
     <div id="update-modal" class="modal-backdrop" style="display: none;">
         <div class="modal-dialog" style="max-width: 520px;">
             <div class="modal-header">

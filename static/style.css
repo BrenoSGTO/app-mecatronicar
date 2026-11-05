@@ -209,6 +209,17 @@ body {
     background-color: #f1f5f9;
 }
 
+.btn-outline-print {
+    background-color: #ffffff;
+    color: #0369a1;
+    border: 1.5px solid #0284c7;
+    font-weight: 600;
+}
+.btn-outline-print:hover {
+    background-color: #f0f9ff;
+    border-color: #0369a1;
+}
+
 /* Main Container */
 .main-container {
     max-width: 1300px;
@@ -273,93 +284,6 @@ body {
 }
 .btn-clear:hover {
     background: #cbd5e1;
-}
-
-.stats-bar {
-    margin-top: 10px;
-    font-size: 13px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.stats-bar .dot {
-    color: #cbd5e1;
-}
-
-/* Quick Vehicles Carousel */
-.quick-vehicles-wrapper {
-    margin-top: 16px;
-    border-top: 1px dashed var(--border-color);
-    padding-top: 14px;
-}
-
-.quick-vehicles-label {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-}
-
-.quick-vehicles-list {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding-bottom: 6px;
-}
-.quick-vehicles-list::-webkit-scrollbar {
-    height: 5px;
-}
-.quick-vehicles-list::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.quick-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-    user-select: none;
-}
-.quick-chip:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
-    transform: translateY(-1px);
-}
-.quick-chip.active {
-    background: #eff6ff;
-    border-color: var(--primary);
-    color: var(--primary);
-    font-weight: 600;
-}
-.chip-plate {
-    font-weight: 700;
-    background: #ffffff;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid #cbd5e1;
-    font-size: 12px;
-}
-.chip-car {
-    color: #334155;
-}
-.chip-count {
-    background: #e2e8f0;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 10px;
-    color: #475569;
 }
 
 /* Search Results Grid */
@@ -591,6 +515,7 @@ body {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
+    align-items: center;
 }
 
 /* Timeline of Visits */
@@ -602,8 +527,6 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
     margin-bottom: 16px;
 }
 
@@ -611,31 +534,6 @@ body {
     font-size: 18px;
     font-weight: 700;
 }
-
-.color-legend {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    font-size: 12px;
-}
-
-.legend-title {
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-.legend-badge {
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 11px;
-    border: 1px solid rgba(0,0,0,0.1);
-}
-.legend-yellow { background: #ffff00; color: #1e293b; }
-.legend-purple { background: #cc99ff; color: #1e293b; }
-.legend-pink   { background: #ff8080; color: #1e293b; }
-.legend-note   { background: #fee2e2; color: #991b1b; display: inline-flex; align-items: center; gap: 4px; }
 
 /* Visit Card */
 .visit-card {
@@ -813,15 +711,6 @@ body {
     height: 0;
     border-style: solid;
     border-width: 0 10px 10px 0;
-    border-color: transparent var(--accent-red) transparent transparent;
-}
-
-.red-triangle-icon {
-    display: inline-block;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 6px 6px 0;
     border-color: transparent var(--accent-red) transparent transparent;
 }
 
@@ -1089,7 +978,8 @@ body {
     .search-section,
     .vehicle-actions-block,
     .btn-excel,
-    .color-legend {
+    .btn-scanner-note,
+    .note-btn-inline {
         display: none !important;
     }
 
@@ -1104,10 +994,17 @@ body {
         box-shadow: none !important;
         border: 1px solid #94a3b8 !important;
         page-break-inside: avoid;
+        margin-bottom: 20px !important;
     }
 
     .items-table tr.has-color {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+    }
+
+    /* Print WITHOUT prices */
+    body.print-no-prices .col-price,
+    body.print-no-prices .totals-group {
+        display: none !important;
     }
 }

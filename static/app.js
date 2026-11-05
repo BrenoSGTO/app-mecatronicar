@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentConfig = {};
     let allCars = [];
     let currentCarHistory = null;
-    let isSortDesc = true;
     let searchDebounceTimer = null;
     let pendingUpdateData = null;
 
@@ -17,12 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const searchInput = document.getElementById('search-input');
     const btnClearSearch = document.getElementById('btn-clear-search');
-    
-    const statFiles = document.getElementById('stat-files');
-    const statCars = document.getElementById('stat-cars');
-    const statClients = document.getElementById('stat-clients');
-    
-    const quickVehiclesList = document.getElementById('quick-vehicles-list');
     
     const welcomeSection = document.getElementById('welcome-section');
     const searchResultsSection = document.getElementById('search-results-section');
@@ -48,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const metricKmDiff = document.getElementById('metric-km-diff');
     
     const btnPrint = document.getElementById('btn-print');
-    const btnToggleSort = document.getElementById('btn-toggle-sort');
+    const btnPrintNoPrices = document.getElementById('btn-print-no-prices');
     
     // Comment Modal elements
     const commentModal = document.getElementById('comment-modal');
@@ -103,17 +96,22 @@ document.addEventListener('DOMContentLoaded', () => {
         resetToWelcome();
     });
 
+    // Print full (with prices)
     btnPrint.addEventListener('click', () => {
+        document.body.classList.remove('print-no-prices');
         window.print();
     });
 
-    btnToggleSort.addEventListener('click', () => {
-        isSortDesc = !isSortDesc;
-        btnToggleSort.textContent = isSortDesc ? '🔃 Mais Recentes' : '🔃 Mais Antigas';
-        if (currentCarHistory) {
-            renderVisits(currentCarHistory.visits);
-        }
-    });
+    // Print without prices
+    if (btnPrintNoPrices) {
+        btnPrintNoPrices.addEventListener('click', () => {
+            document.body.classList.add('print-no-prices');
+            window.print();
+            setTimeout(() => {
+                document.body.classList.remove('print-no-prices');
+            }, 1000);
+        });
+    }
 
     modalCloseBtn.addEventListener('click', closeModal);
     modalDismissBtn.addEventListener('click', closeModal);
@@ -155,11 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/config');
             const data = await res.json();
             currentConfig = data.config || {};
-            if (data.version) {
+            if (data.version && appVersionBadge) {
                 appVersionBadge.textContent = `v${data.version}`;
             }
             updateFolderUI(currentConfig.spreadsheet_folder);
-            updateStatsUI(data.stats);
             
             await loadCarsList();
         } catch (err) {
@@ -173,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/cars');
             const data = await res.json();
             allCars = data.cars || [];
-            renderQuickVehicles(allCars);
         } catch (err) {
             console.error('Erro carregando veículos:', err);
         }
@@ -189,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (data.success) {
                 updateFolderUI(data.folder);
-                updateStatsUI(data.stats);
                 showToast(`Pasta configurada com sucesso! ${data.stats.total_files} planilhas indexadas.`);
                 await loadCarsList();
                 resetToWelcome();
@@ -212,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/reindex', { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                updateStatsUI(data.stats);
                 showToast(`✓ Atualizado! Total de ${data.stats.total_files} arquivos.`);
                 await loadCarsList();
                 if (searchInput.value.trim()) {
@@ -257,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.visits && data.visits.length > 0) {
                 currentCarHistory = data;
                 renderVehicleHistory(data);
-                highlightActiveChip(plate);
             } else {
                 showToast(`Nenhuma visita encontrada para a placa ${plate}`);
             }
@@ -399,48 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateStatsUI(stats) {
-        if (!stats) return;
-        statFiles.textContent = `${stats.total_files || 0} planilhas`;
-        statCars.textContent = `${stats.total_cars || 0} veículos`;
-        statClients.textContent = `${stats.total_clients || 0} clientes`;
-    }
-
-    function renderQuickVehicles(cars) {
-        quickVehiclesList.innerHTML = '';
-        if (!cars || cars.length === 0) {
-            quickVehiclesList.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">Nenhum veículo encontrado na pasta selecionada.</span>';
-            return;
-        }
-
-        cars.forEach(car => {
-            const chip = document.createElement('div');
-            chip.className = 'quick-chip';
-            chip.dataset.plate = car.plate_clean;
-            chip.innerHTML = `
-                <span class="chip-plate">${car.plate_display || car.plate_clean}</span>
-                <span class="chip-car">${car.car_model || car.client_name || 'Carro'}</span>
-                <span class="chip-count">${car.visit_count} ${car.visit_count === 1 ? 'visita' : 'visitas'}</span>
-            `;
-            chip.addEventListener('click', () => {
-                searchInput.value = car.plate_display || car.plate_clean;
-                btnClearSearch.style.display = 'flex';
-                selectVehicleByPlate(car.plate_clean);
-            });
-            quickVehiclesList.appendChild(chip);
-        });
-    }
-
-    function highlightActiveChip(plateClean) {
-        document.querySelectorAll('.quick-chip').forEach(chip => {
-            if (chip.dataset.plate === plateClean) {
-                chip.classList.add('active');
-            } else {
-                chip.classList.remove('active');
-            }
-        });
-    }
-
     function renderSearchResultsGrid(results, query) {
         searchResultsTitle.textContent = `Resultados para "${query}"`;
         searchResultsCount.textContent = `${results.length} visitas encontradas`;
@@ -524,15 +475,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderVisits(visits) {
         visitsListContainer.innerHTML = '';
 
+        // Chronological order: newest visits first
         const sortedVisits = [...visits].sort((a, b) => {
             const dateA = a.entry_date_sort || '0000-00-00';
             const dateB = b.entry_date_sort || '0000-00-00';
             if (dateA !== dateB) {
-                return isSortDesc ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+                return dateB.localeCompare(dateA);
             }
             const kmA = a.odometer_int || 0;
             const kmB = b.odometer_int || 0;
-            return isSortDesc ? kmB - kmA : kmA - kmB;
+            return kmB - kmA;
         });
 
         sortedVisits.forEach((visit, idx) => {
@@ -625,8 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th style="width: 90px;">Tipo</th>
                         <th>Descrição do Item / Serviço / Anotação</th>
                         <th style="width: 70px; text-align: right;">Qtd</th>
-                        <th style="width: 110px; text-align: right;">Valor Unit.</th>
-                        <th style="width: 110px; text-align: right;">Valor Total</th>
+                        <th class="col-price" style="width: 110px; text-align: right;">Valor Unit.</th>
+                        <th class="col-price" style="width: 110px; text-align: right;">Valor Total</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -662,8 +614,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${noteBadgeHtml}
                     </td>
                     <td class="td-num">${it.quantity || '-'}</td>
-                    <td class="td-num">${it.unit_price || '-'}</td>
-                    <td class="td-num" style="font-weight: 600;">${it.total_price || '-'}</td>
+                    <td class="td-num col-price">${it.unit_price || '-'}</td>
+                    <td class="td-num col-price" style="font-weight: 600;">${it.total_price || '-'}</td>
                 `;
 
                 if (hasNote) {
@@ -718,7 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
         searchResultsSection.style.display = 'none';
         welcomeSection.style.display = 'block';
         currentCarHistory = null;
-        document.querySelectorAll('.quick-chip').forEach(c => c.classList.remove('active'));
     }
 
     // Modal helpers
