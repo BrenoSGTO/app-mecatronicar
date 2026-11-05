@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MecatroniCar - Histórico de Veículos e Serviços</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="logo-icon">🔧</div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h1 class="logo-title">MecatroniCar</h1>
+                        <span id="app-version-badge" class="version-badge">v1.0.0</span>
+                    </div>
+                    <p class="logo-sub">Histórico de Visitas, Serviços e Peças</p>
+                </div>
+            </div>
+
+            <!-- Folder Management Bar & Updates -->
+            <div class="header-right-controls">
+                <!-- Update Check Button -->
+                <button id="btn-check-updates" class="btn btn-update btn-sm" title="Verificar se há novas versões do sistema">
+                    ✨ Verificar Atualizações
+                </button>
+
+                <div class="folder-control-box">
+                    <div class="folder-info">
+                        <span class="folder-label">📁 Pasta:</span>
+                        <span id="current-folder-text" class="folder-path" title="Clique para alterar">Carregando pasta...</span>
+                    </div>
+                    <div class="folder-actions">
+                        <button id="btn-change-folder" class="btn btn-secondary btn-sm" title="Escolher outra pasta no computador">
+                            📂 Alterar Pasta
+                        </button>
+                        <button id="btn-reindex" class="btn btn-primary btn-sm" title="Procurar novos arquivos adicionados">
+                            🔄 Atualizar Lista
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Search and Quick Filter Section -->
+        <section class="search-section">
+            <div class="search-box-wrapper">
+                <div class="search-icon">🔍</div>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="search-input" 
+                    placeholder="Digite a placa (ex: FNB 1A77 ou FNB1A77) ou nome do cliente (ex: Danilo, Natanael)..." 
+                    autocomplete="off"
+                    autofocus
+                >
+                <button id="btn-clear-search" class="btn-clear" title="Limpar busca" style="display: none;">✕</button>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar" id="stats-bar">
+                <span id="stat-files">0 planilhas</span>
+                <span class="dot">•</span>
+                <span id="stat-cars">0 veículos</span>
+                <span class="dot">•</span>
+                <span id="stat-clients">0 clientes</span>
+            </div>
+
+            <!-- Quick Vehicle Chips Carousel -->
+            <div class="quick-vehicles-wrapper">
+                <div class="quick-vehicles-label">Veículos Cadastrados:</div>
+                <div id="quick-vehicles-list" class="quick-vehicles-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Search Results Grid (when searching text) -->
+        <section id="search-results-section" class="search-results-section" style="display: none;">
+            <div class="section-header">
+                <h2 id="search-results-title">Resultados da Busca</h2>
+                <span id="search-results-count" class="badge">0 encontrados</span>
+            </div>
+            <div id="search-cards-grid" class="cards-grid">
+                <!-- Search result cards -->
+            </div>
+        </section>
+
+        <!-- Vehicle Detail & Visits History Section -->
+        <section id="vehicle-history-section" class="vehicle-history-section" style="display: none;">
+            <!-- Car Profile Banner -->
+            <div class="vehicle-banner">
+                <div class="plate-card-wrapper">
+                    <div class="brasil-plate">
+                        <div class="plate-top">
+                            <span class="plate-country">BRASIL</span>
+                            <span class="plate-flag">🇧🇷</span>
+                        </div>
+                        <div class="plate-number" id="detail-plate">AAA-0000</div>
+                    </div>
+                </div>
+
+                <div class="vehicle-info-block">
+                    <div class="vehicle-header-row">
+                        <h2 id="detail-owner-name" class="owner-name">Nome do Cliente</h2>
+                        <span id="detail-phone" class="phone-pill"></span>
+                    </div>
+
+                    <div class="car-tags" id="car-tags-container">
+                        <span class="tag tag-car" id="detail-car-model">Modelo do Carro</span>
+                        <span class="tag" id="detail-car-year">Ano</span>
+                        <span class="tag" id="detail-car-color">Cor</span>
+                        <span class="tag" id="detail-car-fuel">Combustível</span>
+                        <span class="tag tag-chassis" id="detail-car-chassis">Chassi</span>
+                    </div>
+                </div>
+
+                <div class="vehicle-metrics-block">
+                    <div class="metric-card">
+                        <div class="metric-label">Total de Visitas</div>
+                        <div class="metric-value" id="metric-total-visits">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Último Hodômetro</div>
+                        <div class="metric-value" id="metric-last-km">- km</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Evolução KM</div>
+                        <div class="metric-value" id="metric-km-diff">-</div>
+                    </div>
+                </div>
+
+                <div class="vehicle-actions-block">
+                    <button id="btn-print" class="btn btn-secondary" title="Imprimir histórico ou salvar em PDF">
+                        🖨️ Imprimir
+                    </button>
+                    <button id="btn-toggle-sort" class="btn btn-outline" title="Inverter ordem das visitas">
+                        🔃 Mais Recentes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visits Timeline / Cards -->
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <h3>Linha do Tempo das Visitas na Oficina</h3>
+                    <div class="color-legend">
+                        <span class="legend-title">Cores das Células:</span>
+                        <span class="legend-badge legend-yellow">Destaque</span>
+                        <span class="legend-badge legend-purple">Mecânica / Câmbio</span>
+                        <span class="legend-badge legend-pink">Pendente / Retorno</span>
+                        <span class="legend-badge legend-note"><span class="red-triangle-icon"></span> Tem Comentário</span>
+                    </div>
+                </div>
+
+                <div id="visits-list-container" class="visits-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Empty / Welcome State -->
+        <section id="welcome-section" class="welcome-section">
+            <div class="welcome-card">
+                <div class="welcome-icon">🚘</div>
+                <h2>Bem-vindo ao MecatroniCar</h2>
+                <p>Digite uma placa ou nome de cliente acima para consultar todo o histórico de visitas, serviços feitos, peças trocadas e notas de diagnóstico.</p>
+                <div class="welcome-tips">
+                    <div class="tip-item">
+                        <span class="tip-icon">🎨</span>
+                        <div>
+                            <strong>Cores preservadas</strong>
+                            <p>As linhas mostram exatamente a mesma cor de fundo que tinham na planilha Excel.</p>
+                        </div>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon">🚩</span>
+                        <div>
+                            <strong>Comentários & Scanner</strong>
+                            <p>Células com triângulos vermelhos contêm notas, observações do mecânico ou relatórios do scanner.</p>
+                        </div>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon">⚡</span>
+                        <div>
+                            <strong>Acesso rápido ao Excel</strong>
+                            <p>Clique em "Abrir no Excel" em qualquer visita para abrir a planilha original no computador.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Cell Comments & Diagnostic Reports -->
+    <div id="comment-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">📝</span>
+                    <h3 id="modal-item-title">Nota da Planilha</h3>
+                </div>
+                <button id="modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
+            </div>
+            <div class="modal-subtitle" id="modal-item-subtitle">Local: Célula da planilha</div>
+            <div class="modal-body">
+                <pre id="modal-comment-text" class="comment-preformatted"></pre>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-copy-btn" class="btn btn-secondary">
+                    📋 Copiar Texto
+                </button>
+                <button id="modal-dismiss-btn" class="btn btn-primary">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Software Updates (Super simple for the secretary aunt) -->
+    <div id="update-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 520px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">🚀</span>
+                    <h3 id="update-modal-title">Atualização do MecatroniCar</h3>
+                </div>
+                <button id="update-modal-close-btn" class="modal-close" title="Fechar">✕</button>
+            </div>
+            <div class="modal-body" id="update-modal-body">
+                <div id="update-checking-state" style="text-align: center; padding: 25px 10px;">
+                    <div style="font-size: 32px; margin-bottom: 12px; animation: spin 1s infinite linear;">🔄</div>
+                    <p style="font-size: 15px; font-weight: 600; color: #1e293b;">Verificando se há novas atualizações...</p>
+                    <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Consultando o repositório no GitHub</p>
+                </div>
+
+                <div id="update-uptodate-state" style="display: none; text-align: center; padding: 25px 10px;">
+                    <div style="font-size: 38px; margin-bottom: 12px;">✅</div>
+                    <h4 style="font-size: 17px; font-weight: 700; color: #15803d; margin-bottom: 6px;">Seu sistema já está atualizado!</h4>
+                    <p style="font-size: 13px; color: #64748b;">Você está usando a versão mais recente (<strong id="uptodate-version">v1.0.0</strong>).</p>
+                </div>
+
+                <div id="update-available-state" style="display: none;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <div style="font-size: 15px; font-weight: 700; color: #1d4ed8; margin-bottom: 4px;">
+                            🎉 Nova versão encontrada: <span id="new-version-tag">v1.0.1</span>
+                        </div>
+                        <p style="font-size: 13px; color: #3b82f6;">Sua versão atual: <span id="current-version-tag">v1.0.0</span></p>
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <strong style="font-size: 13px; color: #334155; display: block; margin-bottom: 6px;">O que há de novo:</strong>
+                        <div id="update-notes-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #475569; max-height: 140px; overflow-y: auto; white-space: pre-wrap;"></div>
+                    </div>
+
+                    <div id="update-progress-container" style="display: none; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">
+                            <span id="update-progress-status">Baixando atualização...</span>
+                            <span id="update-progress-percent">0%</span>
+                        </div>
+                        <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden;">
+                            <div id="update-progress-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="update-modal-footer">
+                <button id="update-cancel-btn" class="btn btn-secondary">
+                    Fechar
+                </button>
+                <button id="update-apply-btn" class="btn btn-primary" style="display: none; background: #16a34a;">
+                    🚀 Atualizar Agora Automaticamente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" style="display: none;"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

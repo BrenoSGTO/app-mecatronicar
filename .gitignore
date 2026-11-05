@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+oficina_cache.db
+.vscode/
+.idea/
+*.tmp
+update.zip
