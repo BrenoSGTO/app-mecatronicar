@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import threading
 
-CURRENT_VERSION = "1.0.1"
+CURRENT_VERSION = "1.0.2"
 REPO_OWNER = "BrenoSGTO"
 REPO_NAME = "app-mecatronicar"
 

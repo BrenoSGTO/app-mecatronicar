@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
+
 
 internal class InstallerForm : Form
 {
@@ -140,6 +143,138 @@ internal class InstallerForm : Form
         this.Controls.Add(btnCancel);
     }
 
+    private bool IsWorkingPython(string exePath)
+    {
+        if (string.IsNullOrEmpty(exePath)) return false;
+        if (exePath.IndexOf("WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+        try
+        {
+            ProcessStartInfo psi = new ProcessStartInfo();
+            psi.FileName = exePath;
+            psi.Arguments = "-c \"import sys; sys.exit(0)\"";
+            psi.CreateNoWindow = true;
+            psi.UseShellExecute = false;
+            psi.WindowStyle = ProcessWindowStyle.Hidden;
+            using (Process p = Process.Start(psi))
+            {
+                if (p == null) return false;
+                if (!p.WaitForExit(5000)) return false;
+                return p.ExitCode == 0;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private string FindPythonExecutable()
+    {
+        List<string> searchRoots = new List<string>();
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrEmpty(localAppData))
+            searchRoots.Add(Path.Combine(localAppData, "Programs", "Python"));
+
+        string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        if (!string.IsNullOrEmpty(progFiles))
+            searchRoots.Add(progFiles);
+
+        string progFiles86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        if (!string.IsNullOrEmpty(progFiles86))
+            searchRoots.Add(progFiles86);
+
+        searchRoots.Add(@"C:\");
+
+        foreach (string root in searchRoots)
+        {
+            try
+            {
+                if (!Directory.Exists(root)) continue;
+                string[] dirs = Directory.GetDirectories(root, "Python3*");
+                Array.Sort(dirs);
+                Array.Reverse(dirs);
+                foreach (string d in dirs)
+                {
+                    string candidate = Path.Combine(d, "python.exe");
+                    if (File.Exists(candidate) && IsWorkingPython(candidate))
+                        return candidate;
+                }
+            }
+            catch { }
+        }
+
+        string pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+        foreach (string dir in pathEnv.Split(';'))
+        {
+            string trimmed = dir.Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+            if (trimmed.IndexOf("WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+            try
+            {
+                string candidate = Path.Combine(trimmed, "python.exe");
+                if (File.Exists(candidate) && IsWorkingPython(candidate))
+                    return candidate;
+            }
+            catch { }
+        }
+
+        if (IsWorkingPython("python.exe"))
+            return "python.exe";
+
+        return null;
+    }
+
+    private string DownloadAndInstallPython()
+    {
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        string pyUrl = Environment.Is64BitOperatingSystem
+            ? "https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe"
+            : "https://www.python.org/ftp/python/3.12.8/python-3.12.8.exe";
+
+        string tempInstaller = Path.Combine(Path.GetTempPath(), "python-3.12.8-installer.exe");
+
+        UpdateStatus("Baixando motor Python para este computador (1ª instalação)...", 52);
+
+        HttpWebRequest req = (HttpWebRequest)WebRequest.Create(pyUrl);
+        req.UserAgent = "MecatroniCar-Installer";
+        req.Timeout = 30000;
+        using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+        using (Stream netStream = resp.GetResponseStream())
+        using (FileStream fileStream = new FileStream(tempInstaller, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            long totalBytes = resp.ContentLength;
+            byte[] buffer = new byte[32768];
+            long downloaded = 0;
+            int read;
+            while ((read = netStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                fileStream.Write(buffer, 0, read);
+                downloaded += read;
+                if (totalBytes > 0)
+                {
+                    int pct = 52 + (int)((downloaded / (double)totalBytes) * 14);
+                    int dlPct = (int)((downloaded / (double)totalBytes) * 100);
+                    UpdateStatus("Baixando motor Python (" + dlPct + "%)...", pct);
+                }
+            }
+        }
+
+        UpdateStatus("Instalando motor Python no computador (aguarde ~1 minuto)...", 68);
+        ProcessStartInfo psi = new ProcessStartInfo();
+        psi.FileName = tempInstaller;
+        psi.Arguments = "/quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_doc=0 SimpleInstall=1";
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        using (Process p = Process.Start(psi))
+        {
+            if (p != null) p.WaitForExit(300000);
+        }
+
+        try { File.Delete(tempInstaller); } catch { }
+
+        return FindPythonExecutable();
+    }
+
     private void BtnInstall_Click(object sender, EventArgs e)
     {
         btnInstall.Enabled = false;
@@ -154,10 +289,10 @@ internal class InstallerForm : Form
         {
             try
             {
-                UpdateStatus("Criando diretório de instalação...", 20);
+                UpdateStatus("Criando diretório de instalação...", 15);
                 Directory.CreateDirectory(targetDir);
 
-                UpdateStatus("Extraindo arquivos do aplicativo...", 40);
+                UpdateStatus("Extraindo arquivos do aplicativo...", 25);
                 Assembly asm = Assembly.GetExecutingAssembly();
                 using (Stream stream = asm.GetManifestResourceStream("MecatroniCar.Package"))
                 {
@@ -173,7 +308,6 @@ internal class InstallerForm : Form
                         foreach (ZipArchiveEntry entry in zip.Entries)
                         {
                             count++;
-                            // Strip any leading root folder like "MecatroniCar/"
                             string entryName = entry.FullName;
                             if (entryName.StartsWith("MecatroniCar/", StringComparison.OrdinalIgnoreCase))
                             {
@@ -183,7 +317,6 @@ internal class InstallerForm : Form
 
                             string destPath = Path.Combine(targetDir, entryName.Replace('/', Path.DirectorySeparatorChar));
 
-                            // Directory
                             if (entry.FullName.EndsWith("/"))
                             {
                                 Directory.CreateDirectory(destPath);
@@ -192,7 +325,6 @@ internal class InstallerForm : Form
 
                             Directory.CreateDirectory(Path.GetDirectoryName(destPath));
 
-                            // Preserve existing config.json and oficina_cache.db
                             if (File.Exists(destPath) && (entryName.Equals("config.json", StringComparison.OrdinalIgnoreCase) || entryName.Equals("oficina_cache.db", StringComparison.OrdinalIgnoreCase)))
                             {
                                 continue;
@@ -200,29 +332,60 @@ internal class InstallerForm : Form
 
                             entry.ExtractToFile(destPath, true);
 
-                            int pct = 40 + (int)((count / (float)total) * 35);
+                            int pct = 25 + (int)((count / (float)total) * 25);
                             UpdateStatus("Instalando: " + Path.GetFileName(destPath), pct);
                         }
                     }
                 }
 
-                UpdateStatus("Instalando dependências necessárias...", 80);
+                UpdateStatus("Verificando motor Python no computador...", 50);
+                string pythonExe = FindPythonExecutable();
+                if (string.IsNullOrEmpty(pythonExe))
+                {
+                    pythonExe = DownloadAndInstallPython();
+                }
+
+                if (string.IsNullOrEmpty(pythonExe))
+                {
+                    throw new Exception("Não foi possível instalar ou localizar o Python automaticamente. Verifique a conexão com a internet e tente novamente.");
+                }
+
+                UpdateStatus("Instalando bibliotecas do sistema (Flask, Excel)...", 78);
                 try
                 {
                     ProcessStartInfo pipInfo = new ProcessStartInfo();
-                    pipInfo.FileName = "python.exe";
-                    pipInfo.Arguments = "-m pip install --quiet openpyxl xlrd flask customtkinter";
+                    pipInfo.FileName = pythonExe;
+                    pipInfo.Arguments = "-m pip install --disable-pip-version-check --quiet openpyxl xlrd flask";
+                    pipInfo.WorkingDirectory = targetDir;
                     pipInfo.CreateNoWindow = true;
                     pipInfo.UseShellExecute = false;
-                    Process p = Process.Start(pipInfo);
-                    if (p != null) p.WaitForExit(30000);
+                    using (Process p = Process.Start(pipInfo))
+                    {
+                        if (p != null) p.WaitForExit(120000);
+                    }
+                }
+                catch (Exception) { }
+
+                UpdateStatus("Inicializando banco de dados e módulos...", 88);
+                try
+                {
+                    ProcessStartInfo initInfo = new ProcessStartInfo();
+                    initInfo.FileName = pythonExe;
+                    initInfo.Arguments = "-c \"import cache, config, parser, server, updater; cache.init_db()\"";
+                    initInfo.WorkingDirectory = targetDir;
+                    initInfo.CreateNoWindow = true;
+                    initInfo.UseShellExecute = false;
+                    using (Process p = Process.Start(initInfo))
+                    {
+                        if (p != null) p.WaitForExit(15000);
+                    }
                 }
                 catch (Exception) { }
 
                 // Create Desktop Shortcut if checked
                 if (createDesktopShortcut)
                 {
-                    UpdateStatus("Criando atalho na Área de Trabalho...", 90);
+                    UpdateStatus("Criando atalho na Área de Trabalho...", 94);
                     string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                     string shortcutPath = Path.Combine(desktopDir, "MecatroniCar - Oficina.lnk");
                     CreateShortcut(shortcutPath, Path.Combine(targetDir, "MecatroniCar.exe"), Path.Combine(targetDir, "app_icon.ico"));
@@ -248,7 +411,7 @@ internal class InstallerForm : Form
                 }
                 else
                 {
-                    Process.Start(new ProcessStartInfo("python.exe", "app.py") { WorkingDirectory = targetDir, UseShellExecute = false });
+                    Process.Start(new ProcessStartInfo(pythonExe, "app.py") { WorkingDirectory = targetDir, UseShellExecute = false, CreateNoWindow = true });
                 }
 
                 this.Invoke((MethodInvoker)delegate

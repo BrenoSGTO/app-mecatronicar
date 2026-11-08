@@ -40,17 +40,32 @@ def launch_ui():
     # Fallback to default browser
     webbrowser.open(URL)
 
+def is_port_in_use(port):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
 def main():
     print("=" * 60)
     print("  MecatroniCar - Sistema de Histórico da Oficina Mecânica")
     print("=" * 60)
     
+    # Ensure local cache DB is always initialized
+    db_path = cache.get_db_path(BASE_DIR)
+    cache.init_db(db_path)
+
+    # If server is already running in background, just open the UI window and exit
+    if is_port_in_use(PORT):
+        print(f"Servidor já em execução em {URL}. Abrindo janela...")
+        launch_ui()
+        return
+
     # Check config
     cfg = config.load_config(BASE_DIR)
     folder = cfg.get("spreadsheet_folder", "")
     if folder and os.path.isdir(folder):
         print(f"Pasta de planilhas configurada: {folder}")
-        db_path = cache.get_db_path(BASE_DIR)
         print("Verificando índice de planilhas...")
         res = cache.scan_and_index_folder(folder, db_path)
         print(f"Índice atualizado: {res.get('total', 0)} planilhas carregadas.")
@@ -65,3 +80,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
