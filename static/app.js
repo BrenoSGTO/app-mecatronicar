@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function performSearch(query) {
-        if (!query) {
+        if (!query || query.length < 3) {
             resetToWelcome();
             return;
         }

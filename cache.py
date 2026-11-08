@@ -4,9 +4,10 @@ import sqlite3
 import json
 import re
 import datetime
-from parser import parse_file, remove_accents, clean_plate, format_plate_display
+from parser import parse_file, parse_filename, remove_accents, clean_plate, format_plate_display
 
 DB_FILE = "oficina_cache.db"
+FAST_INDEX_THRESHOLD = 15
 
 def get_db_path(base_dir=None):
     if base_dir:
@@ -64,6 +65,92 @@ def parse_odometer_int(odometer_str):
     except Exception:
         return 0
 
+def parse_visit_int(visit_str):
+    if not visit_str:
+        return 0
+    cleaned = re.sub(r'[^\d]', '', str(visit_str))
+    try:
+        return int(cleaned)
+    except Exception:
+        return 0
+
+def _ensure_row_parsed(conn, cur, d):
+    """
+    Se a planilha foi indexada apenas pelo nome do arquivo (modo ultrarrápido),
+    lê o conteúdo interno do Excel sob demanda (apenas quando buscada/aberta)
+    e salva o resultado no banco SQLite para as próximas consultas.
+    """
+    fpath = d.get("file_path", "")
+    if d.get("data_json"):
+        try:
+            d["details"] = json.loads(d["data_json"])
+            return d, False
+        except Exception:
+            pass
+
+    if not fpath or not os.path.exists(fpath):
+        d["details"] = None
+        return d, False
+
+    try:
+        mtime = os.path.getmtime(fpath)
+        fsize = os.path.getsize(fpath)
+        parsed = parse_file(fpath)
+
+        plate_raw = parsed.get("plate", "") or d.get("plate", "")
+        plate_clean = clean_plate(plate_raw)
+        plate_display = parsed.get("plate_display", "") or format_plate_display(plate_raw)
+        client_name = parsed.get("client_name", "") or d.get("client_name", "")
+        client_clean = remove_accents(client_name).lower()
+        car_model = parsed.get("car_model", "") or d.get("car_model", "")
+        car_year = parsed.get("car_year", "") or d.get("car_year", "")
+        car_color = parsed.get("car_color", "") or d.get("car_color", "")
+        visit_num = parsed.get("visit_num", "") or d.get("visit_num", "")
+        entry_date = parsed.get("entry_date", "")
+        entry_date_sort = parse_date_sortable(entry_date)
+        odometer = parsed.get("odometer", "")
+        odometer_int = parse_odometer_int(odometer)
+        complaint = parsed.get("complaint", "")
+        data_json = json.dumps(parsed, ensure_ascii=False)
+
+        cur.execute("""
+        INSERT OR REPLACE INTO files (
+            file_path, file_name, file_mtime, file_size,
+            plate, plate_clean, plate_display, client_name, client_clean,
+            car_model, car_year, car_color, visit_num,
+            entry_date, entry_date_sort, odometer, odometer_int,
+            complaint, data_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            fpath, parsed.get("file_name", os.path.basename(fpath)), mtime, fsize,
+            plate_raw, plate_clean, plate_display, client_name, client_clean,
+            car_model, car_year, car_color, visit_num,
+            entry_date, entry_date_sort, odometer, odometer_int,
+            complaint, data_json
+        ))
+
+        d.update({
+            "plate": plate_raw,
+            "plate_clean": plate_clean,
+            "plate_display": plate_display,
+            "client_name": client_name,
+            "car_model": car_model,
+            "car_year": car_year,
+            "car_color": car_color,
+            "visit_num": visit_num,
+            "entry_date": entry_date,
+            "entry_date_sort": entry_date_sort,
+            "odometer": odometer,
+            "odometer_int": odometer_int,
+            "complaint": complaint,
+            "data_json": data_json,
+            "details": parsed
+        })
+        return d, True
+    except Exception:
+        d["details"] = None
+        return d, False
+
 def scan_and_index_folder(folder_path, db_path=None, progress_callback=None):
     if not folder_path or not os.path.isdir(folder_path):
         return {"error": "Pasta inválida", "indexed": 0, "total": 0}
@@ -91,49 +178,81 @@ def scan_and_index_folder(folder_path, db_path=None, progress_callback=None):
     cur.execute("SELECT file_path, file_mtime FROM files")
     cached_mtimes = dict(cur.fetchall())
     
-    for idx, fpath in enumerate(all_files):
+    to_process = []
+    for fpath in all_files:
         try:
             mtime = os.path.getmtime(fpath)
-            fsize = os.path.getsize(fpath)
-            
-            # If already cached and unmodified, skip re-parsing
             if fpath in cached_mtimes and abs(cached_mtimes[fpath] - mtime) < 0.01:
                 continue
-                
-            parsed = parse_file(fpath)
-            
-            plate_raw = parsed.get("plate", "")
-            plate_clean = clean_plate(plate_raw)
-            plate_display = parsed.get("plate_display", "")
-            client_name = parsed.get("client_name", "")
-            client_clean = remove_accents(client_name).lower()
-            entry_date = parsed.get("entry_date", "")
-            entry_date_sort = parse_date_sortable(entry_date)
-            odometer = parsed.get("odometer", "")
-            odometer_int = parse_odometer_int(odometer)
-            
-            data_json = json.dumps(parsed, ensure_ascii=False)
-            
-            cur.execute("""
-            INSERT OR REPLACE INTO files (
-                file_path, file_name, file_mtime, file_size,
-                plate, plate_clean, plate_display, client_name, client_clean,
-                car_model, car_year, car_color, visit_num,
-                entry_date, entry_date_sort, odometer, odometer_int,
-                complaint, data_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                fpath, parsed.get("file_name", os.path.basename(fpath)), mtime, fsize,
-                plate_raw, plate_clean, plate_display, client_name, client_clean,
-                parsed.get("car_model", ""), parsed.get("car_year", ""), parsed.get("car_color", ""), parsed.get("visit_num", ""),
-                entry_date, entry_date_sort, odometer, odometer_int,
-                parsed.get("complaint", ""), data_json
-            ))
+            to_process.append((fpath, mtime, os.path.getsize(fpath)))
+        except Exception as e:
+            errors.append(f"{os.path.basename(fpath)}: {str(e)}")
+
+    # Se houver muitas planilhas novas (ex.: milhares de fichas na pasta da oficina),
+    # faz a indexação instantânea pelo nome do arquivo (< 0,1s) e lê o Excel sob demanda na busca!
+    use_fast_filename_index = len(to_process) > FAST_INDEX_THRESHOLD
+
+    for idx, (fpath, mtime, fsize) in enumerate(to_process):
+        try:
+            fname = os.path.basename(fpath)
+            if use_fast_filename_index:
+                meta = parse_filename(fname)
+                plate_raw = meta.get("plate", "")
+                plate_clean = clean_plate(plate_raw)
+                plate_display = format_plate_display(plate_raw)
+                client_name = meta.get("owner", "")
+                client_clean = remove_accents(client_name).lower()
+                car_model = meta.get("model", "")
+                car_color = meta.get("color", "")
+                visit_num = meta.get("visit_num", "")
+
+                cur.execute("""
+                INSERT OR REPLACE INTO files (
+                    file_path, file_name, file_mtime, file_size,
+                    plate, plate_clean, plate_display, client_name, client_clean,
+                    car_model, car_year, car_color, visit_num,
+                    entry_date, entry_date_sort, odometer, odometer_int,
+                    complaint, data_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    fpath, fname, mtime, fsize,
+                    plate_raw, plate_clean, plate_display, client_name, client_clean,
+                    car_model, "", car_color, visit_num,
+                    "", "0000-00-00", "", 0,
+                    "", ""
+                ))
+            else:
+                parsed = parse_file(fpath)
+                plate_raw = parsed.get("plate", "")
+                plate_clean = clean_plate(plate_raw)
+                plate_display = parsed.get("plate_display", "")
+                client_name = parsed.get("client_name", "")
+                client_clean = remove_accents(client_name).lower()
+                entry_date = parsed.get("entry_date", "")
+                entry_date_sort = parse_date_sortable(entry_date)
+                odometer = parsed.get("odometer", "")
+                odometer_int = parse_odometer_int(odometer)
+                data_json = json.dumps(parsed, ensure_ascii=False)
+
+                cur.execute("""
+                INSERT OR REPLACE INTO files (
+                    file_path, file_name, file_mtime, file_size,
+                    plate, plate_clean, plate_display, client_name, client_clean,
+                    car_model, car_year, car_color, visit_num,
+                    entry_date, entry_date_sort, odometer, odometer_int,
+                    complaint, data_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    fpath, parsed.get("file_name", fname), mtime, fsize,
+                    plate_raw, plate_clean, plate_display, client_name, client_clean,
+                    parsed.get("car_model", ""), parsed.get("car_year", ""), parsed.get("car_color", ""), parsed.get("visit_num", ""),
+                    entry_date, entry_date_sort, odometer, odometer_int,
+                    parsed.get("complaint", ""), data_json
+                ))
+
             indexed_count += 1
-            
             if progress_callback:
-                progress_callback(idx + 1, total_files, os.path.basename(fpath))
-                
+                progress_callback(idx + 1, len(to_process), fname)
         except Exception as e:
             errors.append(f"{os.path.basename(fpath)}: {str(e)}")
             
@@ -150,6 +269,7 @@ def scan_and_index_folder(folder_path, db_path=None, progress_callback=None):
         "success": True,
         "total": total_files,
         "indexed": indexed_count,
+        "fast_mode": use_fast_filename_index,
         "errors": errors
     }
 
@@ -217,8 +337,6 @@ def search_files(query, db_path=None):
     query_clean = remove_accents(query_raw).lower()
     query_plate = clean_plate(query_raw)
     
-    # Search by plate (exact or prefix or partial)
-    # or client name, car model, filename, or complaint
     like_query = f"%{query_clean}%"
     
     cur.execute("""
@@ -235,25 +353,48 @@ def search_files(query, db_path=None):
         LOWER(car_model) LIKE ? OR
         LOWER(file_name) LIKE ? OR
         LOWER(complaint) LIKE ?
-    ORDER BY entry_date_sort DESC, odometer_int DESC
+    ORDER BY entry_date_sort DESC, odometer_int DESC, CAST(visit_num AS INTEGER) DESC
+    LIMIT 60
     """, (
-        f"%{query_clean}%",
+        f"%{query_clean.upper()}%",
         query_plate, f"%{query_plate}%" if query_plate else "%",
         like_query, like_query, like_query, like_query
     ))
     
-    rows = cur.fetchall()
+    rows = [dict(r) for r in cur.fetchall()]
+    unique_plates = {r.get("plate_clean") for r in rows if r.get("plate_clean")}
+
+    # Se a busca já filtrou um único veículo (ou poucos arquivos), lê sob demanda as planilhas encontradas
+    max_lazy_parse = len(rows) if len(unique_plates) <= 1 else min(len(rows), 20)
+    dirty = False
     results = []
-    for r in rows:
-        d = dict(r)
-        if d.get("data_json"):
-            try:
-                d["details"] = json.loads(d["data_json"])
-            except Exception:
+    for idx, d in enumerate(rows):
+        if idx < max_lazy_parse:
+            d, updated = _ensure_row_parsed(conn, cur, d)
+            if updated:
+                dirty = True
+        else:
+            if d.get("data_json"):
+                try:
+                    d["details"] = json.loads(d["data_json"])
+                except Exception:
+                    d["details"] = None
+            else:
                 d["details"] = None
         results.append(d)
-        
+
+    if dirty:
+        conn.commit()
     conn.close()
+
+    results.sort(
+        key=lambda x: (
+            x.get("entry_date_sort") or "0000-00-00",
+            x.get("odometer_int") or 0,
+            parse_visit_int(x.get("visit_num"))
+        ),
+        reverse=True
+    )
     return results
 
 def get_car_history(plate, db_path=None):
@@ -276,19 +417,29 @@ def get_car_history(plate, db_path=None):
         complaint, data_json
     FROM files
     WHERE plate_clean = ? OR plate_clean LIKE ?
-    ORDER BY entry_date_sort DESC, odometer_int DESC, visit_num DESC
+    ORDER BY entry_date_sort DESC, odometer_int DESC, CAST(visit_num AS INTEGER) DESC
     """, (p_clean, f"%{p_clean}%"))
     
-    rows = cur.fetchall()
+    rows = [dict(r) for r in cur.fetchall()]
     results = []
-    for r in rows:
-        d = dict(r)
-        if d.get("data_json"):
-            try:
-                d["details"] = json.loads(d["data_json"])
-            except Exception:
-                d["details"] = None
+    dirty = False
+    for d in rows:
+        d, updated = _ensure_row_parsed(conn, cur, d)
+        if updated:
+            dirty = True
         results.append(d)
         
+    if dirty:
+        conn.commit()
     conn.close()
+
+    results.sort(
+        key=lambda x: (
+            x.get("entry_date_sort") or "0000-00-00",
+            x.get("odometer_int") or 0,
+            parse_visit_int(x.get("visit_num"))
+        ),
+        reverse=True
+    )
     return results
+

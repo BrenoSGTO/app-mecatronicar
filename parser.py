@@ -39,11 +39,15 @@ def parse_filename(filename):
     """
     base_name = os.path.splitext(filename)[0].strip()
     
-    # Try regex matching plate at beginning
-    plate_match = re.search(r'^([A-Za-z]{3}\s*[\dA-Za-z]{4})', base_name)
-    plate = plate_match.group(1).replace(" ", "").upper() if plate_match else ""
-    
-    parts = [p.strip() for p in base_name.split('-') if p.strip()]
+    # Try regex matching plate at beginning (supports space, hyphen, or contiguous)
+    plate_match = re.search(r'^\s*([A-Za-z]{3}[\s\-]*[\dA-Za-z]{4})', base_name)
+    if plate_match:
+        plate = re.sub(r'[^A-Za-z0-9]', '', plate_match.group(1)).upper()
+        remainder = base_name[plate_match.end():].strip()
+        parts = [plate] + [p.strip() for p in remainder.split('-') if p.strip()]
+    else:
+        plate = ""
+        parts = [p.strip() for p in base_name.split('-') if p.strip()]
     
     visit_num = ""
     owner = ""
