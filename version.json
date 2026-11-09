@@ -1,7 +1,7 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "name": "MecatroniCar",
-  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.4/MecatroniCar-v1.0.4.zip",
-  "release_notes": "Versão 1.0.4:\n- Novo controle de Zoom (🔍 − / 100% / +) no topo do aplicativo para ajustar o tamanho dos botões e textos em notebooks\n- O nível de zoom escolhido fica salvo automaticamente para as próximas vezes que abrir o sistema",
+  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.5/MecatroniCar-v1.0.5.zip",
+  "release_notes": "Versão 1.0.5:\n- Corrige o ícone e nome ao 'Fixar na barra de tarefas' do Windows (agora fixa como MecatroniCar - Oficina em vez de Microsoft Edge)\n- Inclui controle de Zoom (🔍 − / 100% / +) na barra superior com salvamento automático",
   "published_at": "2026-11-08"
 }

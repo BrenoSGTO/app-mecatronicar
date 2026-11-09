@@ -11,12 +11,15 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("MecatroniCar Oficina Mecânica")]
 [assembly: AssemblyProduct("MecatroniCar")]
 [assembly: AssemblyCopyright("Copyright © 2026 MecatroniCar")]
-[assembly: AssemblyVersion("1.0.3.0")]
-[assembly: AssemblyFileVersion("1.0.3.0")]
+[assembly: AssemblyVersion("1.0.5.0")]
+[assembly: AssemblyFileVersion("1.0.5.0")]
 [assembly: ComVisible(false)]
 
 internal static class Program
 {
+    [DllImport("shell32.dll", SetLastError = true)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
+
     private static bool IsWorkingPython(string exePath)
     {
         if (string.IsNullOrEmpty(exePath)) return false;
@@ -134,6 +137,7 @@ internal static class Program
     {
         try
         {
+            try { SetCurrentProcessExplicitAppUserModelID("MecatroniCar.Oficina.App.1"); } catch { }
             string appDir = Path.GetDirectoryName(Application.ExecutablePath);
             string pythonPath = FindPythonExecutable();
 
