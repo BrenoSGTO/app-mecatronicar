@@ -15,7 +15,8 @@ def load_config(base_dir=None):
     default_config = {
         "spreadsheet_folder": default_sample_dir if os.path.exists(default_sample_dir) else "",
         "theme": "light",
-        "sort_order": "desc"
+        "sort_order": "desc",
+        "ui_zoom": 100
     }
     
     if os.path.exists(cpath):

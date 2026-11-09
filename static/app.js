@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnChangeFolder = document.getElementById('btn-change-folder');
     const btnReindex = document.getElementById('btn-reindex');
     const btnCheckUpdates = document.getElementById('btn-check-updates');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const zoomValueText = document.getElementById('zoom-value-text');
+    let currentZoom = parseInt(localStorage.getItem('mecatronicar_zoom') || '100', 10);
+    if (isNaN(currentZoom) || currentZoom < 50 || currentZoom > 150) currentZoom = 100;
     
     const searchInput = document.getElementById('search-input');
     const btnClearSearch = document.getElementById('btn-clear-search');
@@ -71,6 +76,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toast = document.getElementById('toast');
 
+    function applyZoom(zoomPct, saveServer = false) {
+        currentZoom = Math.max(50, Math.min(150, Math.round(zoomPct / 5) * 5));
+        document.body.style.zoom = `${currentZoom}%`;
+        if (zoomValueText) {
+            zoomValueText.textContent = `${currentZoom}%`;
+        }
+        localStorage.setItem('mecatronicar_zoom', String(currentZoom));
+        if (saveServer) {
+            fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ui_zoom: currentZoom })
+            }).catch(() => {});
+        }
+    }
+
+    // Apply saved zoom immediately
+    applyZoom(currentZoom, false);
+
     // Initialization
     loadInitialData();
 
@@ -78,6 +102,25 @@ document.addEventListener('DOMContentLoaded', () => {
     btnChangeFolder.addEventListener('click', handleSelectFolder);
     btnReindex.addEventListener('click', handleReindex);
     btnCheckUpdates.addEventListener('click', handleCheckUpdatesManual);
+
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener('click', () => {
+            applyZoom(currentZoom - 10, true);
+            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+        });
+    }
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener('click', () => {
+            applyZoom(currentZoom + 10, true);
+            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+        });
+    }
+    if (zoomValueText) {
+        zoomValueText.addEventListener('click', () => {
+            applyZoom(100, true);
+            showToast('🔍 Zoom restaurado para 100%');
+        });
+    }
     
     searchInput.addEventListener('input', (e) => {
         const val = e.target.value.trim();
@@ -145,6 +188,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (commentModal.style.display !== 'none') closeModal();
             if (updateModal.style.display !== 'none') closeUpdateModal();
         }
+        if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
+            e.preventDefault();
+            applyZoom(currentZoom - 10, true);
+            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+        } else if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
+            e.preventDefault();
+            applyZoom(currentZoom + 10, true);
+            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+        } else if (e.ctrlKey && e.key === '0') {
+            e.preventDefault();
+            applyZoom(100, true);
+            showToast('🔍 Zoom restaurado para 100%');
+        }
     });
 
     // API Functions
@@ -155,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
             currentConfig = data.config || {};
             if (data.version && appVersionBadge) {
                 appVersionBadge.textContent = `v${data.version}`;
+            }
+            if (currentConfig.ui_zoom) {
+                applyZoom(parseInt(currentConfig.ui_zoom, 10), false);
             }
             updateFolderUI(currentConfig.spreadsheet_folder);
             

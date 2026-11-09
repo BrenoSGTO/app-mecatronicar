@@ -41,6 +41,11 @@ def update_config_endpoint():
         cfg["theme"] = data["theme"]
     if "sort_order" in data:
         cfg["sort_order"] = data["sort_order"]
+    if "ui_zoom" in data:
+        try:
+            cfg["ui_zoom"] = max(50, min(150, int(data["ui_zoom"])))
+        except Exception:
+            pass
         
     config.save_config(cfg, BASE_DIR)
     
