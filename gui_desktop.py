@@ -277,9 +277,13 @@ class OficinaApp(ctk.CTk):
                 )
                 c_lbl.pack(fill="x", padx=12, pady=(2, 4))
 
-            # Items
-            items = visit.get("details", {}).get("items", [])
-            for it in items:
+            # Peças & Serviços Executados
+            d_obj = visit.get("details", {}) or {}
+            items = d_obj.get("items", [])
+            pecas_items = d_obj.get("pecas_items") or [i for i in items if i.get("section") != "Serviço"]
+            servicos_items = d_obj.get("servicos_items") or [i for i in items if i.get("section") == "Serviço"]
+
+            for it in pecas_items:
                 it_frame = ctk.CTkFrame(
                     v_frame, 
                     fg_color=it.get("color") or "#ffffff", 
@@ -290,7 +294,7 @@ class OficinaApp(ctk.CTk):
 
                 text_col = it.get("text_color") or "#1e293b"
 
-                desc_text = f"• [{it.get('section', 'Item')}] {it.get('description', '')}"
+                desc_text = f"• [{it.get('section', 'Peças')}] {it.get('description', '')}"
                 if it.get("quantity"):
                     desc_text += f" (Qtd: {it.get('quantity')})"
                 if it.get("total_price") and it.get("total_price") != "R$ 0,00":
@@ -318,9 +322,79 @@ class OficinaApp(ctk.CTk):
                     )
                     btn_note.pack(side="right", padx=6, pady=3)
 
+            # Expandable Services Frame
+            srv_container = ctk.CTkFrame(v_frame, fg_color="#f0f9ff", corner_radius=6, border_width=1, border_color="#bae6fd")
+            if servicos_items:
+                for it in servicos_items:
+                    it_frame = ctk.CTkFrame(
+                        srv_container,
+                        fg_color=it.get("color") or "#e0f2fe",
+                        corner_radius=4,
+                        border_width=0
+                    )
+                    it_frame.pack(fill="x", padx=8, pady=3)
+                    text_col = it.get("text_color") or "#0c4a6e"
+                    desc_text = f"🛠️ [Serviço] {it.get('description', '')}"
+                    if it.get("quantity"):
+                        desc_text += f" (Qtd: {it.get('quantity')})"
+                    if it.get("total_price") and it.get("total_price") != "R$ 0,00":
+                        desc_text += f" - Total: {it.get('total_price')}"
+                    it_lbl = ctk.CTkLabel(
+                        it_frame,
+                        text=desc_text,
+                        font=ctk.CTkFont(size=12, weight="bold"),
+                        text_color=text_col,
+                        anchor="w"
+                    )
+                    it_lbl.pack(side="left", padx=8, pady=3, fill="x", expand=True)
+                    if it.get("comment"):
+                        btn_note = ctk.CTkButton(
+                            it_frame,
+                            text="📝 Ver Nota",
+                            width=70,
+                            height=22,
+                            fg_color="#ef4444",
+                            hover_color="#dc2626",
+                            font=ctk.CTkFont(size=10, weight="bold"),
+                            command=lambda n=it.get("comment"), d=it.get("description"): self.show_note_dialog(d, n)
+                        )
+                        btn_note.pack(side="right", padx=6, pady=3)
+            else:
+                empty_lbl = ctk.CTkLabel(
+                    srv_container,
+                    text="Nenhum serviço discriminado no campo de Serviços desta planilha.",
+                    font=ctk.CTkFont(size=11),
+                    text_color="#64748b"
+                )
+                empty_lbl.pack(padx=10, pady=6)
+
+            def make_toggle_services(frame_ref, count_val):
+                state = {"open": False}
+                btn_srv = ctk.CTkButton(
+                    v_head,
+                    text=f"🛠️ Ver Serviços Executados ({count_val})",
+                    width=175,
+                    height=26,
+                    fg_color="#0284c7",
+                    hover_color="#0369a1",
+                    font=ctk.CTkFont(size=11, weight="bold")
+                )
+                def _toggle():
+                    state["open"] = not state["open"]
+                    if state["open"]:
+                        frame_ref.pack(fill="x", padx=10, pady=(4, 6))
+                        btn_srv.configure(text=f"🛠️ Ocultar Serviços ({count_val})", fg_color="#0369a1")
+                    else:
+                        frame_ref.pack_forget()
+                        btn_srv.configure(text=f"🛠️ Ver Serviços Executados ({count_val})", fg_color="#0284c7")
+                btn_srv.configure(command=_toggle)
+                btn_srv.pack(side="right", padx=6, pady=6)
+
+            make_toggle_services(srv_container, len(servicos_items))
+
             # Totals
-            sub = visit.get("details", {}).get("subtotal")
-            tot = visit.get("details", {}).get("total")
+            sub = d_obj.get("subtotal")
+            tot = d_obj.get("total")
             if (sub and sub != "R$ 0,00") or (tot and tot != "R$ 0,00"):
                 f_lbl = ctk.CTkLabel(
                     v_frame,

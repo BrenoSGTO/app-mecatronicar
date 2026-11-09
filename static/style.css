@@ -729,6 +729,156 @@ body {
     width: 90px;
 }
 
+.td-section-service {
+    color: #0369a1;
+}
+
+/* Global Services Toggle Button */
+.btn-services-global {
+    background: #1e293b;
+    color: #ffffff;
+    border: 1.5px solid #334155;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-services-global:hover {
+    background: #0f172a;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-services-global.active {
+    background: var(--primary);
+    color: #111827;
+    border-color: #eab308;
+    box-shadow: 0 2px 6px rgba(249, 204, 1, 0.35);
+}
+
+/* Per-Spreadsheet Section Bar & Services Toggle Button */
+.sheet-section-bar {
+    background: #f1f5f9;
+    border-bottom: 1px solid var(--border-color);
+    padding: 8px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sheet-section-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.sheet-section-label {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #1e293b;
+    letter-spacing: 0.3px;
+}
+
+.sheet-section-subtotal {
+    font-size: 12px;
+    color: #475569;
+    background: #ffffff;
+    padding: 2px 8px;
+    border-radius: 5px;
+    border: 1px solid #cbd5e1;
+}
+
+.btn-toggle-services {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1.5px solid #0284c7;
+    color: #0369a1;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.btn-toggle-services:hover {
+    background: #e0f2fe;
+    color: #075985;
+    border-color: #0369a1;
+}
+
+.btn-toggle-services.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 2px 5px rgba(2, 132, 199, 0.25);
+}
+
+/* Services Panel inside each Spreadsheet Card */
+.services-section-panel {
+    border-top: 2px solid #0284c7;
+    background: #f8fafc;
+}
+
+.services-panel-header {
+    background: #e0f2fe;
+    color: #0c4a6e;
+    padding: 9px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #bae6fd;
+}
+
+.services-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #0c4a6e;
+}
+
+.services-count-pill {
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.services-subtotal {
+    font-size: 13px;
+    color: #0c4a6e;
+    background: #ffffff;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid #7dd3fc;
+}
+
+.empty-services-msg {
+    padding: 16px 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    font-style: italic;
+    background: #ffffff;
+}
+
 .td-desc {
     font-weight: 500;
     position: relative;
@@ -1279,6 +1429,8 @@ body {
     .vehicle-actions-block,
     .vehicle-item-search-wrapper,
     .extra-sheets-bar,
+    .btn-services-global,
+    .btn-toggle-services,
     .btn-excel,
     .btn-scanner-note,
     .note-btn-inline {

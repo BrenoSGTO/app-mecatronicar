@@ -11,8 +11,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("MecatroniCar Oficina Mecânica")]
 [assembly: AssemblyProduct("MecatroniCar")]
 [assembly: AssemblyCopyright("Copyright © 2026 MecatroniCar")]
-[assembly: AssemblyVersion("1.0.5.0")]
-[assembly: AssemblyFileVersion("1.0.5.0")]
+[assembly: AssemblyVersion("1.0.7.0")]
+[assembly: AssemblyFileVersion("1.0.7.0")]
 [assembly: ComVisible(false)]
 
 internal static class Program
@@ -23,7 +23,6 @@ internal static class Program
     private static bool IsWorkingPython(string exePath)
     {
         if (string.IsNullOrEmpty(exePath)) return false;
-        if (exePath.IndexOf("WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0) return false;
         try
         {
             ProcessStartInfo psi = new ProcessStartInfo();
@@ -80,13 +79,12 @@ internal static class Program
             catch { }
         }
 
-        // Check PATH entries (excluding WindowsApps Microsoft Store stub)
+        // Check PATH entries
         string pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
         foreach (string dir in pathEnv.Split(';'))
         {
             string trimmed = dir.Trim();
             if (string.IsNullOrEmpty(trimmed)) continue;
-            if (trimmed.IndexOf("WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0) continue;
             try
             {
                 string candidate = Path.Combine(trimmed, "python.exe");

@@ -1,7 +1,7 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "name": "MecatroniCar",
-  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.6/MecatroniCar-v1.0.6.zip",
-  "release_notes": "Versão 1.0.6:\n- Nova barra de pesquisa dentro do histórico do veículo: pesquise qualquer peça ou serviço (ex: 'troca de óleo', 'correia', 'vela') e veja na hora em quais datas e quilometragens (KM) foi realizado\n- Detecção inteligente de abas extras preenchidas (Plan2, Plan3, orçamentos extras): exibe um botão '👁️ Ver Aba' apenas quando as outras páginas da planilha realmente tiverem dados preenchidos",
+  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.7/MecatroniCar-v1.0.7.zip",
+  "release_notes": "Versão 1.0.7:\n- Visualização separada de Peças e Serviços Executados por planilha: cada visita exibe as peças por padrão e conta com o botão '🛠️ Ver Serviços Executados' para abrir na hora os serviços feitos e o subtotal de mão de obra daquela planilha\n- Novo botão geral '🛠️ Mostrar Serviços Feitos em Todas as Planilhas' no topo da linha do tempo para expandir ou recolher os serviços de todas as visitas de uma só vez\n- Mantém a barra de pesquisa de peças/serviços dentro do veículo e a leitura de abas extras preenchidas",
   "published_at": "2026-11-09"
 }

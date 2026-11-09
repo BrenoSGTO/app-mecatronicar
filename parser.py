@@ -163,6 +163,36 @@ def get_contrast_text_color(hex_color):
     except Exception:
         return '#1e293b'
 
+PARSER_VERSION = 3
+
+def is_pecas_header(val_clean):
+    s = val_clean.rstrip(':').strip()
+    return s in ('pecas', 'peca', 'peças', 'peça', 'pecas utilizadas', 'pecas trocadas')
+
+def is_servico_header(val_clean):
+    s = val_clean.rstrip(':').strip()
+    return s in (
+        'servico', 'servicos', 'serviço', 'serviços',
+        'servico executado', 'servicos executados',
+        'servicos realizados', 'servico realizado',
+        'mao de obra', 'm.o', 'm.o.'
+    )
+
+def parse_currency_float(val):
+    if val is None or val == "":
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        s = str(val).replace("R$", "").strip()
+        if "," in s and "." in s:
+            s = s.replace(".", "").replace(",", ".")
+        elif "," in s:
+            s = s.replace(",", ".")
+        return float(s)
+    except Exception:
+        return 0.0
+
 def parse_file(filepath):
     ext = os.path.splitext(filepath)[1].lower()
     if ext == '.xlsx':
@@ -204,10 +234,12 @@ def parse_xlsx(filepath):
     subtotal = ""
     discount = ""
     total = ""
+    total_pecas = ""
+    total_servicos = ""
     
     rows_data = []
     
-    max_r = min(ws.max_row, 80)
+    max_r = min(ws.max_row, 200)
     max_c = min(ws.max_column, 15)
     
     pecas_row_idx = -1
@@ -278,17 +310,23 @@ def parse_xlsx(filepath):
                     if target.value is not None and str(target.value).strip() != '':
                         odometer = format_number_val(target.value)
                         break
-            elif val_clean in ('pecas', 'peças') and pecas_row_idx == -1 and r > 18:
+            elif is_pecas_header(val_clean) and pecas_row_idx == -1 and r > 18:
                 pecas_row_idx = r
-            elif val_clean in ('servico', 'serviço', 'servicos', 'serviços') and servico_row_idx == -1 and r > 18:
+            elif is_servico_header(val_clean) and servico_row_idx == -1 and r > 18:
                 servico_row_idx = r
             elif 'subtotal:' in val_clean and totais_row_idx == -1 and r > 24:
                 totais_row_idx = r
                 for offset in range(1, 4):
                     target = ws.cell(r, c + offset)
                     if target.value is not None and str(target.value).strip() != '':
-                        subtotal = format_currency_val(target.value)
-                        break
+                        if not subtotal:
+                            subtotal = format_currency_val(target.value)
+                        elif c + offset == 9 and parse_currency_float(target.value) > 0:
+                            total_servicos = format_currency_val(target.value)
+                if not total_servicos and max_c >= 9:
+                    v9 = ws.cell(r, 9).value
+                    if v9 is not None and parse_currency_float(v9) > 0 and c + 1 != 9:
+                        total_servicos = format_currency_val(v9)
             elif val_clean == 'total:' and r > 24:
                 for offset in range(1, 4):
                     target = ws.cell(r, c + offset)
@@ -301,6 +339,9 @@ def parse_xlsx(filepath):
                     if target.value is not None and str(target.value).strip() != '':
                         discount = format_currency_val(target.value)
                         break
+
+    if servico_row_idx == -1 and pecas_row_idx == 28 and totais_row_idx == 51:
+        servico_row_idx = 45
 
     for r in range(20, min(pecas_row_idx if pecas_row_idx != -1 else 30, max_r)):
         cell = ws.cell(r, 1)
@@ -338,6 +379,7 @@ def parse_xlsx(filepath):
         q_val = ""
         u_val = ""
         t_val = ""
+        t_raw = 0.0
         
         for c in range(1, max_c + 1):
             cell = ws.cell(r, c)
@@ -352,11 +394,17 @@ def parse_xlsx(filepath):
             elif c == 8 and cell.value is not None:
                 u_val = format_currency_val(cell.value)
             elif c == 9 and cell.value is not None:
+                t_raw = parse_currency_float(cell.value)
                 t_val = format_currency_val(cell.value)
 
-        if not desc_val and not row_comment and not row_color:
+        if not desc_val and not row_comment:
+            if servico_row_idx != -1 and r == servico_row_idx - 1 and t_raw > 0 and not total_pecas:
+                total_pecas = t_val
+            elif totais_row_idx != -1 and r in (totais_row_idx - 1, totais_row_idx - 2) and current_section == "Serviço" and t_raw > 0 and not total_servicos:
+                total_servicos = t_val
             continue
-        if not desc_val and t_val in ("R$ 0,00", "0", "") and not row_comment and not row_color:
+
+        if desc_val.lower() in ("quant.", "valor uni.", "valor tot.", "subtotal:", "total:", "desconto:"):
             continue
 
         rows_data.append({
@@ -370,6 +418,18 @@ def parse_xlsx(filepath):
             "text_color": get_contrast_text_color(row_color),
             "comment": row_comment
         })
+
+    pecas_items = [i for i in rows_data if i.get("section") != "Serviço"]
+    servicos_items = [i for i in rows_data if i.get("section") == "Serviço"]
+
+    if not total_pecas:
+        s_pecas = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
+        if s_pecas > 0:
+            total_pecas = format_currency_val(s_pecas)
+    if not total_servicos:
+        s_serv = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
+        if s_serv > 0:
+            total_servicos = format_currency_val(s_serv)
 
     extra_sheets_data = []
     for sec_name in all_sheet_names[1:]:
@@ -387,6 +447,7 @@ def parse_xlsx(filepath):
     final_visit = meta_fn.get("visit_num", "")
 
     return {
+        "parser_version": PARSER_VERSION,
         "file_path": filepath,
         "file_name": filename,
         "file_size": os.path.getsize(filepath),
@@ -414,13 +475,17 @@ def parse_xlsx(filepath):
         "complaint": complaint,
         "complaint_comment": complaint_comment,
         "items": rows_data,
+        "pecas_items": pecas_items,
+        "servicos_items": servicos_items,
+        "total_pecas": total_pecas,
+        "total_servicos": total_servicos,
         "subtotal": subtotal,
         "discount": discount,
         "total": total
     }
 
 def parse_secondary_xlsx_sheet(ws, sheet_name):
-    max_r = min(ws.max_row, 80)
+    max_r = min(ws.max_row, 200)
     max_c = min(ws.max_column, 15)
     pecas_row_idx = -1
     servico_row_idx = -1
@@ -428,6 +493,8 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
     subtotal = ""
     discount = ""
     total = ""
+    total_pecas = ""
+    total_servicos = ""
     title_notes = []
 
     for r in range(1, max_r + 1):
@@ -436,9 +503,9 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
             if not val:
                 continue
             val_clean = remove_accents(val).lower()
-            if val_clean in ("pecas", "peças") and pecas_row_idx == -1 and c <= 3:
+            if is_pecas_header(val_clean) and pecas_row_idx == -1 and c <= 3:
                 pecas_row_idx = r
-            elif val_clean in ("servico", "serviço", "servicos", "serviços") and servico_row_idx == -1 and c <= 3:
+            elif is_servico_header(val_clean) and servico_row_idx == -1 and c <= 3:
                 servico_row_idx = r
             elif "subtotal:" in val_clean and totais_row_idx == -1:
                 totais_row_idx = r
@@ -463,17 +530,18 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
                             discount = format_currency_val(v)
                             break
 
-    if pecas_row_idx != -1:
-        for r in range(1, pecas_row_idx):
+    first_sec_row = pecas_row_idx if pecas_row_idx != -1 else servico_row_idx
+    if first_sec_row != -1:
+        for r in range(1, first_sec_row):
             for c in range(1, max_c + 1):
                 v = str(ws.cell(r, c).value or "").strip()
                 if v and remove_accents(v).lower() not in ("pecas", "quant.", "valor uni.", "valor tot."):
                     title_notes.append(v)
 
         items = []
-        current_section = "Peças"
+        current_section = "Peças" if pecas_row_idx != -1 else "Serviço"
         end_r = totais_row_idx if totais_row_idx != -1 else max_r
-        for r in range(pecas_row_idx + 1, end_r + 1):
+        for r in range(first_sec_row + 1, end_r + 1):
             if r == servico_row_idx:
                 current_section = "Serviço"
                 continue
@@ -490,6 +558,7 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
             q_val = ""
             u_val = ""
             t_val = ""
+            t_raw = 0.0
 
             for c in range(1, max_c + 1):
                 cell = ws.cell(r, c)
@@ -503,9 +572,14 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
                 elif c == 8 and cell.value is not None:
                     u_val = format_currency_val(cell.value)
                 elif c == 9 and cell.value is not None:
+                    t_raw = parse_currency_float(cell.value)
                     t_val = format_currency_val(cell.value)
 
             if not desc_val and not row_comment:
+                if servico_row_idx != -1 and r == servico_row_idx - 1 and t_raw > 0 and not total_pecas:
+                    total_pecas = t_val
+                elif totais_row_idx != -1 and r in (totais_row_idx - 1, totais_row_idx - 2) and current_section == "Serviço" and t_raw > 0 and not total_servicos:
+                    total_servicos = t_val
                 continue
             if desc_val.lower() in ("quant.", "valor uni.", "valor tot.", "subtotal:", "total:", "desconto:"):
                 continue
@@ -525,10 +599,25 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
         if not items and not title_notes and subtotal in ("", "R$ 0,00") and total in ("", "R$ 0,00"):
             return None
 
+        pecas_items = [i for i in items if i.get("section") != "Serviço"]
+        servicos_items = [i for i in items if i.get("section") == "Serviço"]
+        if not total_pecas:
+            s_p = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
+            if s_p > 0:
+                total_pecas = format_currency_val(s_p)
+        if not total_servicos:
+            s_s = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
+            if s_s > 0:
+                total_servicos = format_currency_val(s_s)
+
         return {
             "sheet_name": sheet_name,
             "title": " • ".join(title_notes),
             "items": items,
+            "pecas_items": pecas_items,
+            "servicos_items": servicos_items,
+            "total_pecas": total_pecas,
+            "total_servicos": total_servicos,
             "grid_rows": [],
             "subtotal": subtotal if subtotal != "R$ 0,00" else "",
             "discount": discount if discount != "R$ 0,00" else "",
@@ -558,6 +647,10 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
             "sheet_name": sheet_name,
             "title": "",
             "items": [],
+            "pecas_items": [],
+            "servicos_items": [],
+            "total_pecas": "",
+            "total_servicos": "",
             "grid_rows": grid_rows,
             "subtotal": "",
             "discount": "",
@@ -565,7 +658,7 @@ def parse_secondary_xlsx_sheet(ws, sheet_name):
         }
 
 def parse_secondary_xls_sheet(wb, ws, sheet_name):
-    nrows = min(ws.nrows, 80)
+    nrows = min(ws.nrows, 200)
     ncols = min(ws.ncols, 15)
     pecas_row_idx = -1
     servico_row_idx = -1
@@ -573,6 +666,8 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
     subtotal = ""
     discount = ""
     total = ""
+    total_pecas = ""
+    total_servicos = ""
     title_notes = []
 
     for r in range(nrows):
@@ -581,9 +676,9 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
             if not val:
                 continue
             val_clean = remove_accents(val).lower()
-            if val_clean in ("pecas", "peças") and pecas_row_idx == -1 and c <= 2:
+            if is_pecas_header(val_clean) and pecas_row_idx == -1 and c <= 2:
                 pecas_row_idx = r
-            elif val_clean in ("servico", "serviço", "servicos", "serviços") and servico_row_idx == -1 and c <= 2:
+            elif is_servico_header(val_clean) and servico_row_idx == -1 and c <= 2:
                 servico_row_idx = r
             elif "subtotal:" in val_clean and totais_row_idx == -1:
                 totais_row_idx = r
@@ -608,17 +703,18 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
                             discount = format_currency_val(v)
                             break
 
-    if pecas_row_idx != -1:
-        for r in range(0, pecas_row_idx):
+    first_sec_row = pecas_row_idx if pecas_row_idx != -1 else servico_row_idx
+    if first_sec_row != -1:
+        for r in range(0, first_sec_row):
             for c in range(ncols):
                 v = str(ws.cell_value(r, c) or "").strip()
                 if v and remove_accents(v).lower() not in ("pecas", "quant.", "valor uni.", "valor tot."):
                     title_notes.append(v)
 
         items = []
-        current_section = "Peças"
+        current_section = "Peças" if pecas_row_idx != -1 else "Serviço"
         end_r = totais_row_idx if totais_row_idx != -1 else nrows
-        for r in range(pecas_row_idx + 1, end_r):
+        for r in range(first_sec_row + 1, end_r):
             if r == servico_row_idx:
                 current_section = "Serviço"
                 continue
@@ -636,6 +732,7 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
             q_val = ""
             u_val = ""
             t_val = ""
+            t_raw = 0.0
 
             for c in range(ncols):
                 c_color = get_xls_color(wb, ws, r, c)
@@ -649,9 +746,14 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
                 elif c == 7 and ws.cell_value(r, c) != "":
                     u_val = format_currency_val(ws.cell_value(r, c))
                 elif c == 8 and ws.cell_value(r, c) != "":
+                    t_raw = parse_currency_float(ws.cell_value(r, c))
                     t_val = format_currency_val(ws.cell_value(r, c))
 
             if not desc_val and not row_comment:
+                if servico_row_idx != -1 and r == servico_row_idx - 1 and t_raw > 0 and not total_pecas:
+                    total_pecas = t_val
+                elif totais_row_idx != -1 and r in (totais_row_idx - 1, totais_row_idx - 2) and current_section == "Serviço" and t_raw > 0 and not total_servicos:
+                    total_servicos = t_val
                 continue
             if desc_val.lower() in ("quant.", "valor uni.", "valor tot.", "subtotal:", "total:", "desconto:"):
                 continue
@@ -671,10 +773,25 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
         if not items and not title_notes and subtotal in ("", "R$ 0,00") and total in ("", "R$ 0,00"):
             return None
 
+        pecas_items = [i for i in items if i.get("section") != "Serviço"]
+        servicos_items = [i for i in items if i.get("section") == "Serviço"]
+        if not total_pecas:
+            s_p = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
+            if s_p > 0:
+                total_pecas = format_currency_val(s_p)
+        if not total_servicos:
+            s_s = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
+            if s_s > 0:
+                total_servicos = format_currency_val(s_s)
+
         return {
             "sheet_name": sheet_name,
             "title": " • ".join(title_notes),
             "items": items,
+            "pecas_items": pecas_items,
+            "servicos_items": servicos_items,
+            "total_pecas": total_pecas,
+            "total_servicos": total_servicos,
             "grid_rows": [],
             "subtotal": subtotal if subtotal != "R$ 0,00" else "",
             "discount": discount if discount != "R$ 0,00" else "",
@@ -704,6 +821,10 @@ def parse_secondary_xls_sheet(wb, ws, sheet_name):
             "sheet_name": sheet_name,
             "title": "",
             "items": [],
+            "pecas_items": [],
+            "servicos_items": [],
+            "total_pecas": "",
+            "total_servicos": "",
             "grid_rows": grid_rows,
             "subtotal": "",
             "discount": "",
@@ -742,6 +863,8 @@ def parse_xls(filepath):
     subtotal = ""
     discount = ""
     total = ""
+    total_pecas = ""
+    total_servicos = ""
     
     rows_data = []
     
@@ -749,7 +872,7 @@ def parse_xls(filepath):
     servico_row_idx = -1
     totais_row_idx = -1
     
-    nrows = min(ws.nrows, 80)
+    nrows = min(ws.nrows, 200)
     ncols = min(ws.ncols, 15)
     
     for r in range(nrows):
@@ -810,16 +933,23 @@ def parse_xls(filepath):
                     if c + offset < ncols and ws.cell_value(r, c + offset) != '':
                         odometer = format_number_val(ws.cell_value(r, c + offset))
                         break
-            elif val_clean in ('pecas', 'peças') and pecas_row_idx == -1 and r > 18:
+            elif is_pecas_header(val_clean) and pecas_row_idx == -1 and r > 18:
                 pecas_row_idx = r
-            elif val_clean in ('servico', 'serviço', 'servicos', 'serviços') and servico_row_idx == -1 and r > 18:
+            elif is_servico_header(val_clean) and servico_row_idx == -1 and r > 18:
                 servico_row_idx = r
             elif 'subtotal:' in val_clean and totais_row_idx == -1 and r > 24:
                 totais_row_idx = r
                 for offset in range(1, 4):
                     if c + offset < ncols and ws.cell_value(r, c + offset) != '':
-                        subtotal = format_currency_val(ws.cell_value(r, c + offset))
-                        break
+                        v = ws.cell_value(r, c + offset)
+                        if not subtotal:
+                            subtotal = format_currency_val(v)
+                        elif c + offset == 8 and parse_currency_float(v) > 0:
+                            total_servicos = format_currency_val(v)
+                if not total_servicos and ncols >= 9:
+                    v9 = ws.cell_value(r, 8)
+                    if v9 != '' and parse_currency_float(v9) > 0 and c + 1 != 8:
+                        total_servicos = format_currency_val(v9)
             elif val_clean == 'total:' and r > 24:
                 for offset in range(1, 4):
                     if c + offset < ncols and ws.cell_value(r, c + offset) != '':
@@ -830,6 +960,9 @@ def parse_xls(filepath):
                     if c + offset < ncols and ws.cell_value(r, c + offset) != '':
                         discount = format_currency_val(ws.cell_value(r, c + offset))
                         break
+
+    if servico_row_idx == -1 and pecas_row_idx == 27 and totais_row_idx == 50:
+        servico_row_idx = 44
 
     for r in range(19, min(pecas_row_idx if pecas_row_idx != -1 else 28, nrows)):
         val = str(ws.cell_value(r, 0) or '').strip()
@@ -871,6 +1004,7 @@ def parse_xls(filepath):
         q_val = ""
         u_val = ""
         t_val = ""
+        t_raw = 0.0
         
         for c in range(ncols):
             c_color = get_xls_color(wb, ws, r, c)
@@ -886,11 +1020,17 @@ def parse_xls(filepath):
             elif c == 7 and ws.cell_value(r, c) != '':
                 u_val = format_currency_val(ws.cell_value(r, c))
             elif c == 8 and ws.cell_value(r, c) != '':
+                t_raw = parse_currency_float(ws.cell_value(r, c))
                 t_val = format_currency_val(ws.cell_value(r, c))
 
-        if not desc_val and not row_comment and not row_color:
+        if not desc_val and not row_comment:
+            if servico_row_idx != -1 and r == servico_row_idx - 1 and t_raw > 0 and not total_pecas:
+                total_pecas = t_val
+            elif totais_row_idx != -1 and r in (totais_row_idx - 1, totais_row_idx - 2) and current_section == "Serviço" and t_raw > 0 and not total_servicos:
+                total_servicos = t_val
             continue
-        if not desc_val and t_val in ("R$ 0,00", "0", "0.0", "") and not row_comment and not row_color:
+
+        if desc_val.lower() in ("quant.", "valor uni.", "valor tot.", "subtotal:", "total:", "desconto:"):
             continue
 
         rows_data.append({
@@ -904,6 +1044,18 @@ def parse_xls(filepath):
             "text_color": get_contrast_text_color(row_color),
             "comment": row_comment
         })
+
+    pecas_items = [i for i in rows_data if i.get("section") != "Serviço"]
+    servicos_items = [i for i in rows_data if i.get("section") == "Serviço"]
+
+    if not total_pecas:
+        s_pecas = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
+        if s_pecas > 0:
+            total_pecas = format_currency_val(s_pecas)
+    if not total_servicos:
+        s_serv = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
+        if s_serv > 0:
+            total_servicos = format_currency_val(s_serv)
 
     extra_sheets_data = []
     for sec_idx in range(1, len(all_sheet_names)):
@@ -922,6 +1074,7 @@ def parse_xls(filepath):
     final_visit = meta_fn.get("visit_num", "")
 
     return {
+        "parser_version": PARSER_VERSION,
         "file_path": filepath,
         "file_name": filename,
         "file_size": os.path.getsize(filepath),
@@ -949,8 +1102,13 @@ def parse_xls(filepath):
         "complaint": complaint,
         "complaint_comment": complaint_comment,
         "items": rows_data,
+        "pecas_items": pecas_items,
+        "servicos_items": servicos_items,
+        "total_pecas": total_pecas,
+        "total_servicos": total_servicos,
         "subtotal": subtotal,
         "discount": discount,
         "total": total
     }
+
 

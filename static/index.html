@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MecatroniCar - Histórico de Veículos e Serviços</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.0.7">
 </head>
 <body>
     <!-- Top Header -->
@@ -16,7 +16,7 @@
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h1 class="logo-title">MecatroniCar</h1>
-                        <span id="app-version-badge" class="version-badge">v1.0.1</span>
+                        <span id="app-version-badge" class="version-badge">v1.0.7</span>
                     </div>
                     <p class="logo-sub">Histórico de Visitas, Serviços e Peças</p>
                 </div>
@@ -166,6 +166,9 @@
             <div class="timeline-container">
                 <div class="timeline-header">
                     <h3>Linha do Tempo das Visitas na Oficina (Planilha Principal)</h3>
+                    <button id="btn-toggle-all-services" class="btn btn-services-global" title="Mostrar ou ocultar os serviços feitos em todas as planilhas deste veículo">
+                        🛠️ Mostrar Serviços Feitos em Todas as Planilhas
+                    </button>
                 </div>
 
                 <div id="visits-list-container" class="visits-list">
@@ -270,6 +273,6 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast" style="display: none;"></div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=1.0.7"></script>
 </body>
 </html>

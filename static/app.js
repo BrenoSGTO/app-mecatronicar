@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const vehicleHistorySection = document.getElementById('vehicle-history-section');
     const visitsListContainer = document.getElementById('visits-list-container');
+    const btnToggleAllServices = document.getElementById('btn-toggle-all-services');
+    let showAllServicesGlobal = false;
     
     // Vehicle banner elements
     const detailPlate = document.getElementById('detail-plate');
@@ -162,6 +164,32 @@ document.addEventListener('DOMContentLoaded', () => {
             filterVehicleItems('');
             vehicleItemSearchInput.focus();
         });
+    }
+
+    if (btnToggleAllServices) {
+        btnToggleAllServices.addEventListener('click', () => {
+            showAllServicesGlobal = !showAllServicesGlobal;
+            updateGlobalServicesButtonUI();
+            const allCards = document.querySelectorAll('.visit-card, .extra-sheet-panel');
+            allCards.forEach(container => {
+                if (typeof container._setServicesVisible === 'function') {
+                    container._setServicesVisible(showAllServicesGlobal);
+                }
+            });
+            showToast(
+                showAllServicesGlobal
+                    ? '🛠️ Exibindo serviços executados em todas as planilhas'
+                    : '🔩 Exibindo apenas peças (clique em "Ver Serviços Executados" na planilha desejada)'
+            );
+        });
+    }
+
+    function updateGlobalServicesButtonUI() {
+        if (!btnToggleAllServices) return;
+        btnToggleAllServices.classList.toggle('active', showAllServicesGlobal);
+        btnToggleAllServices.innerHTML = showAllServicesGlobal
+            ? '🛠️ Ocultar Serviços Feitos em Todas as Planilhas'
+            : '🛠️ Mostrar Serviços Feitos em Todas as Planilhas';
     }
 
     // Print full (with prices)
@@ -604,6 +632,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.querySelectorAll('tr.item-search-match').forEach(tr => {
                     tr.classList.remove('item-search-match');
                 });
+                if (typeof card._setServicesVisible === 'function') {
+                    card._setServicesVisible(showAllServicesGlobal);
+                }
             });
             return;
         }
@@ -616,6 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!visit) return;
 
             let cardHasMatch = false;
+            let serviceHasMatch = false;
             const d = visit.details || {};
             const complaintStr = `${visit.complaint || ''} ${d.complaint_comment || ''}`;
 
@@ -642,10 +674,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (matchesSearchTokens(`${desc} ${comment}`, q)) {
                     tr.classList.add('item-search-match');
                     cardHasMatch = true;
+                    if (sec === 'Serviço') {
+                        serviceHasMatch = true;
+                    }
                     matchedOccurrences.push({
                         visit,
                         cardElement: card,
                         rowElement: tr,
+                        isServiceRow: sec === 'Serviço',
                         section: sec,
                         description: desc,
                         quantity: qty,
@@ -655,6 +691,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     tr.classList.remove('item-search-match');
                 }
             });
+
+            if (serviceHasMatch && typeof card._setServicesVisible === 'function') {
+                card._setServicesVisible(true);
+            }
 
             const extraSheets = d.extra_sheets_data || [];
             extraSheets.forEach(secSheet => {
@@ -711,6 +751,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
 
                     row.addEventListener('click', () => {
+                        if (occ.isServiceRow && occ.cardElement && typeof occ.cardElement._setServicesVisible === 'function') {
+                            occ.cardElement._setServicesVisible(true);
+                        }
                         const target = occ.rowElement || occ.cardElement;
                         if (target) {
                             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -725,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderVisits(visits) {
         visitsListContainer.innerHTML = '';
+        updateGlobalServicesButtonUI();
 
         // Chronological order: newest visits first
         const sortedVisits = [...visits].sort((a, b) => {
@@ -748,14 +792,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function buildItemsTableElement(items, isMainSheet = false) {
+    function buildItemsTableElement(items, isMainSheet = false, tableMode = 'pecas') {
         const table = document.createElement('table');
         table.className = isMainSheet ? 'items-table main-sheet-table' : 'items-table';
+        const descHeader = tableMode === 'servicos'
+            ? 'Descrição do Serviço Executado / Mão de Obra'
+            : 'Descrição da Peça / Anotação da Planilha';
         table.innerHTML = `
             <thead>
                 <tr>
                     <th style="width: 90px;">Tipo</th>
-                    <th>Descrição do Item / Serviço / Anotação</th>
+                    <th>${descHeader}</th>
                     <th style="width: 70px; text-align: right;">Qtd</th>
                     <th class="col-price" style="width: 110px; text-align: right;">Valor Unit.</th>
                     <th class="col-price" style="width: 110px; text-align: right;">Valor Total</th>
@@ -792,8 +839,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
+            const sectionBadgeClass = it.section === 'Serviço' ? 'td-section td-section-service' : 'td-section';
+
             tr.innerHTML = `
-                <td class="td-section" style="${it.color ? 'color: inherit; opacity: 0.85;' : ''}">${it.section || 'Item'}</td>
+                <td class="${sectionBadgeClass}" style="${it.color ? 'color: inherit; opacity: 0.85;' : ''}">${it.section || 'Item'}</td>
                 <td ${noteAttr}>
                     ${escapeHtml(it.description || '')}
                     ${noteBadgeHtml}
@@ -821,9 +870,47 @@ document.addEventListener('DOMContentLoaded', () => {
         return table;
     }
 
+    function buildServicesPanelAndToggle(servicosItems, totalServicos, isMainSheet, initiallyOpen) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'services-section-panel';
+        wrapper.style.display = initiallyOpen ? 'block' : 'none';
+
+        const srvHeader = document.createElement('div');
+        srvHeader.className = 'services-panel-header';
+        srvHeader.innerHTML = `
+            <div class="services-panel-title">
+                <span>🛠️ Serviços Executados / Mão de Obra nesta Planilha</span>
+                <span class="services-count-pill">${servicosItems.length} ${servicosItems.length === 1 ? 'serviço' : 'serviços'}</span>
+            </div>
+            ${totalServicos && totalServicos !== 'R$ 0,00' ? `<div class="services-subtotal col-price">Total de Serviços: <strong>${escapeHtml(totalServicos)}</strong></div>` : ''}
+        `;
+        wrapper.appendChild(srvHeader);
+
+        const srvBody = document.createElement('div');
+        srvBody.className = 'items-table-container';
+        if (servicosItems.length === 0) {
+            srvBody.innerHTML = `
+                <div class="empty-services-msg">
+                    Nenhum serviço foi preenchido separadamente no campo "Serviço" desta planilha.
+                </div>
+            `;
+        } else {
+            srvBody.appendChild(buildItemsTableElement(servicosItems, isMainSheet, 'servicos'));
+        }
+        wrapper.appendChild(srvBody);
+
+        return wrapper;
+    }
+
     function createExtraSheetPanel(sheetData) {
         const panel = document.createElement('div');
         panel.className = 'extra-sheet-panel';
+
+        const allItems = sheetData.items || [];
+        const pecasItems = sheetData.pecas_items || allItems.filter(i => i.section !== 'Serviço');
+        const servicosItems = sheetData.servicos_items || allItems.filter(i => i.section === 'Serviço');
+        const totalPecas = sheetData.total_pecas || '';
+        const totalServicos = sheetData.total_servicos || '';
 
         const header = document.createElement('div');
         header.className = 'extra-sheet-panel-header';
@@ -833,18 +920,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${sheetData.title ? `<span style="margin-left: 10px; font-weight: 500; color: #e2e8f0;">— ${escapeHtml(sheetData.title)}</span>` : ''}
             </div>
             <div class="totals-group" style="margin-left: auto;">
-                ${sheetData.subtotal ? `<span style="font-size: 12px; color: #cbd5e1;">SubTotal: <strong>${escapeHtml(sheetData.subtotal)}</strong></span>` : ''}
-                ${sheetData.discount ? `<span style="font-size: 12px; color: #cbd5e1;">Desconto: <strong>${escapeHtml(sheetData.discount)}</strong></span>` : ''}
-                ${sheetData.total ? `<span style="font-size: 13px; background: var(--primary); color: #111827; padding: 2px 8px; border-radius: 4px; font-weight: 800;">Total: ${escapeHtml(sheetData.total)}</span>` : ''}
+                ${totalPecas ? `<span class="col-price" style="font-size: 12px; color: #cbd5e1;">Peças: <strong>${escapeHtml(totalPecas)}</strong></span>` : ''}
+                ${totalServicos ? `<span class="col-price" style="font-size: 12px; color: #fde047;">Serviços: <strong>${escapeHtml(totalServicos)}</strong></span>` : ''}
+                ${sheetData.subtotal ? `<span class="col-price" style="font-size: 12px; color: #cbd5e1;">SubTotal: <strong>${escapeHtml(sheetData.subtotal)}</strong></span>` : ''}
+                ${sheetData.discount ? `<span class="col-price" style="font-size: 12px; color: #cbd5e1;">Desconto: <strong>${escapeHtml(sheetData.discount)}</strong></span>` : ''}
+                ${sheetData.total ? `<span class="col-price" style="font-size: 13px; background: var(--primary); color: #111827; padding: 2px 8px; border-radius: 4px; font-weight: 800;">Total: ${escapeHtml(sheetData.total)}</span>` : ''}
             </div>
         `;
         panel.appendChild(header);
 
-        if (sheetData.items && sheetData.items.length > 0) {
+        if (allItems.length > 0) {
+            const sectionBar = document.createElement('div');
+            sectionBar.className = 'sheet-section-bar';
+            sectionBar.innerHTML = `
+                <div class="sheet-section-bar-left">
+                    <span class="sheet-section-label">🔩 Peças da Aba (${pecasItems.length})</span>
+                    ${totalPecas ? `<span class="sheet-section-subtotal col-price">Subtotal Peças: <strong>${escapeHtml(totalPecas)}</strong></span>` : ''}
+                </div>
+                <div class="sheet-section-bar-right">
+                    <button type="button" class="btn-toggle-services">
+                        🛠️ Ver Serviços Executados (${servicosItems.length})
+                    </button>
+                </div>
+            `;
+            panel.appendChild(sectionBar);
+
             const tblWrap = document.createElement('div');
             tblWrap.className = 'items-table-container';
-            tblWrap.appendChild(buildItemsTableElement(sheetData.items, false));
+            if (pecasItems.length > 0) {
+                tblWrap.appendChild(buildItemsTableElement(pecasItems, false, 'pecas'));
+            } else {
+                tblWrap.innerHTML = `
+                    <div style="padding: 14px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                        Nenhuma peça listada nesta aba.
+                    </div>
+                `;
+            }
             panel.appendChild(tblWrap);
+
+            const autoOpen = showAllServicesGlobal || (pecasItems.length === 0 && servicosItems.length > 0);
+            const srvPanel = buildServicesPanelAndToggle(servicosItems, totalServicos, false, autoOpen);
+            panel.appendChild(srvPanel);
+
+            const toggleBtn = sectionBar.querySelector('.btn-toggle-services');
+            const setServicesVisible = (vis) => {
+                srvPanel.style.display = vis ? 'block' : 'none';
+                toggleBtn.classList.toggle('active', vis);
+                toggleBtn.innerHTML = vis
+                    ? `🛠️ Ocultar Serviços Executados (${servicosItems.length})`
+                    : `🛠️ Ver Serviços Executados (${servicosItems.length})`;
+            };
+            setServicesVisible(autoOpen);
+            toggleBtn.addEventListener('click', () => {
+                const currentlyHidden = srvPanel.style.display === 'none';
+                setServicesVisible(currentlyHidden);
+            });
+            panel._setServicesVisible = setServicesVisible;
         } else if (sheetData.grid_rows && sheetData.grid_rows.length > 0) {
             const tblWrap = document.createElement('div');
             tblWrap.className = 'items-table-container';
@@ -871,6 +1002,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function createVisitCard(visit, index) {
         const d = visit.details || {};
         const items = d.items || [];
+        const pecasItems = d.pecas_items || items.filter(i => i.section !== 'Serviço');
+        const servicosItems = d.servicos_items || items.filter(i => i.section === 'Serviço');
+        const totalPecas = d.total_pecas || '';
+        const totalServicos = d.total_servicos || '';
         
         const card = document.createElement('div');
         card.className = 'visit-card';
@@ -891,6 +1026,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="visit-meta-right">
                 <span class="visit-filename" title="${escapeHtml(visit.file_name)}">📄 ${escapeHtml(visit.file_name)}</span>
+                <button type="button" class="btn-toggle-services btn-sm" title="Mostrar ou ocultar os serviços executados nesta planilha">
+                    🛠️ Ver Serviços Executados (${servicosItems.length})
+                </button>
                 <button class="btn btn-excel btn-sm" title="Abrir planilha original no Microsoft Excel">
                     📂 Abrir no Excel
                 </button>
@@ -935,20 +1073,74 @@ document.addEventListener('DOMContentLoaded', () => {
             card.appendChild(compBox);
         }
 
+        // Section bar above Peças with per-spreadsheet button to toggle Serviços Executados
+        const sectionBar = document.createElement('div');
+        sectionBar.className = 'sheet-section-bar';
+        sectionBar.innerHTML = `
+            <div class="sheet-section-bar-left">
+                <span class="sheet-section-label">🔩 Peças da Planilha (${pecasItems.length})</span>
+                ${totalPecas && totalPecas !== 'R$ 0,00' ? `<span class="sheet-section-subtotal col-price">Total de Peças: <strong>${escapeHtml(totalPecas)}</strong></span>` : ''}
+            </div>
+            <div class="sheet-section-bar-right">
+                <button type="button" class="btn-toggle-services">
+                    🛠️ Ver Serviços Executados (${servicosItems.length})${totalServicos && totalServicos !== 'R$ 0,00' ? ` • ${escapeHtml(totalServicos)}` : ''}
+                </button>
+            </div>
+        `;
+        card.appendChild(sectionBar);
+
         const tableContainer = document.createElement('div');
         tableContainer.className = 'items-table-container';
 
-        if (items.length === 0) {
+        if (pecasItems.length === 0) {
             tableContainer.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
-                    Nenhum item discriminado no corpo padrão desta planilha.
+                <div style="padding: 18px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                    Nenhuma peça discriminada na seção de Peças desta planilha.
                 </div>
             `;
         } else {
-            tableContainer.appendChild(buildItemsTableElement(items, true));
+            tableContainer.appendChild(buildItemsTableElement(pecasItems, true, 'pecas'));
         }
 
         card.appendChild(tableContainer);
+
+        const autoOpenServices = showAllServicesGlobal || (pecasItems.length === 0 && servicosItems.length > 0);
+        const servicesPanel = buildServicesPanelAndToggle(servicosItems, totalServicos, true, autoOpenServices);
+        card.appendChild(servicesPanel);
+
+        const headerToggleBtn = header.querySelector('.btn-toggle-services');
+        const barToggleBtn = sectionBar.querySelector('.btn-toggle-services');
+        const priceSuffix = totalServicos && totalServicos !== 'R$ 0,00' ? ` • ${escapeHtml(totalServicos)}` : '';
+
+        const setServicesVisible = (vis) => {
+            servicesPanel.style.display = vis ? 'block' : 'none';
+            [headerToggleBtn, barToggleBtn].forEach(b => {
+                if (!b) return;
+                b.classList.toggle('active', vis);
+            });
+            if (headerToggleBtn) {
+                headerToggleBtn.innerHTML = vis
+                    ? `🛠️ Ocultar Serviços (${servicosItems.length})`
+                    : `🛠️ Ver Serviços Executados (${servicosItems.length})`;
+            }
+            if (barToggleBtn) {
+                barToggleBtn.innerHTML = vis
+                    ? `🛠️ Ocultar Serviços Executados (${servicosItems.length})${priceSuffix}`
+                    : `🛠️ Ver Serviços Executados (${servicosItems.length})${priceSuffix}`;
+            }
+        };
+
+        setServicesVisible(autoOpenServices);
+
+        [headerToggleBtn, barToggleBtn].forEach(b => {
+            if (!b) return;
+            b.addEventListener('click', () => {
+                const currentlyHidden = servicesPanel.style.display === 'none';
+                setServicesVisible(currentlyHidden);
+            });
+        });
+
+        card._setServicesVisible = setServicesVisible;
 
         const footer = document.createElement('div');
         footer.className = 'visit-footer';
@@ -998,6 +1190,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalsDiv = document.createElement('div');
         totalsDiv.className = 'totals-group';
         totalsDiv.innerHTML = `
+            ${totalPecas && totalPecas !== 'R$ 0,00' ? `<span class="total-item">Peças: <strong>${totalPecas}</strong></span>` : ''}
+            ${totalServicos && totalServicos !== 'R$ 0,00' ? `<span class="total-item">Serviços: <strong>${totalServicos}</strong></span>` : ''}
             ${subtotal && subtotal !== 'R$ 0,00' ? `<span class="total-item">SubTotal: <strong>${subtotal}</strong></span>` : ''}
             ${discount ? `<span class="total-item">Desconto: <strong>${discount}</strong></span>` : ''}
             ${total && total !== 'R$ 0,00' ? `<span class="total-item total-final">Total da Visita: ${total}</span>` : ''}

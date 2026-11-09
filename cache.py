@@ -4,7 +4,7 @@ import sqlite3
 import json
 import re
 import datetime
-from parser import parse_file, parse_filename, remove_accents, clean_plate, format_plate_display
+from parser import parse_file, parse_filename, remove_accents, clean_plate, format_plate_display, PARSER_VERSION
 
 DB_FILE = "oficina_cache.db"
 FAST_INDEX_THRESHOLD = 15
@@ -84,7 +84,7 @@ def _ensure_row_parsed(conn, cur, d):
     if d.get("data_json"):
         try:
             loaded = json.loads(d["data_json"])
-            if "extra_sheets_data" in loaded:
+            if loaded.get("parser_version") == PARSER_VERSION and "servicos_items" in loaded:
                 d["details"] = loaded
                 return d, False
         except Exception:
@@ -176,9 +176,18 @@ def scan_and_index_folder(folder_path, db_path=None, progress_callback=None):
     indexed_count = 0
     errors = []
     
-    # Check existing mtimes in batch
-    cur.execute("SELECT file_path, file_mtime FROM files")
-    cached_mtimes = dict(cur.fetchall())
+    # Check existing mtimes and parser_version in batch
+    cur.execute("SELECT file_path, file_mtime, data_json FROM files")
+    cached_mtimes = {}
+    for row_fp, row_mt, row_dj in cur.fetchall():
+        is_current_schema = True
+        if row_dj:
+            try:
+                is_current_schema = json.loads(row_dj).get("parser_version") == PARSER_VERSION
+            except Exception:
+                is_current_schema = False
+        if is_current_schema:
+            cached_mtimes[row_fp] = row_mt
     
     to_process = []
     for fpath in all_files:

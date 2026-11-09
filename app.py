@@ -193,6 +193,38 @@ def is_port_in_use(port):
         s.settimeout(0.5)
         return s.connect_ex(("127.0.0.1", port)) == 0
 
+def get_running_server_version(port):
+    import urllib.request
+    import json
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/config", timeout=1.5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data.get("version")
+    except Exception:
+        return None
+
+def kill_process_on_port(port):
+    if os.name != "nt":
+        return
+    try:
+        out = subprocess.check_output(
+            f'netstat -ano | findstr :{port}',
+            shell=True
+        ).decode("cp1252", errors="ignore")
+        pids = set()
+        for line in out.splitlines():
+            parts = line.strip().split()
+            if len(parts) >= 5 and "LISTENING" in line.upper():
+                pid = parts[-1]
+                if pid.isdigit() and int(pid) != os.getpid():
+                    pids.add(int(pid))
+        for pid in pids:
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+        if pids:
+            time.sleep(0.8)
+    except Exception:
+        pass
+
 def main():
     set_process_app_id()
     print("=" * 60)
@@ -208,12 +240,18 @@ def main():
     except Exception:
         pass
 
-    # If server is already running in background, just open the UI window and exit
+    # If server is already running in background, check if its version matches
     if is_port_in_use(PORT):
-        print(f"Servidor já em execução em {URL}. Abrindo janela...")
-        launch_ui()
-        time.sleep(4.0)
-        return
+        import updater
+        running_ver = get_running_server_version(PORT)
+        if running_ver == updater.CURRENT_VERSION:
+            print(f"Servidor v{running_ver} já em execução em {URL}. Abrindo janela...")
+            launch_ui()
+            time.sleep(4.0)
+            return
+        else:
+            print(f"Reiniciando servidor antigo (v{running_ver}) para nova versão (v{updater.CURRENT_VERSION})...")
+            kill_process_on_port(PORT)
 
     # Check config
     cfg = config.load_config(BASE_DIR)
