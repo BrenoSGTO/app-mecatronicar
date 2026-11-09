@@ -371,6 +371,15 @@ def parse_xlsx(filepath):
             "comment": row_comment
         })
 
+    extra_sheets_data = []
+    for sec_name in all_sheet_names[1:]:
+        try:
+            sec_parsed = parse_secondary_xlsx_sheet(wb[sec_name], sec_name)
+            if sec_parsed:
+                extra_sheets_data.append(sec_parsed)
+        except Exception:
+            pass
+
     final_plate = car_plate or meta_fn.get("plate", "")
     final_owner = client_name or meta_fn.get("owner", "")
     final_model = car_model or meta_fn.get("model", "")
@@ -385,6 +394,7 @@ def parse_xlsx(filepath):
         "format": "xlsx",
         "sheets": all_sheet_names,
         "active_sheet": sheet_name,
+        "extra_sheets_data": extra_sheets_data,
         "plate": final_plate,
         "plate_display": format_plate_display(final_plate),
         "plate_comment": plate_comment,
@@ -408,6 +418,297 @@ def parse_xlsx(filepath):
         "discount": discount,
         "total": total
     }
+
+def parse_secondary_xlsx_sheet(ws, sheet_name):
+    max_r = min(ws.max_row, 80)
+    max_c = min(ws.max_column, 15)
+    pecas_row_idx = -1
+    servico_row_idx = -1
+    totais_row_idx = -1
+    subtotal = ""
+    discount = ""
+    total = ""
+    title_notes = []
+
+    for r in range(1, max_r + 1):
+        for c in range(1, max_c + 1):
+            val = str(ws.cell(r, c).value or "").strip()
+            if not val:
+                continue
+            val_clean = remove_accents(val).lower()
+            if val_clean in ("pecas", "peças") and pecas_row_idx == -1 and c <= 3:
+                pecas_row_idx = r
+            elif val_clean in ("servico", "serviço", "servicos", "serviços") and servico_row_idx == -1 and c <= 3:
+                servico_row_idx = r
+            elif "subtotal:" in val_clean and totais_row_idx == -1:
+                totais_row_idx = r
+                for offset in range(1, 4):
+                    if c + offset <= max_c:
+                        v = ws.cell(r, c + offset).value
+                        if v is not None and str(v).strip() not in ("", "0", "0.0"):
+                            subtotal = format_currency_val(v)
+                            break
+            elif val_clean == "total:":
+                for offset in range(1, 4):
+                    if c + offset <= max_c:
+                        v = ws.cell(r, c + offset).value
+                        if v is not None and str(v).strip() not in ("", "0", "0.0"):
+                            total = format_currency_val(v)
+                            break
+            elif val_clean == "desconto:":
+                for offset in range(1, 4):
+                    if c + offset <= max_c:
+                        v = ws.cell(r, c + offset).value
+                        if v is not None and str(v).strip() not in ("", "0", "0.0"):
+                            discount = format_currency_val(v)
+                            break
+
+    if pecas_row_idx != -1:
+        for r in range(1, pecas_row_idx):
+            for c in range(1, max_c + 1):
+                v = str(ws.cell(r, c).value or "").strip()
+                if v and remove_accents(v).lower() not in ("pecas", "quant.", "valor uni.", "valor tot."):
+                    title_notes.append(v)
+
+        items = []
+        current_section = "Peças"
+        end_r = totais_row_idx if totais_row_idx != -1 else max_r
+        for r in range(pecas_row_idx + 1, end_r + 1):
+            if r == servico_row_idx:
+                current_section = "Serviço"
+                continue
+            if r == totais_row_idx:
+                break
+
+            desc_cell = ws.cell(r, 1)
+            desc_val = str(desc_cell.value or "").strip()
+            if isinstance(desc_cell.value, (datetime.datetime, datetime.date)):
+                desc_val = format_date_val(desc_cell.value)
+
+            row_color = None
+            row_comment = desc_cell.comment.text.strip() if desc_cell.comment else ""
+            q_val = ""
+            u_val = ""
+            t_val = ""
+
+            for c in range(1, max_c + 1):
+                cell = ws.cell(r, c)
+                c_color = get_xlsx_color(cell)
+                if c_color and not row_color:
+                    row_color = c_color
+                if cell.comment and not row_comment:
+                    row_comment = cell.comment.text.strip()
+                if c == 7 and cell.value is not None:
+                    q_val = format_number_val(cell.value)
+                elif c == 8 and cell.value is not None:
+                    u_val = format_currency_val(cell.value)
+                elif c == 9 and cell.value is not None:
+                    t_val = format_currency_val(cell.value)
+
+            if not desc_val and not row_comment:
+                continue
+            if desc_val.lower() in ("quant.", "valor uni.", "valor tot.", "subtotal:", "total:", "desconto:"):
+                continue
+
+            items.append({
+                "section": current_section,
+                "row_index": r,
+                "description": desc_val,
+                "quantity": q_val if q_val not in ("0", "0,00") else "",
+                "unit_price": u_val if u_val not in ("R$ 0,00", "0") else "",
+                "total_price": t_val if t_val not in ("R$ 0,00", "0") else "",
+                "color": row_color,
+                "text_color": get_contrast_text_color(row_color),
+                "comment": row_comment
+            })
+
+        if not items and not title_notes and subtotal in ("", "R$ 0,00") and total in ("", "R$ 0,00"):
+            return None
+
+        return {
+            "sheet_name": sheet_name,
+            "title": " • ".join(title_notes),
+            "items": items,
+            "grid_rows": [],
+            "subtotal": subtotal if subtotal != "R$ 0,00" else "",
+            "discount": discount if discount != "R$ 0,00" else "",
+            "total": total if total != "R$ 0,00" else ""
+        }
+    else:
+        grid_rows = []
+        for r in range(1, max_r + 1):
+            row_cells = []
+            has_text = False
+            for c in range(1, max_c + 1):
+                v = ws.cell(r, c).value
+                s = str(v).strip() if v is not None else ""
+                if s and s not in ("0", "0.0"):
+                    has_text = True
+                row_cells.append(s)
+            if has_text:
+                while row_cells and not row_cells[-1]:
+                    row_cells.pop()
+                while row_cells and not row_cells[0]:
+                    row_cells.pop(0)
+                if row_cells:
+                    grid_rows.append(row_cells)
+        if not grid_rows:
+            return None
+        return {
+            "sheet_name": sheet_name,
+            "title": "",
+            "items": [],
+            "grid_rows": grid_rows,
+            "subtotal": "",
+            "discount": "",
+            "total": ""
+        }
+
+def parse_secondary_xls_sheet(wb, ws, sheet_name):
+    nrows = min(ws.nrows, 80)
+    ncols = min(ws.ncols, 15)
+    pecas_row_idx = -1
+    servico_row_idx = -1
+    totais_row_idx = -1
+    subtotal = ""
+    discount = ""
+    total = ""
+    title_notes = []
+
+    for r in range(nrows):
+        for c in range(ncols):
+            val = str(ws.cell_value(r, c) or "").strip()
+            if not val:
+                continue
+            val_clean = remove_accents(val).lower()
+            if val_clean in ("pecas", "peças") and pecas_row_idx == -1 and c <= 2:
+                pecas_row_idx = r
+            elif val_clean in ("servico", "serviço", "servicos", "serviços") and servico_row_idx == -1 and c <= 2:
+                servico_row_idx = r
+            elif "subtotal:" in val_clean and totais_row_idx == -1:
+                totais_row_idx = r
+                for offset in range(1, 4):
+                    if c + offset < ncols:
+                        v = ws.cell_value(r, c + offset)
+                        if v != "" and str(v).strip() not in ("0", "0.0"):
+                            subtotal = format_currency_val(v)
+                            break
+            elif val_clean == "total:":
+                for offset in range(1, 4):
+                    if c + offset < ncols:
+                        v = ws.cell_value(r, c + offset)
+                        if v != "" and str(v).strip() not in ("0", "0.0"):
+                            total = format_currency_val(v)
+                            break
+            elif val_clean == "desconto:":
+                for offset in range(1, 4):
+                    if c + offset < ncols:
+                        v = ws.cell_value(r, c + offset)
+                        if v != "" and str(v).strip() not in ("0", "0.0"):
+                            discount = format_currency_val(v)
+                            break
+
+    if pecas_row_idx != -1:
+        for r in range(0, pecas_row_idx):
+            for c in range(ncols):
+                v = str(ws.cell_value(r, c) or "").strip()
+                if v and remove_accents(v).lower() not in ("pecas", "quant.", "valor uni.", "valor tot."):
+                    title_notes.append(v)
+
+        items = []
+        current_section = "Peças"
+        end_r = totais_row_idx if totais_row_idx != -1 else nrows
+        for r in range(pecas_row_idx + 1, end_r):
+            if r == servico_row_idx:
+                current_section = "Serviço"
+                continue
+            if r == totais_row_idx:
+                break
+
+            desc_raw = ws.cell_value(r, 0)
+            desc_val = str(desc_raw or "").strip()
+            if ws.cell_type(r, 0) == xlrd.XL_CELL_DATE:
+                desc_val = format_date_val(desc_raw, wb.datemode)
+
+            row_color = None
+            note_0 = ws.cell_note_map.get((r, 0))
+            row_comment = note_0.text.strip() if note_0 else ""
+            q_val = ""
+            u_val = ""
+            t_val = ""
+
+            for c in range(ncols):
+                c_color = get_xls_color(wb, ws, r, c)
+                if c_color and not row_color:
+                    row_color = c_color
+                n = ws.cell_note_map.get((r, c))
+                if n and not row_comment:
+                    row_comment = n.text.strip()
+                if c == 6 and ws.cell_value(r, c) != "":
+                    q_val = format_number_val(ws.cell_value(r, c))
+                elif c == 7 and ws.cell_value(r, c) != "":
+                    u_val = format_currency_val(ws.cell_value(r, c))
+                elif c == 8 and ws.cell_value(r, c) != "":
+                    t_val = format_currency_val(ws.cell_value(r, c))
+
+            if not desc_val and not row_comment:
+                continue
+            if desc_val.lower() in ("quant.", "valor uni.", "valor tot.", "subtotal:", "total:", "desconto:"):
+                continue
+
+            items.append({
+                "section": current_section,
+                "row_index": r + 1,
+                "description": desc_val,
+                "quantity": q_val if q_val not in ("0", "0,00") else "",
+                "unit_price": u_val if u_val not in ("R$ 0,00", "0") else "",
+                "total_price": t_val if t_val not in ("R$ 0,00", "0") else "",
+                "color": row_color,
+                "text_color": get_contrast_text_color(row_color),
+                "comment": row_comment
+            })
+
+        if not items and not title_notes and subtotal in ("", "R$ 0,00") and total in ("", "R$ 0,00"):
+            return None
+
+        return {
+            "sheet_name": sheet_name,
+            "title": " • ".join(title_notes),
+            "items": items,
+            "grid_rows": [],
+            "subtotal": subtotal if subtotal != "R$ 0,00" else "",
+            "discount": discount if discount != "R$ 0,00" else "",
+            "total": total if total != "R$ 0,00" else ""
+        }
+    else:
+        grid_rows = []
+        for r in range(nrows):
+            row_cells = []
+            has_text = False
+            for c in range(ncols):
+                v = ws.cell_value(r, c)
+                s = str(v).strip() if v is not None else ""
+                if s and s not in ("0", "0.0"):
+                    has_text = True
+                row_cells.append(s)
+            if has_text:
+                while row_cells and not row_cells[-1]:
+                    row_cells.pop()
+                while row_cells and not row_cells[0]:
+                    row_cells.pop(0)
+                if row_cells:
+                    grid_rows.append(row_cells)
+        if not grid_rows:
+            return None
+        return {
+            "sheet_name": sheet_name,
+            "title": "",
+            "items": [],
+            "grid_rows": grid_rows,
+            "subtotal": "",
+            "discount": "",
+            "total": ""
+        }
 
 def parse_xls(filepath):
     filename = os.path.basename(filepath)
@@ -604,6 +905,16 @@ def parse_xls(filepath):
             "comment": row_comment
         })
 
+    extra_sheets_data = []
+    for sec_idx in range(1, len(all_sheet_names)):
+        try:
+            sec_ws = wb.sheet_by_index(sec_idx)
+            sec_parsed = parse_secondary_xls_sheet(wb, sec_ws, sec_ws.name)
+            if sec_parsed:
+                extra_sheets_data.append(sec_parsed)
+        except Exception:
+            pass
+
     final_plate = car_plate or meta_fn.get("plate", "")
     final_owner = client_name or meta_fn.get("owner", "")
     final_model = car_model or meta_fn.get("model", "")
@@ -618,6 +929,7 @@ def parse_xls(filepath):
         "format": "xls",
         "sheets": all_sheet_names,
         "active_sheet": sheet_name,
+        "extra_sheets_data": extra_sheets_data,
         "plate": final_plate,
         "plate_display": format_plate_display(final_plate),
         "plate_comment": plate_comment,
@@ -641,3 +953,4 @@ def parse_xls(filepath):
         "discount": discount,
         "total": total
     }
+

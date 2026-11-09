@@ -83,8 +83,10 @@ def _ensure_row_parsed(conn, cur, d):
     fpath = d.get("file_path", "")
     if d.get("data_json"):
         try:
-            d["details"] = json.loads(d["data_json"])
-            return d, False
+            loaded = json.loads(d["data_json"])
+            if "extra_sheets_data" in loaded:
+                d["details"] = loaded
+                return d, False
         except Exception:
             pass
 

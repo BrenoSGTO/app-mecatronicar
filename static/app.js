@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const searchInput = document.getElementById('search-input');
     const btnClearSearch = document.getElementById('btn-clear-search');
+    const vehicleItemSearchInput = document.getElementById('vehicle-item-search-input');
+    const btnClearVehicleItemSearch = document.getElementById('btn-clear-vehicle-item-search');
+    const vehicleItemMatchesBox = document.getElementById('vehicle-item-matches-box');
+    const vehicleItemMatchesTitle = document.getElementById('vehicle-item-matches-title');
+    const vehicleItemMatchesBadge = document.getElementById('vehicle-item-matches-badge');
+    const vehicleItemMatchesList = document.getElementById('vehicle-item-matches-list');
     
     const welcomeSection = document.getElementById('welcome-section');
     const searchResultsSection = document.getElementById('search-results-section');
@@ -138,6 +144,25 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.focus();
         resetToWelcome();
     });
+
+    if (vehicleItemSearchInput) {
+        vehicleItemSearchInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (btnClearVehicleItemSearch) {
+                btnClearVehicleItemSearch.style.display = val ? 'flex' : 'none';
+            }
+            filterVehicleItems(val);
+        });
+    }
+
+    if (btnClearVehicleItemSearch) {
+        btnClearVehicleItemSearch.addEventListener('click', () => {
+            vehicleItemSearchInput.value = '';
+            btnClearVehicleItemSearch.style.display = 'none';
+            filterVehicleItems('');
+            vehicleItemSearchInput.focus();
+        });
+    }
 
     // Print full (with prices)
     btnPrint.addEventListener('click', () => {
@@ -524,11 +549,178 @@ document.addEventListener('DOMContentLoaded', () => {
             metricKmDiff.textContent = '-';
         }
 
+        if (vehicleItemSearchInput) {
+            vehicleItemSearchInput.value = '';
+        }
+        if (btnClearVehicleItemSearch) {
+            btnClearVehicleItemSearch.style.display = 'none';
+        }
+        if (vehicleItemMatchesBox) {
+            vehicleItemMatchesBox.style.display = 'none';
+        }
+
         renderVisits(visits);
 
         vehicleHistorySection.style.display = 'block';
         searchResultsSection.style.display = 'none';
         welcomeSection.style.display = 'none';
+    }
+
+    function normalizeSearchText(str) {
+        if (!str) return '';
+        return String(str)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+
+    function matchesSearchTokens(targetText, rawQuery) {
+        const stopWords = new Set(['de', 'do', 'da', 'dos', 'das', 'e', 'o', 'a', 'os', 'as', 'no', 'na', 'nos', 'nas', 'para', 'por', 'com', 'em']);
+        const actionWords = new Set(['troca', 'trocar', 'substituicao', 'substituir', 'subst', 'reparo', 'conserto', 'servico', 'peca']);
+        const normTarget = normalizeSearchText(targetText);
+        const tokens = normalizeSearchText(rawQuery)
+            .split(/\s+/)
+            .filter(t => t.length > 0 && !stopWords.has(t));
+        if (tokens.length === 0) {
+            return normTarget.includes(normalizeSearchText(rawQuery));
+        }
+        const specificTokens = tokens.filter(t => !actionWords.has(t));
+        const activeTokens = specificTokens.length > 0 ? specificTokens : tokens;
+        return activeTokens.every(tok => normTarget.includes(tok));
+    }
+
+    function filterVehicleItems(rawQuery) {
+        if (!currentCarHistory || !currentCarHistory.visits) return;
+        const q = (rawQuery || '').trim();
+        const visitCards = visitsListContainer.querySelectorAll('.visit-card');
+
+        if (!q) {
+            if (vehicleItemMatchesBox) {
+                vehicleItemMatchesBox.style.display = 'none';
+            }
+            visitCards.forEach(card => {
+                card.style.display = '';
+                card.querySelectorAll('tr.item-search-match').forEach(tr => {
+                    tr.classList.remove('item-search-match');
+                });
+            });
+            return;
+        }
+
+        const matchedOccurrences = [];
+
+        visitCards.forEach(card => {
+            const visitIdx = parseInt(card.dataset.visitIndex || '0', 10);
+            const visit = currentCarHistory._sortedVisits ? currentCarHistory._sortedVisits[visitIdx] : null;
+            if (!visit) return;
+
+            let cardHasMatch = false;
+            const d = visit.details || {};
+            const complaintStr = `${visit.complaint || ''} ${d.complaint_comment || ''}`;
+
+            if (matchesSearchTokens(complaintStr, q)) {
+                cardHasMatch = true;
+                matchedOccurrences.push({
+                    visit,
+                    cardElement: card,
+                    section: 'Queixa',
+                    description: visit.complaint || 'Nota Técnica / Diagnóstico',
+                    quantity: '',
+                    total_price: ''
+                });
+            }
+
+            const rows = card.querySelectorAll('.main-sheet-table tbody tr');
+            rows.forEach(tr => {
+                const desc = tr.dataset.itemDesc || '';
+                const comment = tr.dataset.itemComment || '';
+                const sec = tr.dataset.itemSection || 'Item';
+                const qty = tr.dataset.itemQty || '';
+                const price = tr.dataset.itemPrice || '';
+
+                if (matchesSearchTokens(`${desc} ${comment}`, q)) {
+                    tr.classList.add('item-search-match');
+                    cardHasMatch = true;
+                    matchedOccurrences.push({
+                        visit,
+                        cardElement: card,
+                        rowElement: tr,
+                        section: sec,
+                        description: desc,
+                        quantity: qty,
+                        total_price: price
+                    });
+                } else {
+                    tr.classList.remove('item-search-match');
+                }
+            });
+
+            const extraSheets = d.extra_sheets_data || [];
+            extraSheets.forEach(secSheet => {
+                (secSheet.items || []).forEach(it => {
+                    if (matchesSearchTokens(`${it.description || ''} ${it.comment || ''}`, q)) {
+                        cardHasMatch = true;
+                        matchedOccurrences.push({
+                            visit,
+                            cardElement: card,
+                            section: `${secSheet.sheet_name} • ${it.section || 'Item'}`,
+                            description: it.description || '',
+                            quantity: it.quantity || '',
+                            total_price: it.total_price || ''
+                        });
+                    }
+                });
+            });
+
+            card.style.display = cardHasMatch ? '' : 'none';
+        });
+
+        if (vehicleItemMatchesBox) {
+            vehicleItemMatchesBox.style.display = 'block';
+            vehicleItemMatchesTitle.textContent = `Histórico de "${q}" neste veículo`;
+            vehicleItemMatchesBadge.textContent = `${matchedOccurrences.length} ${matchedOccurrences.length === 1 ? 'registro encontrado' : 'registros encontrados'}`;
+            vehicleItemMatchesList.innerHTML = '';
+
+            if (matchedOccurrences.length === 0) {
+                vehicleItemMatchesList.innerHTML = `
+                    <div style="padding: 10px; color: var(--text-muted); font-size: 13px; text-align: center;">
+                        Nenhuma peça ou serviço com <strong>"${escapeHtml(q)}"</strong> foi encontrado nas visitas deste veículo.
+                    </div>
+                `;
+            } else {
+                matchedOccurrences.forEach(occ => {
+                    const row = document.createElement('div');
+                    row.className = 'match-row-card';
+                    const dateStr = occ.visit.entry_date || 'Sem data';
+                    const kmStr = occ.visit.odometer ? formatKm(occ.visit.odometer) : 'KM não inf.';
+                    const vNum = occ.visit.visit_num ? `Visita #${occ.visit.visit_num}` : '';
+                    const qtyInfo = occ.quantity && occ.quantity !== '-' ? ` (Qtd: ${occ.quantity})` : '';
+
+                    row.innerHTML = `
+                        <div class="match-meta-pills">
+                            <span class="match-pill-date">📅 ${escapeHtml(dateStr)}</span>
+                            <span class="match-pill-km">⏱️ ${escapeHtml(kmStr)}</span>
+                            ${vNum ? `<span class="match-pill-visit">${escapeHtml(vNum)}</span>` : ''}
+                        </div>
+                        <div class="match-item-desc">
+                            <span class="match-item-section-tag">${escapeHtml(occ.section)}</span>
+                            ${escapeHtml(occ.description)}${escapeHtml(qtyInfo)}
+                        </div>
+                        ${occ.total_price && occ.total_price !== '-' ? `<div class="match-item-price col-price">${escapeHtml(occ.total_price)}</div>` : ''}
+                    `;
+
+                    row.addEventListener('click', () => {
+                        const target = occ.rowElement || occ.cardElement;
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+
+                    vehicleItemMatchesList.appendChild(row);
+                });
+            }
+        }
     }
 
     function renderVisits(visits) {
@@ -546,10 +738,134 @@ document.addEventListener('DOMContentLoaded', () => {
             return kmB - kmA;
         });
 
+        if (currentCarHistory) {
+            currentCarHistory._sortedVisits = sortedVisits;
+        }
+
         sortedVisits.forEach((visit, idx) => {
             const card = createVisitCard(visit, idx);
             visitsListContainer.appendChild(card);
         });
+    }
+
+    function buildItemsTableElement(items, isMainSheet = false) {
+        const table = document.createElement('table');
+        table.className = isMainSheet ? 'items-table main-sheet-table' : 'items-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th style="width: 90px;">Tipo</th>
+                    <th>Descrição do Item / Serviço / Anotação</th>
+                    <th style="width: 70px; text-align: right;">Qtd</th>
+                    <th class="col-price" style="width: 110px; text-align: right;">Valor Unit.</th>
+                    <th class="col-price" style="width: 110px; text-align: right;">Valor Total</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        items.forEach(it => {
+            const tr = document.createElement('tr');
+            tr.dataset.itemDesc = it.description || '';
+            tr.dataset.itemComment = it.comment || '';
+            tr.dataset.itemSection = it.section || 'Item';
+            tr.dataset.itemQty = it.quantity || '';
+            tr.dataset.itemPrice = it.total_price || '';
+            
+            if (it.color) {
+                tr.className = 'has-color';
+                tr.style.backgroundColor = it.color;
+                tr.style.color = it.text_color || '#1e293b';
+            }
+
+            const hasNote = Boolean(it.comment);
+            const noteAttr = hasNote ? 'class="td-desc has-excel-note" title="Clique para ver o comentário desta célula"' : 'class="td-desc"';
+
+            let noteBadgeHtml = '';
+            if (hasNote) {
+                noteBadgeHtml = `
+                    <button class="note-btn-inline" title="Clique para abrir a anotação da célula">
+                        💬 Ver nota
+                    </button>
+                `;
+            }
+
+            tr.innerHTML = `
+                <td class="td-section" style="${it.color ? 'color: inherit; opacity: 0.85;' : ''}">${it.section || 'Item'}</td>
+                <td ${noteAttr}>
+                    ${escapeHtml(it.description || '')}
+                    ${noteBadgeHtml}
+                </td>
+                <td class="td-num">${it.quantity || '-'}</td>
+                <td class="td-num col-price">${it.unit_price || '-'}</td>
+                <td class="td-num col-price" style="font-weight: 600;">${it.total_price || '-'}</td>
+            `;
+
+            if (hasNote) {
+                const descTd = tr.querySelector('.td-desc');
+                descTd.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openModal(
+                        'Nota da Planilha (Excel)',
+                        `Item: ${it.description || 'Célula'} (${it.section || 'Geral'})`,
+                        it.comment
+                    );
+                });
+            }
+
+            tbody.appendChild(tr);
+        });
+
+        return table;
+    }
+
+    function createExtraSheetPanel(sheetData) {
+        const panel = document.createElement('div');
+        panel.className = 'extra-sheet-panel';
+
+        const header = document.createElement('div');
+        header.className = 'extra-sheet-panel-header';
+        header.innerHTML = `
+            <div>
+                <span class="extra-sheet-panel-title">📑 Aba: ${escapeHtml(sheetData.sheet_name)}</span>
+                ${sheetData.title ? `<span style="margin-left: 10px; font-weight: 500; color: #e2e8f0;">— ${escapeHtml(sheetData.title)}</span>` : ''}
+            </div>
+            <div class="totals-group" style="margin-left: auto;">
+                ${sheetData.subtotal ? `<span style="font-size: 12px; color: #cbd5e1;">SubTotal: <strong>${escapeHtml(sheetData.subtotal)}</strong></span>` : ''}
+                ${sheetData.discount ? `<span style="font-size: 12px; color: #cbd5e1;">Desconto: <strong>${escapeHtml(sheetData.discount)}</strong></span>` : ''}
+                ${sheetData.total ? `<span style="font-size: 13px; background: var(--primary); color: #111827; padding: 2px 8px; border-radius: 4px; font-weight: 800;">Total: ${escapeHtml(sheetData.total)}</span>` : ''}
+            </div>
+        `;
+        panel.appendChild(header);
+
+        if (sheetData.items && sheetData.items.length > 0) {
+            const tblWrap = document.createElement('div');
+            tblWrap.className = 'items-table-container';
+            tblWrap.appendChild(buildItemsTableElement(sheetData.items, false));
+            panel.appendChild(tblWrap);
+        } else if (sheetData.grid_rows && sheetData.grid_rows.length > 0) {
+            const tblWrap = document.createElement('div');
+            tblWrap.className = 'items-table-container';
+            const gridTable = document.createElement('table');
+            gridTable.className = 'items-table';
+            const tbody = document.createElement('tbody');
+            sheetData.grid_rows.forEach(rCells => {
+                const tr = document.createElement('tr');
+                rCells.forEach(cellVal => {
+                    const td = document.createElement('td');
+                    td.textContent = cellVal || '';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            gridTable.appendChild(tbody);
+            tblWrap.appendChild(gridTable);
+            panel.appendChild(tblWrap);
+        }
+
+        return panel;
     }
 
     function createVisitCard(visit, index) {
@@ -558,6 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const card = document.createElement('div');
         card.className = 'visit-card';
+        card.dataset.visitIndex = String(index);
 
         const header = document.createElement('div');
         header.className = 'visit-header';
@@ -628,71 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         } else {
-            const table = document.createElement('table');
-            table.className = 'items-table';
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th style="width: 90px;">Tipo</th>
-                        <th>Descrição do Item / Serviço / Anotação</th>
-                        <th style="width: 70px; text-align: right;">Qtd</th>
-                        <th class="col-price" style="width: 110px; text-align: right;">Valor Unit.</th>
-                        <th class="col-price" style="width: 110px; text-align: right;">Valor Total</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            `;
-
-            const tbody = table.querySelector('tbody');
-
-            items.forEach(it => {
-                const tr = document.createElement('tr');
-                
-                if (it.color) {
-                    tr.className = 'has-color';
-                    tr.style.backgroundColor = it.color;
-                    tr.style.color = it.text_color || '#1e293b';
-                }
-
-                const hasNote = Boolean(it.comment);
-                const noteAttr = hasNote ? 'class="td-desc has-excel-note" title="Clique para ver o comentário desta célula"' : 'class="td-desc"';
-
-                let noteBadgeHtml = '';
-                if (hasNote) {
-                    noteBadgeHtml = `
-                        <button class="note-btn-inline" title="Clique para abrir a anotação da célula">
-                            💬 Ver nota
-                        </button>
-                    `;
-                }
-
-                tr.innerHTML = `
-                    <td class="td-section" style="${it.color ? 'color: inherit; opacity: 0.85;' : ''}">${it.section || 'Item'}</td>
-                    <td ${noteAttr}>
-                        ${escapeHtml(it.description || '')}
-                        ${noteBadgeHtml}
-                    </td>
-                    <td class="td-num">${it.quantity || '-'}</td>
-                    <td class="td-num col-price">${it.unit_price || '-'}</td>
-                    <td class="td-num col-price" style="font-weight: 600;">${it.total_price || '-'}</td>
-                `;
-
-                if (hasNote) {
-                    const descTd = tr.querySelector('.td-desc');
-                    descTd.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        openModal(
-                            'Nota da Planilha (Excel)',
-                            `Item: ${it.description || 'Célula'} (${it.section || 'Geral'})`,
-                            it.comment
-                        );
-                    });
-                }
-
-                tbody.appendChild(tr);
-            });
-
-            tableContainer.appendChild(table);
+            tableContainer.appendChild(buildItemsTableElement(items, true));
         }
 
         card.appendChild(tableContainer);
@@ -700,26 +953,60 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.createElement('div');
         footer.className = 'visit-footer';
 
-        const extraSheets = (d.sheets || []).filter(s => s !== d.active_sheet && s !== 'Plan1');
-        let extraSheetsHtml = '';
-        if (extraSheets.length > 0) {
-            extraSheetsHtml = `<span class="extra-sheets-info">📑 Abas adicionais neste arquivo: <strong>${extraSheets.join(', ')}</strong></span>`;
+        const filledExtraSheets = d.extra_sheets_data || [];
+        const extraSheetsContainer = document.createElement('div');
+        extraSheetsContainer.className = 'extra-sheets-bar';
+
+        const extraPanelsHolder = document.createElement('div');
+
+        if (filledExtraSheets.length > 0) {
+            const lbl = document.createElement('span');
+            lbl.className = 'extra-sheets-label';
+            lbl.textContent = '📑 Outras planilhas preenchidas nesta ficha:';
+            extraSheetsContainer.appendChild(lbl);
+
+            filledExtraSheets.forEach((secSheet) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-extra-sheet';
+                const countBadge = secSheet.items && secSheet.items.length > 0
+                    ? ` (${secSheet.items.length} itens)`
+                    : '';
+                btn.textContent = `👁️ Ver ${secSheet.sheet_name}${countBadge}`;
+                btn.title = secSheet.title || `Clique para ver o conteúdo preenchido na aba ${secSheet.sheet_name}`;
+
+                let panelEl = null;
+                btn.addEventListener('click', () => {
+                    if (panelEl) {
+                        const isHidden = panelEl.style.display === 'none';
+                        panelEl.style.display = isHidden ? 'block' : 'none';
+                        btn.classList.toggle('active', isHidden);
+                    } else {
+                        panelEl = createExtraSheetPanel(secSheet);
+                        extraPanelsHolder.appendChild(panelEl);
+                        btn.classList.add('active');
+                    }
+                });
+
+                extraSheetsContainer.appendChild(btn);
+            });
         }
 
         const subtotal = d.subtotal || '';
         const discount = d.discount || '';
         const total = d.total || '';
 
-        footer.innerHTML = `
-            ${extraSheetsHtml}
-            <div class="totals-group">
-                ${subtotal && subtotal !== 'R$ 0,00' ? `<span class="total-item">SubTotal: <strong>${subtotal}</strong></span>` : ''}
-                ${discount ? `<span class="total-item">Desconto: <strong>${discount}</strong></span>` : ''}
-                ${total && total !== 'R$ 0,00' ? `<span class="total-item total-final">Total da Visita: ${total}</span>` : ''}
-            </div>
+        const totalsDiv = document.createElement('div');
+        totalsDiv.className = 'totals-group';
+        totalsDiv.innerHTML = `
+            ${subtotal && subtotal !== 'R$ 0,00' ? `<span class="total-item">SubTotal: <strong>${subtotal}</strong></span>` : ''}
+            ${discount ? `<span class="total-item">Desconto: <strong>${discount}</strong></span>` : ''}
+            ${total && total !== 'R$ 0,00' ? `<span class="total-item total-final">Total da Visita: ${total}</span>` : ''}
         `;
 
+        footer.appendChild(extraSheetsContainer);
+        footer.appendChild(totalsDiv);
         card.appendChild(footer);
+        card.appendChild(extraPanelsHolder);
 
         return card;
     }
@@ -729,6 +1016,9 @@ document.addEventListener('DOMContentLoaded', () => {
         searchResultsSection.style.display = 'none';
         welcomeSection.style.display = 'block';
         currentCarHistory = null;
+        if (vehicleItemSearchInput) vehicleItemSearchInput.value = '';
+        if (btnClearVehicleItemSearch) btnClearVehicleItemSearch.style.display = 'none';
+        if (vehicleItemMatchesBox) vehicleItemMatchesBox.style.display = 'none';
     }
 
     // Modal helpers

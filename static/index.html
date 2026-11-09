@@ -138,10 +138,34 @@
                 </div>
             </div>
 
+            <!-- In-Vehicle Search Bar (Parts / Services Filter) -->
+            <div class="vehicle-item-search-wrapper">
+                <div class="vehicle-item-search-box">
+                    <span class="vehicle-item-search-icon">🔧</span>
+                    <input
+                        type="text"
+                        id="vehicle-item-search-input"
+                        class="vehicle-item-search-input"
+                        placeholder="Buscar peça ou serviço neste veículo (ex: troca de óleo, filtro, correia, pastilha...)"
+                        autocomplete="off"
+                    >
+                    <button id="btn-clear-vehicle-item-search" class="btn-clear-item-search" title="Limpar filtro de peça/serviço" style="display: none;">✕</button>
+                </div>
+
+                <!-- Summary of Matched Occurrences (When, KM, Item) -->
+                <div id="vehicle-item-matches-box" class="vehicle-item-matches-box" style="display: none;">
+                    <div class="matches-header">
+                        <span id="vehicle-item-matches-title">Registros encontrados neste veículo</span>
+                        <span id="vehicle-item-matches-badge" class="matches-badge">0 ocorrências</span>
+                    </div>
+                    <div id="vehicle-item-matches-list" class="matches-list"></div>
+                </div>
+            </div>
+
             <!-- Visits Timeline / Cards -->
             <div class="timeline-container">
                 <div class="timeline-header">
-                    <h3>Linha do Tempo das Visitas na Oficina</h3>
+                    <h3>Linha do Tempo das Visitas na Oficina (Planilha Principal)</h3>
                 </div>
 
                 <div id="visits-list-container" class="visits-list">

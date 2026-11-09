@@ -813,6 +813,254 @@ body {
     border-radius: 6px;
 }
 
+/* In-Vehicle Item / Service Search Bar */
+.vehicle-item-search-wrapper {
+    margin: 16px 0 20px 0;
+}
+
+.vehicle-item-search-box {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.vehicle-item-search-box:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(249, 204, 1, 0.25);
+}
+
+.vehicle-item-search-icon {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.vehicle-item-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main);
+    background: transparent;
+}
+
+.vehicle-item-search-input::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.btn-clear-item-search {
+    background: #e2e8f0;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-clear-item-search:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+}
+
+/* Matched Occurrences Box */
+.vehicle-item-matches-box {
+    margin-top: 12px;
+    background: #ffffff;
+    border: 1.5px solid #f59e0b;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.matches-header {
+    background: #111827;
+    color: #ffffff;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    border-bottom: 2px solid var(--primary);
+}
+
+.matches-badge {
+    background: var(--primary);
+    color: #111827;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 2px 10px;
+    border-radius: 20px;
+}
+
+.matches-list {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.match-row-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #fefce8;
+    border: 1px solid #fde047;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-wrap: wrap;
+}
+.match-row-card:hover {
+    background: #fef08a;
+    transform: translateX(3px);
+}
+
+.match-meta-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.match-pill-date {
+    background: #111827;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+}
+
+.match-pill-km {
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+}
+
+.match-pill-visit {
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.match-item-desc {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    min-width: 200px;
+}
+
+.match-item-section-tag {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    margin-right: 6px;
+}
+
+.match-item-price {
+    font-size: 13px;
+    font-weight: 800;
+    color: #15803d;
+    white-space: nowrap;
+}
+
+/* Highlighted row inside visit table when filtering */
+.items-table tr.item-search-match {
+    outline: 2px solid #f59e0b;
+    background-color: #fef9c3 !important;
+    color: #111827 !important;
+    font-weight: 700;
+}
+
+/* Filled Secondary Sheets (Planilha 2, 3...) */
+.extra-sheets-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.extra-sheets-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.btn-extra-sheet {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1.5px solid #94a3b8;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+
+.btn-extra-sheet:hover,
+.btn-extra-sheet.active {
+    background: #111827;
+    color: var(--primary);
+    border-color: #111827;
+}
+
+.extra-sheet-panel {
+    margin: 0 20px 16px 20px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.extra-sheet-panel-header {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.extra-sheet-panel-title {
+    color: var(--primary);
+    font-weight: 800;
+}
+
 /* Empty State / Welcome */
 .welcome-section {
     max-width: 800px;
@@ -1029,6 +1277,8 @@ body {
     .app-header,
     .search-section,
     .vehicle-actions-block,
+    .vehicle-item-search-wrapper,
+    .extra-sheets-bar,
     .btn-excel,
     .btn-scanner-note,
     .note-btn-inline {

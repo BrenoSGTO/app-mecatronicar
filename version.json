@@ -1,7 +1,7 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "name": "MecatroniCar",
-  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.5/MecatroniCar-v1.0.5.zip",
-  "release_notes": "Versão 1.0.5:\n- Corrige o ícone e nome ao 'Fixar na barra de tarefas' do Windows (agora fixa como MecatroniCar - Oficina em vez de Microsoft Edge)\n- Inclui controle de Zoom (🔍 − / 100% / +) na barra superior com salvamento automático",
-  "published_at": "2026-11-08"
+  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.6/MecatroniCar-v1.0.6.zip",
+  "release_notes": "Versão 1.0.6:\n- Nova barra de pesquisa dentro do histórico do veículo: pesquise qualquer peça ou serviço (ex: 'troca de óleo', 'correia', 'vela') e veja na hora em quais datas e quilometragens (KM) foi realizado\n- Detecção inteligente de abas extras preenchidas (Plan2, Plan3, orçamentos extras): exibe um botão '👁️ Ver Aba' apenas quando as outras páginas da planilha realmente tiverem dados preenchidos",
+  "published_at": "2026-11-09"
 }
