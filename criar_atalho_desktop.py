@@ -14,17 +14,11 @@ def create_desktop_shortcut():
         
     icon_path = os.path.join(app_dir, "app_icon.ico")
     
-    desktop_dir = os.path.join(os.path.expanduser("~"), "Desktop")
-    if not os.path.exists(desktop_dir):
-        onedrive_desktop = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop")
-        if os.path.exists(onedrive_desktop):
-            desktop_dir = onedrive_desktop
-            
-    shortcut_path = os.path.join(desktop_dir, "MecatroniCar - Oficina.lnk")
-    
     ps_cmd = f"""
+    $DesktopDir = [Environment]::GetFolderPath('DesktopDirectory')
+    $ShortcutPath = Join-Path $DesktopDir "MecatroniCar - Oficina.lnk"
     $WshShell = New-Object -ComObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
+    $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
     $Shortcut.TargetPath = "{target_exe}"
     $Shortcut.WorkingDirectory = "{app_dir}"
     $Shortcut.Description = "MecatroniCar - Histórico da Oficina Mecânica"
@@ -36,7 +30,7 @@ def create_desktop_shortcut():
     
     try:
         subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], check=True)
-        print(f"Atalho criado com sucesso na Área de Trabalho: {shortcut_path}")
+        print("Atalho criado com sucesso na Área de Trabalho!")
         return True
     except Exception as e:
         print(f"Erro criando atalho: {e}")

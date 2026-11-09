@@ -4,10 +4,20 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+
+[assembly: AssemblyTitle("Instalador MecatroniCar")]
+[assembly: AssemblyDescription("Instalador Oficial do Sistema de Histórico da Oficina MecatroniCar")]
+[assembly: AssemblyCompany("MecatroniCar Oficina Mecânica")]
+[assembly: AssemblyProduct("MecatroniCar")]
+[assembly: AssemblyCopyright("Copyright © 2026 MecatroniCar")]
+[assembly: AssemblyVersion("1.0.3.0")]
+[assembly: AssemblyFileVersion("1.0.3.0")]
+[assembly: ComVisible(false)]
+
 
 
 internal class InstallerForm : Form
@@ -226,51 +236,52 @@ internal class InstallerForm : Form
 
     private string DownloadAndInstallPython()
     {
-        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-        string pyUrl = Environment.Is64BitOperatingSystem
-            ? "https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe"
-            : "https://www.python.org/ftp/python/3.12.8/python-3.12.8.exe";
+        UpdateStatus("Instalando Python automaticamente via Windows (aguarde ~1 minuto)...", 58);
 
-        string tempInstaller = Path.Combine(Path.GetTempPath(), "python-3.12.8-installer.exe");
-
-        UpdateStatus("Baixando motor Python para este computador (1ª instalação)...", 52);
-
-        HttpWebRequest req = (HttpWebRequest)WebRequest.Create(pyUrl);
-        req.UserAgent = "MecatroniCar-Installer";
-        req.Timeout = 30000;
-        using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
-        using (Stream netStream = resp.GetResponseStream())
-        using (FileStream fileStream = new FileStream(tempInstaller, FileMode.Create, FileAccess.Write, FileShare.None))
+        // Method 1: Official Windows Package Manager (winget)
+        try
         {
-            long totalBytes = resp.ContentLength;
-            byte[] buffer = new byte[32768];
-            long downloaded = 0;
-            int read;
-            while ((read = netStream.Read(buffer, 0, buffer.Length)) > 0)
+            ProcessStartInfo wingetPsi = new ProcessStartInfo();
+            wingetPsi.FileName = "winget.exe";
+            wingetPsi.Arguments = "install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements";
+            wingetPsi.UseShellExecute = false;
+            wingetPsi.CreateNoWindow = true;
+            using (Process wp = Process.Start(wingetPsi))
             {
-                fileStream.Write(buffer, 0, read);
-                downloaded += read;
-                if (totalBytes > 0)
-                {
-                    int pct = 52 + (int)((downloaded / (double)totalBytes) * 14);
-                    int dlPct = (int)((downloaded / (double)totalBytes) * 100);
-                    UpdateStatus("Baixando motor Python (" + dlPct + "%)...", pct);
-                }
+                if (wp != null) wp.WaitForExit(240000);
             }
         }
+        catch { }
 
-        UpdateStatus("Instalando motor Python no computador (aguarde ~1 minuto)...", 68);
-        ProcessStartInfo psi = new ProcessStartInfo();
-        psi.FileName = tempInstaller;
-        psi.Arguments = "/quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_doc=0 SimpleInstall=1";
-        psi.UseShellExecute = false;
-        psi.CreateNoWindow = true;
-        using (Process p = Process.Start(psi))
+        string found = FindPythonExecutable();
+        if (!string.IsNullOrEmpty(found)) return found;
+
+        // Method 2: PowerShell official Python installer fallback
+        try
         {
-            if (p != null) p.WaitForExit(300000);
-        }
+            UpdateStatus("Configurando motor Python (aguarde ~1 minuto)...", 68);
+            string archUrl = Environment.Is64BitOperatingSystem
+                ? "https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe"
+                : "https://www.python.org/ftp/python/3.12.8/python-3.12.8.exe";
 
-        try { File.Delete(tempInstaller); } catch { }
+            string psCmd = "$ProgressPreference='SilentlyContinue'; " +
+                           "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; " +
+                           "$p=Join-Path $env:TEMP 'python-setup.exe'; " +
+                           "Invoke-WebRequest -Uri '" + archUrl + "' -OutFile $p; " +
+                           "Start-Process -FilePath $p -ArgumentList '/quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_doc=0 SimpleInstall=1' -Wait; " +
+                           "Remove-Item $p -Force -ErrorAction SilentlyContinue";
+
+            ProcessStartInfo psPsi = new ProcessStartInfo();
+            psPsi.FileName = "powershell.exe";
+            psPsi.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"" + psCmd + "\"";
+            psPsi.UseShellExecute = false;
+            psPsi.CreateNoWindow = true;
+            using (Process p = Process.Start(psPsi))
+            {
+                if (p != null) p.WaitForExit(300000);
+            }
+        }
+        catch { }
 
         return FindPythonExecutable();
     }

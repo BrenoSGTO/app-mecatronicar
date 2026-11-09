@@ -1,7 +1,7 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "name": "MecatroniCar",
-  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.2/MecatroniCar-v1.0.2.zip",
-  "release_notes": "Versão 1.0.2:\n- Instalador agora baixa e instala automaticamente o Python em computadores que ainda não o possuem\n- Detecção inteligente do Python (ignora atalhos vazios da Microsoft Store)\n- Inicialização imediata do banco de dados local (oficina_cache.db) e cache de módulos na instalação",
+  "download_url": "https://github.com/BrenoSGTO/app-mecatronicar/releases/download/v1.0.3/MecatroniCar-v1.0.3.zip",
+  "release_notes": "Versão 1.0.3:\n- Correção de bloqueio de segurança do Windows Defender / SmartScreen no instalador\n- Indexação instantânea para milhares de fichas e busca sob demanda a partir de 3 letras\n- Instalação automática do Python via gerenciador oficial do Windows (winget/PowerShell)",
   "published_at": "2026-11-08"
 }

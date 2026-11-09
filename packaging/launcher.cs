@@ -2,7 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+
+[assembly: AssemblyTitle("MecatroniCar")]
+[assembly: AssemblyDescription("MecatroniCar - Sistema de Histórico de Veículos da Oficina Mecânica")]
+[assembly: AssemblyCompany("MecatroniCar Oficina Mecânica")]
+[assembly: AssemblyProduct("MecatroniCar")]
+[assembly: AssemblyCopyright("Copyright © 2026 MecatroniCar")]
+[assembly: AssemblyVersion("1.0.3.0")]
+[assembly: AssemblyFileVersion("1.0.3.0")]
+[assembly: ComVisible(false)]
 
 internal static class Program
 {
