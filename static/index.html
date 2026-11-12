@@ -45,6 +45,9 @@
                 <button id="btn-open-fiscal-hub" class="btn btn-fiscal btn-sm" title="Copiloto de Notas Fiscais (NFS-e Santos e NF-e Peças)">
                     🧾 Copiloto Fiscal <span id="header-nf-badge" class="badge-nf-counter" style="display: none;">0</span>
                 </button>
+                <button id="btn-open-analytics-modal" class="btn btn-analytics btn-sm" title="Painel de Analytics e Métricas da Oficina (Volume, Tempo de Permanência e Médias Financeiras)">
+                    📊 Analytics
+                </button>
 
                 <!-- Update Check Button -->
                 <button id="btn-check-updates" class="btn btn-update btn-sm" title="Verificar se há novas versões do sistema">
@@ -212,6 +215,17 @@
                 <img src="logo.png" alt="MecatroniCar" class="welcome-logo">
                 <h2>Bem-vindo ao MecatroniCar</h2>
                 <p>Digite uma placa ou nome de cliente acima para consultar todo o histórico de visitas, serviços feitos, peças trocadas e notas de diagnóstico.</p>
+                <div style="margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button id="welcome-btn-analytics" class="btn btn-analytics" style="padding: 9px 16px; font-size: 13.5px; font-weight: 700;">
+                        📊 Analytics &amp; Métricas
+                    </button>
+                    <button id="welcome-btn-patio" class="btn btn-patio" style="padding: 9px 16px; font-size: 13.5px; font-weight: 700;">
+                        🚗 Pátio &amp; TV
+                    </button>
+                    <button id="welcome-btn-fiscal" class="btn btn-fiscal" style="padding: 9px 16px; font-size: 13.5px; font-weight: 700;">
+                        🧾 Copiloto Fiscal
+                    </button>
+                </div>
             </div>
         </section>
     </main>
@@ -1111,6 +1125,273 @@
                 <div style="display: flex; gap: 10px;">
                     <button type="button" id="btn-print-visits-pdf-tab" class="btn btn-secondary" title="Gerar relatório consolidado em nova aba">📄 Relatório Consolidado</button>
                     <button type="button" id="btn-print-visits-confirm" class="btn btn-primary" title="Imprimir as visitas selecionadas agora">🖨️ Imprimir Visitas Selecionadas</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Analytics & Métricas da Oficina (Issue #16) -->
+    <div id="analytics-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog modal-dialog-xl" style="max-width: 980px;">
+            <div class="modal-header" style="background: #111827; color: #ffffff; border-bottom: 3px solid #f9cc01;">
+                <div class="modal-title-group" style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 26px;">📊</span>
+                    <div>
+                        <h3 id="analytics-modal-title" style="margin: 0; font-size: 18px; font-weight: 800; color: #ffffff;">
+                            Analytics &amp; Métricas da Oficina • MecatroniCar
+                        </h3>
+                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">
+                            Volume de carros atendidos, tempo médio de permanência e médias financeiras
+                        </p>
+                    </div>
+                </div>
+                <button type="button" id="analytics-modal-close-btn" class="modal-close" style="color: #ffffff;" title="Fechar (Esc)">✕</button>
+            </div>
+
+            <div class="modal-body" style="padding: 16px 20px; background: #f8fafc; max-height: calc(90vh - 120px); overflow-y: auto;">
+                <!-- Barra Superior com Filtros de Período e Atualização -->
+                <div class="analytics-toolbar">
+                    <div class="analytics-filter-group">
+                        <span class="analytics-filter-label">📅 Período de Análise:</span>
+                        <div class="analytics-pills">
+                            <button type="button" class="analytics-pill-btn active" data-period="30" id="btn-period-30">
+                                📅 Últimos 30 Dias
+                            </button>
+                            <button type="button" class="analytics-pill-btn" data-period="90" id="btn-period-90">
+                                📅 Últimos 90 Dias
+                            </button>
+                            <button type="button" class="analytics-pill-btn" data-period="all" id="btn-period-all">
+                                🌐 Geral (Histórico Completo)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="analytics-actions-group">
+                        <span id="analytics-period-caption" class="analytics-caption-badge">Últimos 30 Dias</span>
+                        <button type="button" id="btn-refresh-analytics" class="btn btn-secondary btn-sm" title="Recarregar métricas do banco de dados">
+                            🔄 Atualizar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. Volume de Carros Atendidos -->
+                <div class="analytics-section-block">
+                    <div class="analytics-section-header">
+                        <span class="analytics-badge-title badge-car">🚗 1. VOLUME DE CARROS ATENDIDOS</span>
+                        <span class="analytics-section-hint">Veículos únicos e atendimentos realizados</span>
+                    </div>
+
+                    <div class="analytics-grid-4">
+                        <div class="analytics-card card-primary-highlight">
+                            <div class="analytics-card-label">Total de Carros Atendidos</div>
+                            <div class="analytics-card-val" id="val-total-cars">0</div>
+                            <div class="analytics-card-sub" id="val-total-orders">0 ordens de serviço / visitas</div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Média por Dia</div>
+                            <div class="analytics-card-val" id="val-avg-cars-day">0,00</div>
+                            <div class="analytics-card-sub" id="val-avg-orders-day">0,00 OSs / dia</div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Média por Semana</div>
+                            <div class="analytics-card-val" id="val-avg-cars-week">0,00</div>
+                            <div class="analytics-card-sub" id="val-avg-orders-week">0,00 OSs / semana</div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <div class="analytics-card-label">Média por Mês</div>
+                            <div class="analytics-card-val" id="val-avg-cars-month">0,00</div>
+                            <div class="analytics-card-sub" id="val-avg-orders-month">0,00 OSs / mês</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Tempo Médio de Permanência -->
+                <div class="analytics-section-block">
+                    <div class="analytics-section-header">
+                        <span class="analytics-badge-title badge-stay">⏱️ 2. TEMPO MÉDIO DE PERMANÊNCIA NA OFICINA</span>
+                        <span class="analytics-section-hint">Duração da estadia desde a data de entrada até a entrega do veículo</span>
+                    </div>
+
+                    <div class="analytics-grid-2">
+                        <!-- Card Destaque de Permanência -->
+                        <div class="analytics-card card-stay-highlight">
+                            <div class="analytics-card-label">Tempo Médio de Permanência</div>
+                            <div class="analytics-card-val text-amber" id="val-avg-stay-days">0,0 dias</div>
+                            <p class="analytics-card-desc" style="margin: 6px 0 10px 0; font-size: 12.5px; color: #475569;">
+                                Média de dias que cada veículo permanece na oficina (da entrada à entrega).
+                            </p>
+                            <div class="analytics-stay-meta">
+                                <span class="tag-meta" id="val-stay-range">Mínimo: - • Máximo: -</span>
+                                <span class="tag-meta" id="val-stay-count">Medido em 0 ordens finalizadas</span>
+                            </div>
+                        </div>
+
+                        <!-- Indicadores Visuais da Distribuição de Permanência -->
+                        <div class="analytics-card">
+                            <div class="analytics-card-label" style="margin-bottom: 10px;">Distribuição de Tempo por Faixa</div>
+                            
+                            <div class="stay-dist-item">
+                                <div class="stay-dist-row">
+                                    <span class="stay-dist-label">⚡ Mesmo Dia (0 dias / Rápido)</span>
+                                    <span class="stay-dist-val" id="dist-count-same-day">0 carros (0%)</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-green" id="dist-bar-same-day" style="width: 0%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="stay-dist-item">
+                                <div class="stay-dist-row">
+                                    <span class="stay-dist-label">🔧 1 a 3 Dias (Padrão)</span>
+                                    <span class="stay-dist-val" id="dist-count-1-3">0 carros (0%)</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-blue" id="dist-bar-1-3" style="width: 0%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="stay-dist-item">
+                                <div class="stay-dist-row">
+                                    <span class="stay-dist-label">📦 4 a 7 Dias (Esperando Peças/Complexo)</span>
+                                    <span class="stay-dist-val" id="dist-count-4-7">0 carros (0%)</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-amber" id="dist-bar-4-7" style="width: 0%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="stay-dist-item">
+                                <div class="stay-dist-row">
+                                    <span class="stay-dist-label">⏳ Mais de 7 Dias (Reparo Pesado / Retífica)</span>
+                                    <span class="stay-dist-val" id="dist-count-over-7">0 carros (0%)</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-rose" id="dist-bar-over-7" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Métricas Financeiras Médias -->
+                <div class="analytics-section-block">
+                    <div class="analytics-section-header">
+                        <span class="analytics-badge-title badge-finance">💰 3. MÉTRICAS FINANCEIRAS MÉDIAS</span>
+                        <span class="analytics-section-hint">Valores médios por ordem de serviço e separação de autopeças vs mão de obra</span>
+                    </div>
+
+                    <div class="analytics-grid-4">
+                        <!-- Média de Autopeças -->
+                        <div class="analytics-card card-parts-border">
+                            <div class="analytics-card-label text-amber">📦 Média de Autopeças / OS</div>
+                            <div class="analytics-card-val text-amber" id="val-avg-parts">R$ 0,00</div>
+                            <div class="analytics-card-sub" id="val-total-parts">Total em peças: R$ 0,00</div>
+                            <div class="analytics-card-note" id="val-parts-billed-note">Média p/ OS c/ peças: R$ 0,00</div>
+                        </div>
+
+                        <!-- Média de Mão de Obra -->
+                        <div class="analytics-card card-labor-border">
+                            <div class="analytics-card-label text-blue">🔧 Média de Mão de Obra / Visita</div>
+                            <div class="analytics-card-val text-blue" id="val-avg-labor">R$ 0,00</div>
+                            <div class="analytics-card-sub" id="val-total-labor">Total em serviços: R$ 0,00</div>
+                            <div class="analytics-card-note" id="val-labor-billed-note">Média p/ OS c/ serviço: R$ 0,00</div>
+                        </div>
+
+                        <!-- Ticket Médio Geral -->
+                        <div class="analytics-card card-ticket-border">
+                            <div class="analytics-card-label">🏷️ Ticket Médio Geral / OS</div>
+                            <div class="analytics-card-val" id="val-avg-ticket">R$ 0,00</div>
+                            <div class="analytics-card-sub" id="val-orders-billed-count">0 atendimentos faturados</div>
+                            <div class="analytics-card-note" id="val-ticket-billed-note">Média faturada: R$ 0,00</div>
+                        </div>
+
+                        <!-- Faturamento Total Acumulado -->
+                        <div class="analytics-card card-revenue-border">
+                            <div class="analytics-card-label text-green">💵 Faturamento Total (Período)</div>
+                            <div class="analytics-card-val text-green" id="val-total-revenue">R$ 0,00</div>
+                            <div class="analytics-card-sub" id="val-revenue-ratio">Peças: 0% • Serviços: 0%</div>
+                            <div class="analytics-card-note" id="val-period-days-count">Base: 30 dias de dados</div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico / Barra de Proporção Peças vs Mão de Obra -->
+                    <div class="analytics-card" style="margin-top: 12px; padding: 14px 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 13px; color: #1e293b;">Divisão do Faturamento: Autopeças vs Mão de Obra Mecânica</strong>
+                            <span id="val-parts-labor-legend" style="font-size: 12px; font-weight: 700; color: #475569;">0% Peças | 0% Serviços</span>
+                        </div>
+                        <div class="ratio-bar-track">
+                            <div id="ratio-bar-parts" class="ratio-bar-fill fill-amber" style="width: 50%;" title="Autopeças"></div>
+                            <div id="ratio-bar-labor" class="ratio-bar-fill fill-blue" style="width: 50%;" title="Mão de Obra"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 6px; color: #64748b;">
+                            <span>📦 <strong>Autopeças:</strong> <span id="ratio-text-parts">R$ 0,00 (0%)</span></span>
+                            <span>🔧 <strong>Mão de Obra:</strong> <span id="ratio-text-labor">R$ 0,00 (0%)</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Gráficos e Histórico Mensal / Tabela de Ordens -->
+                <div class="analytics-section-block">
+                    <div class="analytics-section-header">
+                        <span class="analytics-badge-title badge-trend">📈 4. HISTÓRICO &amp; ORDENS RECENTES</span>
+                        <span class="analytics-section-hint">Evolução por mês e detalhamento das ordens de serviço</span>
+                    </div>
+
+                    <!-- Gráfico Visual de Volume e Receita Mensal -->
+                    <div class="analytics-card" style="margin-bottom: 12px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <strong style="font-size: 13px; color: #1e293b;">Evolução Mensal (Volume de Carros &amp; Receita em R$)</strong>
+                            <span style="font-size: 12px; color: #64748b;">Agrupado por mês de atendimento</span>
+                        </div>
+                        <div id="analytics-monthly-chart" class="analytics-chart-container">
+                            <!-- Renderizado dinamicamente via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Tabela Resumo das Ordens de Serviço do Período -->
+                    <div class="analytics-card" style="padding: 0; overflow: hidden;">
+                        <div style="padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="font-size: 13px; color: #1e293b;">Últimos Atendimentos Registrados no Período (<span id="analytics-recent-count">0</span>)</strong>
+                            <span style="font-size: 11.5px; color: #64748b;">Placa, cliente, permanência e valores</span>
+                        </div>
+                        <div style="overflow-x: auto; max-height: 240px;">
+                            <table class="analytics-table">
+                                <thead>
+                                    <tr>
+                                        <th>Placa</th>
+                                        <th>Cliente</th>
+                                        <th>Modelo</th>
+                                        <th>Entrada</th>
+                                        <th>Saída/Entrega</th>
+                                        <th>Permanência</th>
+                                        <th>Autopeças</th>
+                                        <th>Mão de Obra</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analytics-recent-tbody">
+                                    <!-- Linhas geradas via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="justify-content: space-between; background: #ffffff; border-top: 1px solid #e2e8f0;">
+                <div style="font-size: 12px; color: #64748b;">
+                    MecatroniCar • Dados sincronizados diretamente de <strong>oficina_cache.db</strong>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-print-analytics" class="btn btn-secondary">
+                        🖨️ Imprimir Resumo
+                    </button>
+                    <button type="button" id="analytics-modal-dismiss" class="btn btn-primary" style="font-weight: 700;">
+                        Fechar
+                    </button>
                 </div>
             </div>
         </div>

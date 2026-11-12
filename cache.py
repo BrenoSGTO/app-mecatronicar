@@ -1743,3 +1743,373 @@ def get_quick_suggestions(db_path=None):
         "pecas": default_pecas + pecas_db[:30],
         "servicos": default_servicos + servicos_db[:30]
     }
+
+
+# ==============================================================================
+# ANALYTICS E MÉTRICAS DA OFICINA (Issue #16)
+# ==============================================================================
+
+def parse_any_date(date_val):
+    """Converte valores variados de data (strings DD/MM/AAAA, AAAA-MM-DD, DD/MM/AA ou objetos date) em datetime.date."""
+    if not date_val:
+        return None
+    if isinstance(date_val, datetime.date):
+        return date_val
+    if isinstance(date_val, datetime.datetime):
+        return date_val.date()
+    s = str(date_val).strip()
+    m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})', s)
+    if m:
+        d, mo, y = map(int, m.groups())
+        try:
+            return datetime.date(y, mo, d)
+        except ValueError:
+            return None
+    m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})', s)
+    if m:
+        y, mo, d = map(int, m.groups())
+        try:
+            return datetime.date(y, mo, d)
+        except ValueError:
+            return None
+    m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{2})$', s)
+    if m:
+        d, mo, y = map(int, m.groups())
+        y += 2000 if y < 50 else 1900
+        try:
+            return datetime.date(y, mo, d)
+        except ValueError:
+            return None
+    return None
+
+
+def get_analytics(period='30', db_path=None, ref_date=None):
+    """
+    Agregação e cálculo de métricas analíticas da oficina mecânica (Issue #16):
+    - Volume de carros atendidos (total e médias por dia, semana e mês)
+    - Tempo médio de permanência (dias desde a data de entrada até a saída/entrega)
+    - Médias financeiras (valor médio de peças por OS, valor médio de mão de obra por serviço/visita)
+    - Filtros por período: '30' (últimos 30 dias), '90' (últimos 90 dias) ou 'all' (geral)
+    """
+    path = db_path or get_db_path()
+    init_db(path)
+    
+    # Define a data de referência
+    if ref_date:
+        today = parse_any_date(ref_date) or datetime.date.today()
+    else:
+        today = datetime.date.today()
+        
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    
+    # Carrega lookup fiscal de nf_control para complementar eventuais ordens sem preços no json
+    nf_lookup = {}
+    try:
+        cur.execute("SELECT file_path, plate_clean, visit_num, valor_servico, valor_pecas FROM nf_control")
+        for row in cur.fetchall():
+            fp = row["file_path"] or ""
+            pc = row["plate_clean"] or ""
+            vn = str(row["visit_num"] or "")
+            vs = float(row["valor_servico"] or 0.0)
+            vp = float(row["valor_pecas"] or 0.0)
+            if fp:
+                nf_lookup[fp] = (vs, vp)
+            if pc:
+                nf_lookup[(pc, vn)] = (vs, vp)
+    except Exception:
+        pass
+        
+    cur.execute("""
+    SELECT file_path, file_name, plate, plate_clean, plate_display,
+           client_name, car_model, car_year, car_color, visit_num,
+           entry_date, entry_date_sort, data_json
+    FROM files
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    
+    all_records = []
+    
+    for r in rows:
+        dj_str = r["data_json"]
+        d = {}
+        if dj_str:
+            try:
+                d = json.loads(dj_str)
+            except Exception:
+                d = {}
+                
+        # Data de entrada
+        entry_raw = r["entry_date"] or d.get("entry_date") or r["entry_date_sort"]
+        ed = parse_any_date(entry_raw)
+        
+        # Data de saída / entrega
+        exit_raw = d.get("exit_date") or d.get("delivery_date") or d.get("data_saida") or d.get("data_entrega") or ""
+        exd = parse_any_date(exit_raw)
+        
+        # Tempo de permanência em dias
+        stay_days = None
+        if ed and exd and exd >= ed:
+            stay_days = (exd - ed).days
+            
+        # Valores financeiros de autopeças
+        tp = parse_currency_float(d.get("total_pecas"))
+        if tp == 0.0:
+            for item in d.get("pecas_items", []):
+                t_item = parse_currency_float(item.get("total_price"))
+                if t_item > 0:
+                    tp += t_item
+                else:
+                    u_item = parse_currency_float(item.get("unit_price"))
+                    q_val = item.get("quantity") or 1
+                    try:
+                        q_num = float(q_val)
+                    except Exception:
+                        q_num = 1.0
+                    if u_item > 0:
+                        tp += u_item * q_num
+                        
+        # Valores financeiros de mão de obra (serviços)
+        ts = parse_currency_float(d.get("total_servicos"))
+        if ts == 0.0:
+            for item in d.get("servicos_items", []):
+                t_item = parse_currency_float(item.get("total_price"))
+                if t_item > 0:
+                    ts += t_item
+                else:
+                    u_item = parse_currency_float(item.get("unit_price"))
+                    q_val = item.get("quantity") or 1
+                    try:
+                        q_num = float(q_val)
+                    except Exception:
+                        q_num = 1.0
+                    if u_item > 0:
+                        ts += u_item * q_num
+                        
+        # Fallback de valores via nf_control se zerados
+        if tp == 0.0 and ts == 0.0:
+            fp = r["file_path"] or ""
+            pc = r["plate_clean"] or ""
+            vn = str(r["visit_num"] or "")
+            if fp in nf_lookup:
+                ts, tp = nf_lookup[fp]
+            elif (pc, vn) in nf_lookup:
+                ts, tp = nf_lookup[(pc, vn)]
+                
+        tot = parse_currency_float(d.get("total"))
+        if tot == 0.0:
+            tot = tp + ts
+            
+        record = {
+            "file_path": r["file_path"],
+            "file_name": r["file_name"],
+            "plate": r["plate"] or "",
+            "plate_clean": r["plate_clean"] or "",
+            "plate_display": r["plate_display"] or r["plate"] or "",
+            "client_name": r["client_name"] or "",
+            "car_model": r["car_model"] or "",
+            "visit_num": r["visit_num"] or "1",
+            "entry_date": ed,
+            "entry_date_str": ed.strftime("%d/%m/%Y") if ed else (r["entry_date"] or ""),
+            "exit_date": exd,
+            "exit_date_str": exd.strftime("%d/%m/%Y") if exd else (exit_raw or ""),
+            "stay_days": stay_days,
+            "parts_val": round(tp, 2),
+            "labor_val": round(ts, 2),
+            "total_val": round(tot, 2)
+        }
+        all_records.append(record)
+        
+    # Filtro por período
+    p = str(period).lower().strip()
+    if p in ("30", "30d", "30_days", "30dias"):
+        cutoff = today - datetime.timedelta(days=30)
+        filtered = [rec for rec in all_records if rec["entry_date"] and rec["entry_date"] >= cutoff]
+        days_span = 30
+        period_label = "Últimos 30 Dias"
+        period_key = "30"
+    elif p in ("90", "90d", "90_days", "90dias"):
+        cutoff = today - datetime.timedelta(days=90)
+        filtered = [rec for rec in all_records if rec["entry_date"] and rec["entry_date"] >= cutoff]
+        days_span = 90
+        period_label = "Últimos 90 Dias"
+        period_key = "90"
+    else:
+        filtered = list(all_records)
+        dates_with_values = [rec["entry_date"] for rec in all_records if rec["entry_date"]]
+        if dates_with_values:
+            min_d = min(dates_with_values)
+            max_d = max(dates_with_values)
+            days_span = max(1, (max_d - min_d).days + 1)
+        else:
+            days_span = 30
+        period_label = "Geral (Todo o Período)"
+        period_key = "all"
+        
+    # 1. Métricas de Volume de Carros
+    total_cars = len(set(r["plate_clean"] for r in filtered if r["plate_clean"]))
+    total_orders = len(filtered)
+    weeks_span = max(1.0, days_span / 7.0)
+    months_span = max(1.0, days_span / 30.0)
+    
+    avg_cars_per_day = round(total_cars / days_span, 2) if days_span > 0 else 0.0
+    avg_cars_per_week = round(total_cars / weeks_span, 2) if weeks_span > 0 else 0.0
+    avg_cars_per_month = round(total_cars / months_span, 2) if months_span > 0 else 0.0
+    
+    avg_orders_per_day = round(total_orders / days_span, 2) if days_span > 0 else 0.0
+    avg_orders_per_week = round(total_orders / weeks_span, 2) if weeks_span > 0 else 0.0
+    avg_orders_per_month = round(total_orders / months_span, 2) if months_span > 0 else 0.0
+    
+    active_days = set(r["entry_date"] for r in filtered if r["entry_date"])
+    active_days_count = len(active_days)
+    
+    # 2. Tempo Médio de Permanência
+    stays = [r["stay_days"] for r in filtered if r["stay_days"] is not None]
+    stays_count = len(stays)
+    avg_stay_days = round(sum(stays) / stays_count, 1) if stays_count > 0 else 0.0
+    min_stay = min(stays) if stays_count > 0 else 0
+    max_stay = max(stays) if stays_count > 0 else 0
+    
+    stay_dist = {
+        "same_day": sum(1 for s in stays if s == 0),
+        "days_1_to_3": sum(1 for s in stays if 1 <= s <= 3),
+        "days_4_to_7": sum(1 for s in stays if 4 <= s <= 7),
+        "days_over_7": sum(1 for s in stays if s > 7)
+    }
+    
+    if stays_count == 0:
+        avg_stay_text = "Sem registros finalizados"
+    elif avg_stay_days == 1.0:
+        avg_stay_text = "1,0 dia"
+    else:
+        avg_stay_text = f"{avg_stay_days:.1f}".replace(".", ",") + " dias"
+        
+    # 3. Métricas Financeiras Médias
+    tot_parts = round(sum(r["parts_val"] for r in filtered), 2)
+    tot_labor = round(sum(r["labor_val"] for r in filtered), 2)
+    tot_revenue = round(tot_parts + tot_labor, 2)
+    
+    orders_with_parts = [r for r in filtered if r["parts_val"] > 0]
+    orders_with_labor = [r for r in filtered if r["labor_val"] > 0]
+    orders_billed = [r for r in filtered if r["total_val"] > 0]
+    
+    avg_parts_order = round(tot_parts / total_orders, 2) if total_orders > 0 else 0.0
+    avg_parts_billed = round(tot_parts / len(orders_with_parts), 2) if orders_with_parts else 0.0
+    
+    avg_labor_order = round(tot_labor / total_orders, 2) if total_orders > 0 else 0.0
+    avg_labor_billed = round(tot_labor / len(orders_with_labor), 2) if orders_with_labor else 0.0
+    
+    avg_ticket_order = round(tot_revenue / total_orders, 2) if total_orders > 0 else 0.0
+    avg_ticket_billed = round(tot_revenue / len(orders_billed), 2) if orders_billed else 0.0
+    
+    parts_pct = round((tot_parts / tot_revenue) * 100, 1) if tot_revenue > 0 else 0.0
+    labor_pct = round((tot_labor / tot_revenue) * 100, 1) if tot_revenue > 0 else 0.0
+    
+    # 4. Tendência Mensal (Monthly Trend)
+    months_map = {}
+    month_names = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    for r in filtered:
+        ed = r["entry_date"]
+        if not ed:
+            continue
+        m_key = ed.strftime("%Y-%m")
+        if m_key not in months_map:
+            lbl = f"{month_names[ed.month]}/{ed.year}"
+            months_map[m_key] = {
+                "month": m_key,
+                "label": lbl,
+                "cars_set": set(),
+                "orders": 0,
+                "parts": 0.0,
+                "labor": 0.0,
+                "total": 0.0
+            }
+        m_entry = months_map[m_key]
+        if r["plate_clean"]:
+            m_entry["cars_set"].add(r["plate_clean"])
+        m_entry["orders"] += 1
+        m_entry["parts"] += r["parts_val"]
+        m_entry["labor"] += r["labor_val"]
+        m_entry["total"] += r["total_val"]
+        
+    monthly_trend = []
+    for m_key in sorted(months_map.keys()):
+        item = months_map[m_key]
+        monthly_trend.append({
+            "month": item["month"],
+            "label": item["label"],
+            "cars": len(item["cars_set"]),
+            "orders": item["orders"],
+            "parts": round(item["parts"], 2),
+            "labor": round(item["labor"], 2),
+            "total": round(item["total"], 2)
+        })
+        
+    # 5. Ordens Recentes (para visualização detalhada no dashboard)
+    sorted_recent = sorted(
+        filtered,
+        key=lambda x: (x["entry_date"] or datetime.date(2000, 1, 1), x["visit_num"]),
+        reverse=True
+    )
+    recent_orders = []
+    for r in sorted_recent[:15]:
+        recent_orders.append({
+            "plate": r["plate"],
+            "plate_clean": r["plate_clean"],
+            "plate_display": r["plate_display"],
+            "client_name": r["client_name"],
+            "car_model": r["car_model"],
+            "visit_num": r["visit_num"],
+            "entry_date": r["entry_date_str"],
+            "exit_date": r["exit_date_str"],
+            "stay_days": r["stay_days"],
+            "parts_val": r["parts_val"],
+            "labor_val": r["labor_val"],
+            "total_val": r["total_val"]
+        })
+        
+    return {
+        "period": period_key,
+        "period_label": period_label,
+        "days_span": days_span,
+        "volume": {
+            "total_cars": total_cars,
+            "total_orders": total_orders,
+            "avg_cars_per_day": avg_cars_per_day,
+            "avg_cars_per_week": avg_cars_per_week,
+            "avg_cars_per_month": avg_cars_per_month,
+            "avg_orders_per_day": avg_orders_per_day,
+            "avg_orders_per_week": avg_orders_per_week,
+            "avg_orders_per_month": avg_orders_per_month,
+            "active_days_count": active_days_count
+        },
+        "stay_time": {
+            "avg_stay_days": avg_stay_days,
+            "avg_stay_text": avg_stay_text,
+            "min_stay_days": min_stay,
+            "max_stay_days": max_stay,
+            "stays_measured_count": stays_count,
+            "distribution": stay_dist
+        },
+        "financials": {
+            "total_parts": tot_parts,
+            "total_labor": tot_labor,
+            "total_revenue": tot_revenue,
+            "avg_parts_per_order": avg_parts_order,
+            "avg_parts_per_billed_order": avg_parts_billed,
+            "avg_labor_per_order": avg_labor_order,
+            "avg_labor_per_billed_order": avg_labor_billed,
+            "avg_ticket_order": avg_ticket_order,
+            "avg_ticket_billed_order": avg_ticket_billed,
+            "parts_percentage": parts_pct,
+            "labor_percentage": labor_pct,
+            "orders_with_parts_count": len(orders_with_parts),
+            "orders_with_labor_count": len(orders_with_labor),
+            "orders_billed_count": len(orders_billed)
+        },
+        "monthly_trend": monthly_trend,
+        "recent_orders": recent_orders
+    }
+

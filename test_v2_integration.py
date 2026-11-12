@@ -276,5 +276,36 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         pend_json = resp_pend.get_json()
         self.assertTrue(pend_json["success"])
 
+    def test_07_analytics_endpoint_and_metrics(self):
+        """Valida rota /api/analytics e cálculo de métricas de volume, permanência e valores médios (Issue #16)."""
+        # Teste de consulta no endpoint geral
+        resp = self.client.get("/api/analytics?period=all")
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertTrue(json_data["success"])
+        data = json_data["data"]
+
+        # Valida estrutura de resposta
+        self.assertIn("volume", data)
+        self.assertIn("stay_time", data)
+        self.assertIn("financials", data)
+        self.assertIn("monthly_trend", data)
+        self.assertIn("recent_orders", data)
+
+        vol = data["volume"]
+        self.assertGreaterEqual(vol["total_cars"], 4)
+        self.assertGreater(vol["avg_cars_per_month"], 0.0)
+
+        stay = data["stay_time"]
+        self.assertGreaterEqual(stay["stays_measured_count"], 1)
+        self.assertEqual(stay["avg_stay_days"], 5.0)
+
+        fin = data["financials"]
+        self.assertGreater(fin["total_parts"], 0.0)
+        self.assertGreater(fin["total_labor"], 0.0)
+        self.assertGreater(fin["avg_parts_per_order"], 0.0)
+        self.assertGreater(fin["avg_labor_per_order"], 0.0)
+
 if __name__ == "__main__":
     unittest.main()
+
