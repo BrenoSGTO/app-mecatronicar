@@ -267,6 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') {
             if (commentModal.style.display !== 'none') closeModal();
             if (updateModal.style.display !== 'none') closeUpdateModal();
+            const anModal = document.getElementById('analytics-modal');
+            if (anModal && anModal.style.display !== 'none') anModal.style.display = 'none';
         }
         if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
             e.preventDefault();
@@ -3086,7 +3088,376 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // =========================================================================
+    // MÓDULO DE ANALYTICS & MÉTRICAS DA OFICINA (Issue #16)
+    // =========================================================================
+
+    const btnOpenAnalyticsModal = document.getElementById('btn-open-analytics-modal');
+    const welcomeBtnAnalytics = document.getElementById('welcome-btn-analytics');
+    const welcomeBtnPatio = document.getElementById('welcome-btn-patio');
+    const welcomeBtnFiscal = document.getElementById('welcome-btn-fiscal');
+    const analyticsModal = document.getElementById('analytics-modal');
+    const analyticsModalCloseBtn = document.getElementById('analytics-modal-close-btn');
+    const analyticsModalDismiss = document.getElementById('analytics-modal-dismiss');
+    const btnRefreshAnalytics = document.getElementById('btn-refresh-analytics');
+    const btnPrintAnalytics = document.getElementById('btn-print-analytics');
+    const analyticsPeriodCaption = document.getElementById('analytics-period-caption');
+
+    const periodBtns = {
+        '30': document.getElementById('btn-period-30'),
+        '90': document.getElementById('btn-period-90'),
+        'all': document.getElementById('btn-period-all')
+    };
+
+    let currentAnalyticsPeriod = '30';
+
+    function formatCurrencyBR(value) {
+        const num = parseFloat(value) || 0;
+        return 'R$ ' + num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDecimalBR(value, decimals = 2) {
+        const num = parseFloat(value) || 0;
+        return num.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    async function loadAnalyticsData(period = '30') {
+        currentAnalyticsPeriod = period;
+
+        // Atualiza estilo dos botões de período
+        Object.keys(periodBtns).forEach(pKey => {
+            if (periodBtns[pKey]) {
+                if (pKey === period) {
+                    periodBtns[pKey].classList.add('active');
+                } else {
+                    periodBtns[pKey].classList.remove('active');
+                }
+            }
+        });
+
+        // Atualiza legenda do período
+        if (analyticsPeriodCaption) {
+            analyticsPeriodCaption.textContent = period === '30' ? 'Últimos 30 Dias' : (period === '90' ? 'Últimos 90 Dias' : 'Geral (Histórico Completo)');
+        }
+
+        try {
+            const resp = await fetch(`/api/analytics?period=${encodeURIComponent(period)}`);
+            if (!resp.ok) {
+                throw new Error(`Erro na API (${resp.status})`);
+            }
+            const resJson = await resp.json();
+            if (!resJson.success || !resJson.data) {
+                throw new Error(resJson.error || 'Falha ao obter dados analíticos');
+            }
+
+            renderAnalyticsDashboard(resJson.data);
+        } catch (err) {
+            console.error('Erro ao carregar analytics:', err);
+            showToast('Erro ao carregar dados de analytics: ' + err.message, 'error');
+        }
+    }
+
+    function renderAnalyticsDashboard(data) {
+        const vol = data.volume || {};
+        const stay = data.stay_time || {};
+        const fin = data.financials || {};
+        const trend = data.monthly_trend || [];
+        const recent = data.recent_orders || [];
+
+        // 1. Volume de Carros
+        const valTotalCars = document.getElementById('val-total-cars');
+        const valTotalOrders = document.getElementById('val-total-orders');
+        const valAvgCarsDay = document.getElementById('val-avg-cars-day');
+        const valAvgOrdersDay = document.getElementById('val-avg-orders-day');
+        const valAvgCarsWeek = document.getElementById('val-avg-cars-week');
+        const valAvgOrdersWeek = document.getElementById('val-avg-orders-week');
+        const valAvgCarsMonth = document.getElementById('val-avg-cars-month');
+        const valAvgOrdersMonth = document.getElementById('val-avg-orders-month');
+
+        if (valTotalCars) valTotalCars.textContent = vol.total_cars || 0;
+        if (valTotalOrders) valTotalOrders.textContent = `${vol.total_orders || 0} ${vol.total_orders === 1 ? 'ordem de serviço' : 'ordens de serviço'} (${vol.active_days_count || 0} dias ativos)`;
+        if (valAvgCarsDay) valAvgCarsDay.textContent = formatDecimalBR(vol.avg_cars_per_day, 2);
+        if (valAvgOrdersDay) valAvgOrdersDay.textContent = `${formatDecimalBR(vol.avg_orders_per_day, 2)} OSs / dia`;
+        if (valAvgCarsWeek) valAvgCarsWeek.textContent = formatDecimalBR(vol.avg_cars_per_week, 2);
+        if (valAvgOrdersWeek) valAvgOrdersWeek.textContent = `${formatDecimalBR(vol.avg_orders_per_week, 2)} OSs / sem`;
+        if (valAvgCarsMonth) valAvgCarsMonth.textContent = formatDecimalBR(vol.avg_cars_per_month, 2);
+        if (valAvgOrdersMonth) valAvgOrdersMonth.textContent = `${formatDecimalBR(vol.avg_orders_per_month, 2)} OSs / mês`;
+
+        // 2. Tempo Médio de Permanência
+        const valAvgStayDays = document.getElementById('val-avg-stay-days');
+        const valStayRange = document.getElementById('val-stay-range');
+        const valStayCount = document.getElementById('val-stay-count');
+
+        if (valAvgStayDays) {
+            valAvgStayDays.textContent = stay.avg_stay_text || `${formatDecimalBR(stay.avg_stay_days, 1)} dias`;
+        }
+        if (valStayRange) {
+            if (stay.stays_measured_count > 0) {
+                const minTxt = stay.min_stay_days === 0 ? '0d (mesmo dia)' : `${stay.min_stay_days}d`;
+                const maxTxt = `${stay.max_stay_days}d`;
+                valStayRange.textContent = `Mín: ${minTxt} • Máx: ${maxTxt}`;
+            } else {
+                valStayRange.textContent = 'Mín: - • Máx: -';
+            }
+        }
+        if (valStayCount) {
+            valStayCount.textContent = `Medido em ${stay.stays_measured_count || 0} ${stay.stays_measured_count === 1 ? 'veículo finalizado' : 'veículos finalizados'}`;
+        }
+
+        // Distribuição de Permanência
+        const dist = stay.distribution || {};
+        const totalMeasured = stay.stays_measured_count || 0;
+        const calcPct = (cnt) => totalMeasured > 0 ? Math.round((cnt / totalMeasured) * 100) : 0;
+
+        const sameDayCnt = dist.same_day || 0;
+        const d13Cnt = dist.days_1_to_3 || 0;
+        const d47Cnt = dist.days_4_to_7 || 0;
+        const dOver7Cnt = dist.days_over_7 || 0;
+
+        const elDistSame = document.getElementById('dist-count-same-day');
+        const elBarSame = document.getElementById('dist-bar-same-day');
+        if (elDistSame) elDistSame.textContent = `${sameDayCnt} carros (${calcPct(sameDayCnt)}%)`;
+        if (elBarSame) elBarSame.style.width = `${calcPct(sameDayCnt)}%`;
+
+        const elDist13 = document.getElementById('dist-count-1-3');
+        const elBar13 = document.getElementById('dist-bar-1-3');
+        if (elDist13) elDist13.textContent = `${d13Cnt} carros (${calcPct(d13Cnt)}%)`;
+        if (elBar13) elBar13.style.width = `${calcPct(d13Cnt)}%`;
+
+        const elDist47 = document.getElementById('dist-count-4-7');
+        const elBar47 = document.getElementById('dist-bar-4-7');
+        if (elDist47) elDist47.textContent = `${d47Cnt} carros (${calcPct(d47Cnt)}%)`;
+        if (elBar47) elBar47.style.width = `${calcPct(d47Cnt)}%`;
+
+        const elDistOver7 = document.getElementById('dist-count-over-7');
+        const elBarOver7 = document.getElementById('dist-bar-over-7');
+        if (elDistOver7) elDistOver7.textContent = `${dOver7Cnt} carros (${calcPct(dOver7Cnt)}%)`;
+        if (elBarOver7) elBarOver7.style.width = `${calcPct(dOver7Cnt)}%`;
+
+        // 3. Médias Financeiras
+        const valAvgParts = document.getElementById('val-avg-parts');
+        const valTotalParts = document.getElementById('val-total-parts');
+        const valPartsBilledNote = document.getElementById('val-parts-billed-note');
+
+        const valAvgLabor = document.getElementById('val-avg-labor');
+        const valTotalLabor = document.getElementById('val-total-labor');
+        const valLaborBilledNote = document.getElementById('val-labor-billed-note');
+
+        const valAvgTicket = document.getElementById('val-avg-ticket');
+        const valOrdersBilledCount = document.getElementById('val-orders-billed-count');
+        const valTicketBilledNote = document.getElementById('val-ticket-billed-note');
+
+        const valTotalRevenue = document.getElementById('val-total-revenue');
+        const valRevenueRatio = document.getElementById('val-revenue-ratio');
+        const valPeriodDaysCount = document.getElementById('val-period-days-count');
+
+        if (valAvgParts) valAvgParts.textContent = formatCurrencyBR(fin.avg_parts_per_order);
+        if (valTotalParts) valTotalParts.textContent = `Total em peças: ${formatCurrencyBR(fin.total_parts)}`;
+        if (valPartsBilledNote) valPartsBilledNote.textContent = `Média p/ OS c/ peças: ${formatCurrencyBR(fin.avg_parts_per_billed_order)} (${fin.orders_with_parts_count || 0} OSs)`;
+
+        if (valAvgLabor) valAvgLabor.textContent = formatCurrencyBR(fin.avg_labor_per_order);
+        if (valTotalLabor) valTotalLabor.textContent = `Total em serviços: ${formatCurrencyBR(fin.total_labor)}`;
+        if (valLaborBilledNote) valLaborBilledNote.textContent = `Média p/ OS c/ serviço: ${formatCurrencyBR(fin.avg_labor_per_billed_order)} (${fin.orders_with_labor_count || 0} OSs)`;
+
+        if (valAvgTicket) valAvgTicket.textContent = formatCurrencyBR(fin.avg_ticket_order);
+        if (valOrdersBilledCount) valOrdersBilledCount.textContent = `${fin.orders_billed_count || 0} de ${vol.total_orders || 0} OSs faturadas`;
+        if (valTicketBilledNote) valTicketBilledNote.textContent = `Ticket médio faturado: ${formatCurrencyBR(fin.avg_ticket_billed_order)}`;
+
+        if (valTotalRevenue) valTotalRevenue.textContent = formatCurrencyBR(fin.total_revenue);
+        if (valRevenueRatio) valRevenueRatio.textContent = `Peças: ${formatDecimalBR(fin.parts_percentage, 1)}% • Mão de Obra: ${formatDecimalBR(fin.labor_percentage, 1)}%`;
+        if (valPeriodDaysCount) valPeriodDaysCount.textContent = `Base: ${data.days_span || 30} dias de intervalo analisado`;
+
+        // Barra de proporção empilhada
+        const ratioPartsBar = document.getElementById('ratio-bar-parts');
+        const ratioLaborBar = document.getElementById('ratio-bar-labor');
+        const partsLaborLegend = document.getElementById('val-parts-labor-legend');
+        const ratioTextParts = document.getElementById('ratio-text-parts');
+        const ratioTextLabor = document.getElementById('ratio-text-labor');
+
+        const partsPct = fin.parts_percentage || 0;
+        const laborPct = fin.labor_percentage || 0;
+
+        if (ratioPartsBar) ratioPartsBar.style.width = `${partsPct}%`;
+        if (ratioLaborBar) ratioLaborBar.style.width = `${laborPct}%`;
+        if (partsLaborLegend) partsLaborLegend.textContent = `${formatDecimalBR(partsPct, 1)}% Peças | ${formatDecimalBR(laborPct, 1)}% Serviços`;
+        if (ratioTextParts) ratioTextParts.textContent = `${formatCurrencyBR(fin.total_parts)} (${formatDecimalBR(partsPct, 1)}%)`;
+        if (ratioTextLabor) ratioTextLabor.textContent = `${formatCurrencyBR(fin.total_labor)} (${formatDecimalBR(laborPct, 1)}%)`;
+
+        // 4. Gráfico Mensal
+        renderMonthlyChart(trend);
+
+        // 5. Tabela de Ordens Recentes
+        renderRecentOrdersTable(recent);
+    }
+
+    function renderMonthlyChart(trend) {
+        const chartContainer = document.getElementById('analytics-monthly-chart');
+        if (!chartContainer) return;
+
+        chartContainer.innerHTML = '';
+
+        if (!trend || trend.length === 0) {
+            chartContainer.innerHTML = `
+                <div style="width: 100%; text-align: center; padding: 25px 10px; color: #94a3b8; font-size: 13px;">
+                    Nenhum histórico mensal disponível para o período selecionado.
+                </div>
+            `;
+            return;
+        }
+
+        const maxTotal = Math.max(...trend.map(t => t.total || 0), 100);
+
+        trend.forEach(item => {
+            const group = document.createElement('div');
+            group.className = 'chart-bar-group';
+
+            const heightPct = Math.max(10, Math.round(((item.total || 0) / maxTotal) * 100));
+            const barHeightPx = Math.max(10, Math.round((heightPct / 100) * 80));
+
+            group.innerHTML = `
+                <div class="chart-bar-val">${item.total > 0 ? formatCurrencyBR(item.total) : `${item.cars} carros`}</div>
+                <div class="chart-bar-pillar" style="height: ${barHeightPx}px;" title="${item.label}: ${item.cars} ${item.cars === 1 ? 'carro' : 'carros'}, ${item.orders} OSs, Peças: ${formatCurrencyBR(item.parts)}, Mão de Obra: ${formatCurrencyBR(item.labor)}, Total: ${formatCurrencyBR(item.total)}"></div>
+                <div class="chart-bar-label">${item.label}</div>
+                <div class="chart-bar-sub">${item.cars} ${item.cars === 1 ? 'carro' : 'carros'}</div>
+            `;
+            chartContainer.appendChild(group);
+        });
+    }
+
+    function renderRecentOrdersTable(orders) {
+        const tbody = document.getElementById('analytics-recent-tbody');
+        const countBadge = document.getElementById('analytics-recent-count');
+        if (countBadge) countBadge.textContent = orders ? orders.length : 0;
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 20px; color: #94a3b8;">
+                        Nenhuma ordem de serviço registrada no período selecionado.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        orders.forEach(ord => {
+            const tr = document.createElement('tr');
+
+            let stayPillHtml = '<span class="stay-pill stay-open">-</span>';
+            if (ord.stay_days !== null && ord.stay_days !== undefined) {
+                if (ord.stay_days === 0) {
+                    stayPillHtml = '<span class="stay-pill stay-fast">0d (mesmo dia)</span>';
+                } else if (ord.stay_days <= 3) {
+                    stayPillHtml = `<span class="stay-pill stay-norm">${ord.stay_days}d</span>`;
+                } else {
+                    stayPillHtml = `<span class="stay-pill stay-long">${ord.stay_days}d</span>`;
+                }
+            } else if (ord.exit_date) {
+                stayPillHtml = '<span class="stay-pill stay-norm">Finalizado</span>';
+            } else {
+                stayPillHtml = '<span class="stay-pill stay-open">Em aberto</span>';
+            }
+
+            tr.innerHTML = `
+                <td><span class="analytics-plate-badge">${escapeHtml(ord.plate_display || ord.plate || '-')}</span></td>
+                <td><strong>${escapeHtml(ord.client_name || '-')}</strong></td>
+                <td>${escapeHtml(ord.car_model || '-')}</td>
+                <td>${escapeHtml(ord.entry_date || '-')}</td>
+                <td>${escapeHtml(ord.exit_date || '-')}</td>
+                <td>${stayPillHtml}</td>
+                <td style="color: #d97706; font-weight: 600;">${ord.parts_val > 0 ? formatCurrencyBR(ord.parts_val) : '-'}</td>
+                <td style="color: #0284c7; font-weight: 600;">${ord.labor_val > 0 ? formatCurrencyBR(ord.labor_val) : '-'}</td>
+                <td style="font-weight: 700; color: #111827;">${ord.total_val > 0 ? formatCurrencyBR(ord.total_val) : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openAnalyticsModal(period = '30') {
+        if (analyticsModal) {
+            analyticsModal.style.display = 'flex';
+            loadAnalyticsData(period);
+        }
+    }
+
+    function closeAnalyticsModal() {
+        if (analyticsModal) {
+            analyticsModal.style.display = 'none';
+        }
+    }
+
+    // Eventos de Abertura e Fechamento do Modal de Analytics
+    if (btnOpenAnalyticsModal) {
+        btnOpenAnalyticsModal.addEventListener('click', () => {
+            openAnalyticsModal(currentAnalyticsPeriod);
+        });
+    }
+
+    if (welcomeBtnAnalytics) {
+        welcomeBtnAnalytics.addEventListener('click', () => {
+            openAnalyticsModal(currentAnalyticsPeriod);
+        });
+    }
+
+    if (welcomeBtnPatio) {
+        welcomeBtnPatio.addEventListener('click', () => {
+            const btnPatio = document.getElementById('btn-open-patio-modal');
+            if (btnPatio) btnPatio.click();
+        });
+    }
+
+    if (welcomeBtnFiscal) {
+        welcomeBtnFiscal.addEventListener('click', () => {
+            const btnFiscal = document.getElementById('btn-open-fiscal-hub');
+            if (btnFiscal) btnFiscal.click();
+        });
+    }
+
+    if (analyticsModalCloseBtn) {
+        analyticsModalCloseBtn.addEventListener('click', closeAnalyticsModal);
+    }
+
+    if (analyticsModalDismiss) {
+        analyticsModalDismiss.addEventListener('click', closeAnalyticsModal);
+    }
+
+    if (analyticsModal) {
+        analyticsModal.addEventListener('click', (e) => {
+            if (e.target === analyticsModal) {
+                closeAnalyticsModal();
+            }
+        });
+    }
+
+    if (btnRefreshAnalytics) {
+        btnRefreshAnalytics.addEventListener('click', () => {
+            loadAnalyticsData(currentAnalyticsPeriod);
+            showToast('Métricas de Analytics atualizadas com sucesso!', 'success');
+        });
+    }
+
+    if (btnPrintAnalytics) {
+        btnPrintAnalytics.addEventListener('click', () => {
+            window.print();
+        });
+    }
+
+    // Filtros por Período
+    if (periodBtns['30']) {
+        periodBtns['30'].addEventListener('click', () => loadAnalyticsData('30'));
+    }
+    if (periodBtns['90']) {
+        periodBtns['90'].addEventListener('click', () => loadAnalyticsData('90'));
+    }
+    if (periodBtns['all']) {
+        periodBtns['all'].addEventListener('click', () => loadAnalyticsData('all'));
+    }
+
     // Inicialização da contagem no carregamento da tela
     updateHeaderFiscalBadge();
 });
+
 

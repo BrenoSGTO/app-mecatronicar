@@ -726,6 +726,33 @@ def nf_export_batch_endpoint():
         }
 
 
+@app.route("/api/analytics", methods=["GET"])
+def get_analytics_endpoint():
+    """
+    Retorna métricas e indicadores de analytics da oficina MecatroniCar (Issue #16):
+    - Volume de carros atendidos e médias por dia, semana e mês
+    - Tempo médio de permanência (data entrada até entrega)
+    - Médias financeiras de autopeças e mão de obra
+    - Filtros por período: 30 dias (default), 90 dias, geral
+    """
+    period = request.args.get("period", "30")
+    ref_date = request.args.get("ref_date", "")
+    db_path = request.args.get("db_path") or cache.get_db_path(BASE_DIR)
+    try:
+        data = cache.get_analytics(period=period, db_path=db_path, ref_date=ref_date)
+        return jsonify({
+            "success": True,
+            "data": data
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 def start_server(port=5000):
     cfg = config.load_config(BASE_DIR)
     folder = cfg.get("spreadsheet_folder", "")
