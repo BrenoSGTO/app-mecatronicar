@@ -31,6 +31,17 @@
 
         <!-- Indicadores & Controles da TV -->
         <div class="tv-header-right">
+            <!-- Alternância de Abas: Pátio vs Calendário -->
+            <div class="tv-tab-switcher">
+                <button type="button" class="tv-tab-btn active" id="tab-btn-patio">
+                    <span>🚗</span> Pátio / TV
+                </button>
+                <button type="button" class="tv-tab-btn" id="tab-btn-calendar">
+                    <span>📅</span> Agenda / Calendário
+                    <span id="header-agenda-badge" class="tv-tab-badge">0</span>
+                </button>
+            </div>
+
             <div class="tv-counter-pill" title="Total de veículos no pátio agora">
                 <span class="tv-counter-icon">🚗</span>
                 <span class="tv-counter-val" id="tv-total-cars">0</span>
@@ -126,6 +137,55 @@
                 <button type="button" class="tv-btn tv-btn-primary" id="btn-empty-add-car">
                     ➕ Adicionar Primeiro Veículo
                 </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Quadro de Calendário de Agendamentos (TV) -->
+    <main class="tv-calendar-container" id="tv-calendar-view" style="display: none;">
+        <!-- Barra de Controle do Calendário -->
+        <div class="tv-cal-controls">
+            <div class="tv-cal-nav">
+                <button type="button" id="btn-cal-prev" class="tv-btn tv-btn-secondary" title="Data Anterior">◀ Anterior</button>
+                <button type="button" id="btn-cal-today" class="tv-btn tv-btn-primary">Hoje</button>
+                <button type="button" id="btn-cal-next" class="tv-btn tv-btn-secondary" title="Próxima Data">Próximo ▶</button>
+                <div class="tv-cal-date-indicator">
+                    <span class="tv-cal-indicator-icon">📅</span>
+                    <span id="tv-cal-current-label" class="tv-cal-current-label">Carregando data...</span>
+                </div>
+            </div>
+
+            <div class="tv-cal-filters">
+                <button type="button" class="tv-filter-btn active" data-filter="today" id="filter-btn-today">
+                    <span>Hoje</span>
+                    <span id="badge-cal-today" class="tv-filter-count">0</span>
+                </button>
+                <button type="button" class="tv-filter-btn" data-filter="week" id="filter-btn-week">
+                    <span>Próximos 7 Dias</span>
+                    <span id="badge-cal-week" class="tv-filter-count">0</span>
+                </button>
+                <button type="button" class="tv-filter-btn" data-filter="all" id="filter-btn-all">
+                    <span>Todos</span>
+                    <span id="badge-cal-all" class="tv-filter-count">0</span>
+                </button>
+            </div>
+
+            <div class="tv-cal-actions">
+                <button type="button" id="btn-cal-new-appointment" class="tv-btn tv-btn-primary">
+                    <span>➕</span> Novo Agendamento
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de Agendamentos -->
+        <div class="tv-cal-content" id="tv-cal-content">
+            <div class="tv-cal-grid" id="tv-cal-grid">
+                <!-- Cards de agendamento injetados via JS -->
+            </div>
+            <div id="tv-cal-empty" class="tv-cal-empty" style="display: none;">
+                <div class="tv-empty-icon">📅</div>
+                <div class="tv-empty-title">Nenhum agendamento encontrado para este período</div>
+                <div class="tv-empty-sub">Clique em "+ Novo Agendamento" para cadastrar a previsão de chegada de um veículo.</div>
             </div>
         </div>
     </main>
@@ -229,6 +289,86 @@
                     <div class="tv-actions-right">
                         <button type="button" id="btn-cancel-modal" class="tv-btn tv-btn-secondary">Cancelar</button>
                         <button type="submit" id="btn-save-car" class="tv-btn tv-btn-primary">💾 Salvar no Pátio</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro / Edição de Agendamento na TV -->
+    <div id="tv-agendamento-modal" class="tv-modal-backdrop" style="display: none;">
+        <div class="tv-modal-dialog" style="max-width: 640px;">
+            <div class="tv-modal-header">
+                <h3 class="tv-modal-title" id="tv-agendamento-modal-title">📅 Agendar Atendimento na Oficina</h3>
+                <button type="button" class="tv-modal-close" id="btn-close-agendamento-modal">✕</button>
+            </div>
+            <form id="tv-agendamento-form" class="tv-modal-form">
+                <input type="hidden" id="form-agenda-id" value="">
+
+                <div class="tv-form-row">
+                    <div class="tv-form-group flex-3">
+                        <label for="form-agenda-client">Nome do Cliente *</label>
+                        <input type="text" id="form-agenda-client" class="tv-input" placeholder="Ex: Danilo Rodrigues" required>
+                    </div>
+                    <div class="tv-form-group flex-2">
+                        <label for="form-agenda-phone">Telefone / WhatsApp *</label>
+                        <input type="text" id="form-agenda-phone" class="tv-input" placeholder="Ex: (13) 99752-9463" required>
+                    </div>
+                </div>
+
+                <div class="tv-form-row">
+                    <div class="tv-form-group flex-2">
+                        <label for="form-agenda-plate">Placa do Veículo</label>
+                        <input type="text" id="form-agenda-plate" class="tv-input uppercase font-bold" placeholder="Ex: FNB-1A77" maxlength="10">
+                    </div>
+                    <div class="tv-form-group flex-3">
+                        <label for="form-agenda-model">Modelo do Carro *</label>
+                        <input type="text" id="form-agenda-model" class="tv-input" placeholder="Ex: VW Fox 1.0 ou Nissan Sentra" required>
+                    </div>
+                </div>
+
+                <div class="tv-form-row">
+                    <div class="tv-form-group flex-2">
+                        <label for="form-agenda-date">Data Agendada *</label>
+                        <input type="date" id="form-agenda-date" class="tv-input" required>
+                    </div>
+                    <div class="tv-form-group flex-1">
+                        <label for="form-agenda-time">Horário *</label>
+                        <input type="time" id="form-agenda-time" class="tv-input" value="08:30" required>
+                    </div>
+                    <div class="tv-form-group flex-2">
+                        <label for="form-agenda-status">Status</label>
+                        <select id="form-agenda-status" class="tv-select">
+                            <option value="agendado">🕒 Agendado</option>
+                            <option value="confirmado">👍 Confirmado</option>
+                            <option value="concluido">✅ Atendido / Concluído</option>
+                            <option value="cancelado">❌ Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="tv-form-group">
+                    <label for="form-agenda-title">Título do Problema / Serviço Solicitado *</label>
+                    <input type="text" id="form-agenda-title" class="tv-input" placeholder="Ex: Troca de correia dentada / Revisão de freios / Barulho suspensão" required>
+                </div>
+
+                <div class="tv-form-group">
+                    <label for="form-agenda-desc">Descrição do Problema / Sintomas Relatados</label>
+                    <textarea id="form-agenda-desc" class="tv-input tv-textarea" rows="3" placeholder="Ex: Barulho agudo na dianteira ao esterçar para a esquerda; cliente relata vazamento sutil de óleo sob o motor."></textarea>
+                </div>
+
+                <div class="tv-form-group">
+                    <label for="form-agenda-notes">Observações Internas (Opcional)</label>
+                    <input type="text" id="form-agenda-notes" class="tv-input" placeholder="Ex: Cliente aguarda na recepção; verificar histórico anterior">
+                </div>
+
+                <div class="tv-modal-actions">
+                    <button type="button" id="btn-delete-agendamento" class="tv-btn tv-btn-danger" style="display: none;">
+                        🗑️ Excluir Agendamento
+                    </button>
+                    <div class="tv-actions-right">
+                        <button type="button" id="btn-cancel-agenda-modal" class="tv-btn tv-btn-secondary">Voltar</button>
+                        <button type="submit" id="btn-save-agendamento" class="tv-btn tv-btn-primary">💾 Salvar Agendamento</button>
                     </div>
                 </div>
             </form>

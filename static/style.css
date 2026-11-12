@@ -3320,6 +3320,456 @@ body {
     color: #64748b;
 }
 
+/* ==========================================================================
+   SIDEBAR DE AGENDAMENTOS & WORKSPACE LAYOUT (Issue #15)
+   ========================================================================== */
+.btn-agenda {
+    background: #1f2937;
+    color: var(--primary);
+    border: 1px solid #374151;
+    font-weight: 700;
+    transition: all 0.15s ease;
+}
+.btn-agenda:hover {
+    background: #374151;
+    color: #ffffff;
+    border-color: var(--primary);
+}
+.btn-agenda.active {
+    background: var(--primary);
+    color: #111827;
+    border-color: var(--primary-hover);
+}
 
+.badge-agenda-counter {
+    background: var(--accent-red);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+}
 
+/* Layout Workspace */
+.app-workspace-layout {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: calc(100vh - 72px);
+    position: relative;
+}
 
+.app-workspace-content {
+    flex: 1;
+    min-width: 0;
+    transition: margin-right 0.25s ease;
+}
+
+/* Sidebar Estilizada */
+.agenda-sidebar {
+    width: 370px;
+    flex-shrink: 0;
+    background: #ffffff;
+    border-left: 2px solid var(--border-color);
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.04);
+    position: sticky;
+    top: 72px;
+    height: calc(100vh - 72px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    transition: all 0.25s ease;
+    z-index: 90;
+}
+
+.agenda-sidebar.collapsed {
+    display: none;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
+}
+
+.sidebar-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-icon {
+    font-size: 20px;
+}
+
+.sidebar-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.3px;
+}
+
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-sidebar-icon {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-sidebar-icon:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.btn-sidebar-add {
+    background: var(--primary);
+    border-color: var(--primary-hover);
+    color: #111827;
+    font-weight: 700;
+}
+
+.btn-sidebar-add:hover {
+    background: var(--primary-hover);
+}
+
+/* Filtros da Sidebar */
+.sidebar-filters {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+    border: 1px solid var(--border-color);
+}
+
+.sidebar-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 6px 4px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+
+.sidebar-tab-btn:hover {
+    color: var(--text-main);
+}
+
+.sidebar-tab-btn.active {
+    background: #ffffff;
+    color: var(--text-main);
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.sidebar-tab-count {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 8px;
+}
+
+.sidebar-tab-btn.active .sidebar-tab-count {
+    background: #fef08a;
+    color: #854d0e;
+}
+
+/* Busca rápida na sidebar */
+.sidebar-search-box {
+    position: relative;
+}
+
+.sidebar-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    background: #f8fafc;
+    transition: border-color 0.15s ease;
+}
+
+.sidebar-search-input:focus {
+    border-color: var(--primary);
+    background: #ffffff;
+}
+
+/* Lista de agendamentos */
+.sidebar-agenda-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+/* Card de Agendamento na Sidebar */
+.sidebar-agenda-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease;
+}
+
+.sidebar-agenda-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+}
+
+.sidebar-agenda-card.status-confirmado {
+    border-left-color: var(--accent-blue);
+}
+
+.sidebar-agenda-card.status-concluido {
+    border-left-color: var(--accent-green);
+    background: #f0fdf4;
+    opacity: 0.9;
+}
+
+.sidebar-agenda-card.status-cancelado {
+    border-left-color: var(--accent-red);
+    opacity: 0.6;
+}
+
+.sidebar-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-card-time-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-card-time {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.sidebar-card-date {
+    font-size: 11px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.sidebar-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-status-agendado {
+    background: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #fde047;
+}
+
+.badge-status-confirmado {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.badge-status-concluido {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.badge-status-cancelado {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.sidebar-card-vehicle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-card-plate {
+    background: #111827;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-card-model {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.sidebar-card-client {
+    font-size: 12px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-card-client-name {
+    font-weight: 600;
+}
+
+.sidebar-card-client-phone {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.sidebar-card-issue-box {
+    background: #f8fafc;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #f1f5f9;
+}
+
+.sidebar-card-issue-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.sidebar-card-issue-desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+.sidebar-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-dar-entrada {
+    flex: 1;
+    background: var(--primary);
+    color: #111827;
+    border: 1px solid var(--primary-hover);
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-dar-entrada:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-dar-entrada.concluido {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+    cursor: default;
+}
+
+.btn-action-mini {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-action-mini:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Empty State da Sidebar */
+.sidebar-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    text-align: center;
+    color: #64748b;
+}
+
+.sidebar-empty-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.sidebar-empty-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.sidebar-empty-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}

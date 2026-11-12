@@ -2539,6 +2539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openNewOsModal(prefillPlate = '') {
         document.getElementById('os-form').reset();
         osExistingFilePath.value = '';
+        delete osModal.dataset.agendamentoId;
 
         if (osModalTitle) osModalTitle.textContent = '🛠️ Nova Visita / Ordem de Serviço';
         if (osModalSave) osModalSave.textContent = '💾 Salvar Ficha no Excel (.xlsx) e Sistema';
@@ -2569,6 +2570,59 @@ document.addEventListener('DOMContentLoaded', () => {
         if (prefillPlate) {
             osCarPlate.value = prefillPlate;
             handlePlateLookup(prefillPlate);
+            setTimeout(() => osOdometer.focus(), 150);
+        } else {
+            setTimeout(() => osCarPlate.focus(), 150);
+        }
+    }
+
+    function openNewOsFromAgendamento(agendamento) {
+        if (!agendamento) return;
+        document.getElementById('os-form').reset();
+        osExistingFilePath.value = '';
+        osModal.dataset.agendamentoId = String(agendamento.id);
+
+        if (osModalTitle) {
+            osModalTitle.textContent = `🚀 Criar Ficha de Entrada • Agendamento #${agendamento.id} (${agendamento.car_plate_display || agendamento.car_plate || 'Sem placa'})`;
+        }
+        if (osModalSave) {
+            osModalSave.textContent = '💾 Confirmar e Salvar Ficha no Excel (.xlsx)';
+        }
+
+        const now = new Date();
+        osEntryDate.value = formatDateBr(now);
+        osEntryTime.value = formatTimeBr(now);
+        osPatioStatus.value = 'Em Diagnóstico';
+        osPaymentMethod.value = '';
+
+        if (agendamento.car_plate) osCarPlate.value = agendamento.car_plate_display || agendamento.car_plate;
+        if (agendamento.car_model) osCarModel.value = agendamento.car_model;
+        if (agendamento.client_name) osClientName.value = agendamento.client_name;
+        if (agendamento.phone) osClientPhone.value = agendamento.phone;
+
+        const complaintParts = [];
+        if (agendamento.title) complaintParts.push(agendamento.title);
+        if (agendamento.description) complaintParts.push(agendamento.description);
+        osComplaint.value = complaintParts.join(' - ');
+
+        osPecasTbody.innerHTML = '';
+        osServicosTbody.innerHTML = '';
+        addPecaRow('', 1, '');
+        addServicoRow(agendamento.title || '', 1, '');
+
+        if (osPlateLookupBadge) osPlateLookupBadge.style.display = 'none';
+        if (osVisitSuggestedHint) osVisitSuggestedHint.textContent = '';
+        if (osLastOdometerHint) osLastOdometerHint.textContent = '';
+        if (osAutocompleteDropdown) osAutocompleteDropdown.style.display = 'none';
+
+        loadQuickSuggestions();
+        recalcOsTotals();
+
+        // IMPORTANTE: NÃO gera planilha Excel (.xlsx) até que a secretária clique manualmente em salvar!
+        osModal.style.display = 'flex';
+
+        if (agendamento.car_plate) {
+            handlePlateLookup(agendamento.car_plate);
             setTimeout(() => osOdometer.focus(), 150);
         } else {
             setTimeout(() => osCarPlate.focus(), 150);
@@ -2663,6 +2717,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function closeOsModal() {
         osModal.style.display = 'none';
+        delete osModal.dataset.agendamentoId;
         if (osAutocompleteDropdown) osAutocompleteDropdown.style.display = 'none';
     }
 
@@ -2890,6 +2945,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (res.ok && data && data.success) {
                     showToast(`🎉 Ficha salva com sucesso! Planilha: ${data.file_name || data.filename}`);
+
+                    // Se a entrada veio de um agendamento, marca como atendido/concluído
+                    const linkedAgendaId = osModal.dataset.agendamentoId;
+                    if (linkedAgendaId) {
+                        try {
+                            await fetch(`/api/agendamentos/${linkedAgendaId}/status`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: 'concluido' })
+                            });
+                            if (typeof fetchSecretaryAgendamentos === 'function') {
+                                fetchSecretaryAgendamentos();
+                            }
+                        } catch (e) {
+                            console.error('Erro atualizando agendamento vinculado:', e);
+                        }
+                    }
+
                     closeOsModal();
 
                     // Atualiza a visualização da tela
@@ -4006,6 +4079,389 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // =========================================================================
+    // MECATRONICAR v2.0 - SIDEBAR DE AGENDAMENTOS (Issue #15)
+    // =========================================================================
+    const btnToggleAgenda = document.getElementById('btn-toggle-agenda');
+    const headerAgendaBadge = document.getElementById('header-agenda-badge');
+    const secretarySidebar = document.getElementById('secretary-agenda-sidebar');
+    const sidebarAgendaBadge = document.getElementById('sidebar-agenda-badge');
+    const btnSidebarRefreshAgenda = document.getElementById('btn-sidebar-refresh-agenda');
+    const btnSidebarNewAgenda = document.getElementById('btn-sidebar-new-agenda');
+    const btnSidebarCloseAgenda = document.getElementById('btn-sidebar-close-agenda');
+    const sidebarTabToday = document.getElementById('sidebar-tab-today');
+    const sidebarTabUpcoming = document.getElementById('sidebar-tab-upcoming');
+    const sidebarTabAll = document.getElementById('sidebar-tab-all');
+    const sidebarCountToday = document.getElementById('sidebar-count-today');
+    const sidebarCountUpcoming = document.getElementById('sidebar-count-upcoming');
+    const sidebarCountAll = document.getElementById('sidebar-count-all');
+    const sidebarAgendaSearch = document.getElementById('sidebar-agenda-search');
+    const sidebarAgendaList = document.getElementById('sidebar-agenda-list');
+    const sidebarAgendaEmpty = document.getElementById('sidebar-agenda-empty');
+    const btnSidebarEmptyAdd = document.getElementById('btn-sidebar-empty-add');
+
+    // Modal Agendamento Secretária
+    const secretaryAgendaModal = document.getElementById('secretary-agenda-modal');
+    const secretaryAgendaModalClose = document.getElementById('secretary-agenda-modal-close');
+    const secretaryAgendaModalTitle = document.getElementById('secretary-agenda-modal-title');
+    const secretaryAgendaForm = document.getElementById('secretary-agenda-form');
+    const secAgendaId = document.getElementById('sec-agenda-id');
+    const secAgendaClient = document.getElementById('sec-agenda-client');
+    const secAgendaPhone = document.getElementById('sec-agenda-phone');
+    const secAgendaPlate = document.getElementById('sec-agenda-plate');
+    const secAgendaModel = document.getElementById('sec-agenda-model');
+    const secAgendaDate = document.getElementById('sec-agenda-date');
+    const secAgendaTime = document.getElementById('sec-agenda-time');
+    const secAgendaStatus = document.getElementById('sec-agenda-status');
+    const secAgendaTitle = document.getElementById('sec-agenda-title');
+    const secAgendaDesc = document.getElementById('sec-agenda-desc');
+    const secAgendaNotes = document.getElementById('sec-agenda-notes');
+    const secAgendaBtnSave = document.getElementById('sec-agenda-btn-save');
+    const secAgendaBtnCancel = document.getElementById('sec-agenda-btn-cancel');
+    const secAgendaBtnDelete = document.getElementById('sec-agenda-btn-delete');
+
+    let secretaryAgendamentos = [];
+    let secretaryFilter = 'today'; // 'today', 'upcoming', 'all'
+    let secretarySearchQuery = '';
+
+    function toggleSecretarySidebar(forceOpen = null) {
+        if (!secretarySidebar) return;
+        const isCollapsed = secretarySidebar.classList.contains('collapsed');
+        const willOpen = forceOpen !== null ? forceOpen : isCollapsed;
+
+        if (willOpen) {
+            secretarySidebar.classList.remove('collapsed');
+            if (btnToggleAgenda) btnToggleAgenda.classList.add('active');
+        } else {
+            secretarySidebar.classList.add('collapsed');
+            if (btnToggleAgenda) btnToggleAgenda.classList.remove('active');
+        }
+    }
+
+    if (btnToggleAgenda) {
+        btnToggleAgenda.addEventListener('click', () => toggleSecretarySidebar());
+    }
+    if (btnSidebarCloseAgenda) {
+        btnSidebarCloseAgenda.addEventListener('click', () => toggleSecretarySidebar(false));
+    }
+
+    function formatLocalDateIso(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    async function fetchSecretaryAgendamentos() {
+        try {
+            const res = await fetch('/api/agendamentos');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success) {
+                secretaryAgendamentos = data.agendamentos || [];
+
+                // Atualiza contadores
+                const todayIso = formatLocalDateIso(new Date());
+                const todayItems = secretaryAgendamentos.filter(a => a.scheduled_date_iso === todayIso && a.status !== 'concluido' && a.status !== 'cancelado');
+                const todayActiveCount = todayItems.length;
+
+                if (headerAgendaBadge) {
+                    if (todayActiveCount > 0) {
+                        headerAgendaBadge.textContent = todayActiveCount;
+                        headerAgendaBadge.style.display = 'inline-block';
+                    } else {
+                        headerAgendaBadge.style.display = 'none';
+                    }
+                }
+                if (sidebarAgendaBadge) {
+                    sidebarAgendaBadge.textContent = todayActiveCount;
+                }
+
+                renderSecretaryAgenda();
+            }
+        } catch (e) {
+            console.error('Erro buscando agendamentos para a secretária:', e);
+        }
+    }
+
+    function renderSecretaryAgenda() {
+        if (!sidebarAgendaList) return;
+
+        const today = new Date();
+        const todayIso = formatLocalDateIso(today);
+
+        const next7 = new Date();
+        next7.setDate(today.getDate() + 7);
+        const next7Iso = formatLocalDateIso(next7);
+
+        // Contagens
+        const todayTotal = secretaryAgendamentos.filter(a => a.scheduled_date_iso === todayIso).length;
+        const upcomingTotal = secretaryAgendamentos.filter(a => a.scheduled_date_iso > todayIso && a.scheduled_date_iso <= next7Iso).length;
+        const allTotal = secretaryAgendamentos.length;
+
+        if (sidebarCountToday) sidebarCountToday.textContent = todayTotal;
+        if (sidebarCountUpcoming) sidebarCountUpcoming.textContent = upcomingTotal;
+        if (sidebarCountAll) sidebarCountAll.textContent = allTotal;
+
+        // Filtragem
+        let filtered = [];
+        if (secretaryFilter === 'today') {
+            filtered = secretaryAgendamentos.filter(a => a.scheduled_date_iso === todayIso);
+        } else if (secretaryFilter === 'upcoming') {
+            filtered = secretaryAgendamentos.filter(a => a.scheduled_date_iso > todayIso && a.scheduled_date_iso <= next7Iso);
+        } else {
+            filtered = [...secretaryAgendamentos];
+        }
+
+        // Filtro de busca textual
+        if (secretarySearchQuery) {
+            const q = secretarySearchQuery.toLowerCase();
+            const cleanQ = cleanPlateStr(q);
+            filtered = filtered.filter(a => {
+                const c = (a.client_name || '').toLowerCase();
+                const m = (a.car_model || '').toLowerCase();
+                const t = (a.title || '').toLowerCase();
+                const p = (a.car_plate_clean || '').toLowerCase();
+                return c.includes(q) || m.includes(q) || t.includes(q) || p.includes(cleanQ);
+            });
+        }
+
+        sidebarAgendaList.innerHTML = '';
+        if (filtered.length === 0) {
+            if (sidebarAgendaEmpty) sidebarAgendaEmpty.style.display = 'flex';
+        } else {
+            if (sidebarAgendaEmpty) sidebarAgendaEmpty.style.display = 'none';
+            filtered.forEach(ag => {
+                const card = createSecretaryAgendaCard(ag);
+                sidebarAgendaList.appendChild(card);
+            });
+        }
+    }
+
+    function createSecretaryAgendaCard(ag) {
+        const card = document.createElement('div');
+        const statusClass = `status-${ag.status || 'agendado'}`;
+        card.className = `sidebar-agenda-card ${statusClass}`;
+
+        const statusLabels = {
+            agendado: '🕒 Agendado',
+            confirmado: '👍 Confirmado',
+            concluido: '✅ Atendido',
+            cancelado: '❌ Cancelado'
+        };
+        const statusBadgeClass = `badge-status-${ag.status || 'agendado'}`;
+        const statusLabel = statusLabels[ag.status] || ag.status;
+        const plateDisp = ag.car_plate_display || ag.car_plate || 'S/ Placa';
+        const isConcluido = ag.status === 'concluido';
+
+        card.innerHTML = `
+            <div class="sidebar-card-top">
+                <div class="sidebar-card-time-group">
+                    <span class="sidebar-card-time">🕒 ${escapeHtml(ag.scheduled_time || '08:00')}</span>
+                    <span class="sidebar-card-date">${escapeHtml(ag.scheduled_date_display || ag.scheduled_date)}</span>
+                </div>
+                <span class="sidebar-status-badge ${statusBadgeClass}">${statusLabel}</span>
+            </div>
+
+            <div class="sidebar-card-vehicle">
+                <span class="sidebar-card-plate">${escapeHtml(plateDisp)}</span>
+                <span class="sidebar-card-model">${escapeHtml(ag.car_model || 'Veículo')}</span>
+            </div>
+
+            <div class="sidebar-card-client">
+                <span class="sidebar-card-client-name">👤 ${escapeHtml(ag.client_name)}</span>
+                <span class="sidebar-card-client-phone">📞 ${escapeHtml(ag.phone || 'S/ Tel')}</span>
+            </div>
+
+            <div class="sidebar-card-issue-box">
+                <div class="sidebar-card-issue-title">🔧 ${escapeHtml(ag.title)}</div>
+                ${ag.description ? `<div class="sidebar-card-issue-desc">${escapeHtml(ag.description)}</div>` : ''}
+            </div>
+
+            <div class="sidebar-card-actions">
+                ${isConcluido ? `
+                    <button type="button" class="btn-dar-entrada concluido" disabled>
+                        ✅ Entrada Realizada
+                    </button>
+                ` : `
+                    <button type="button" class="btn-dar-entrada" data-id="${ag.id}" title="Abrir ficha com dados pré-preenchidos (NÃO cria Excel até que você clique em Salvar)">
+                        🚀 Dar Entrada / Criar Ficha
+                    </button>
+                `}
+                <button type="button" class="btn-action-mini btn-sec-edit" data-id="${ag.id}" title="Editar agendamento">
+                    ✏️
+                </button>
+            </div>
+        `;
+
+        const btnDarEntrada = card.querySelector('.btn-dar-entrada:not(.concluido)');
+        if (btnDarEntrada) {
+            btnDarEntrada.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openNewOsFromAgendamento(ag);
+            });
+        }
+
+        const btnEdit = card.querySelector('.btn-sec-edit');
+        if (btnEdit) {
+            btnEdit.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openSecretaryAgendaModal(ag);
+            });
+        }
+
+        return card;
+    }
+
+    // Filtros de abas da Sidebar
+    [sidebarTabToday, sidebarTabUpcoming, sidebarTabAll].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                [sidebarTabToday, sidebarTabUpcoming, sidebarTabAll].forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                secretaryFilter = btn.dataset.filter;
+                renderSecretaryAgenda();
+            });
+        }
+    });
+
+    if (sidebarAgendaSearch) {
+        sidebarAgendaSearch.addEventListener('input', (e) => {
+            secretarySearchQuery = e.target.value.trim();
+            renderSecretaryAgenda();
+        });
+    }
+
+    if (btnSidebarRefreshAgenda) {
+        btnSidebarRefreshAgenda.addEventListener('click', () => {
+            fetchSecretaryAgendamentos();
+            showToast('🔄 Agenda atualizada!');
+        });
+    }
+
+    // Modal de Cadastro/Edição da Secretária
+    function openSecretaryAgendaModal(ag = null) {
+        if (!secretaryAgendaModal) return;
+        if (secretaryAgendaForm) secretaryAgendaForm.reset();
+
+        const todayIso = formatLocalDateIso(new Date());
+
+        if (ag) {
+            if (secretaryAgendaModalTitle) secretaryAgendaModalTitle.textContent = '✏️ Editar Agendamento';
+            if (secAgendaId) secAgendaId.value = ag.id;
+            if (secAgendaClient) secAgendaClient.value = ag.client_name || '';
+            if (secAgendaPhone) secAgendaPhone.value = ag.phone || '';
+            if (secAgendaPlate) secAgendaPlate.value = ag.car_plate || '';
+            if (secAgendaModel) secAgendaModel.value = ag.car_model || '';
+            if (secAgendaDate) secAgendaDate.value = ag.scheduled_date_iso || ag.scheduled_date || todayIso;
+            if (secAgendaTime) secAgendaTime.value = ag.scheduled_time || '08:30';
+            if (secAgendaStatus) secAgendaStatus.value = ag.status || 'agendado';
+            if (secAgendaTitle) secAgendaTitle.value = ag.title || '';
+            if (secAgendaDesc) secAgendaDesc.value = ag.description || '';
+            if (secAgendaNotes) secAgendaNotes.value = ag.notes || '';
+            if (secAgendaBtnDelete) secAgendaBtnDelete.style.display = 'inline-flex';
+        } else {
+            if (secretaryAgendaModalTitle) secretaryAgendaModalTitle.textContent = '📅 Novo Agendamento de Atendimento';
+            if (secAgendaId) secAgendaId.value = '';
+            if (secAgendaDate) secAgendaDate.value = todayIso;
+            if (secAgendaTime) secAgendaTime.value = '08:30';
+            if (secAgendaStatus) secAgendaStatus.value = 'agendado';
+            if (secAgendaBtnDelete) secAgendaBtnDelete.style.display = 'none';
+        }
+
+        secretaryAgendaModal.style.display = 'flex';
+        setTimeout(() => {
+            if (secAgendaClient) secAgendaClient.focus();
+        }, 120);
+    }
+
+    function closeSecretaryAgendaModal() {
+        if (secretaryAgendaModal) secretaryAgendaModal.style.display = 'none';
+    }
+
+    if (btnSidebarNewAgenda) {
+        btnSidebarNewAgenda.addEventListener('click', () => openSecretaryAgendaModal());
+    }
+    if (btnSidebarEmptyAdd) {
+        btnSidebarEmptyAdd.addEventListener('click', () => openSecretaryAgendaModal());
+    }
+    if (secretaryAgendaModalClose) {
+        secretaryAgendaModalClose.addEventListener('click', closeSecretaryAgendaModal);
+    }
+    if (secAgendaBtnCancel) {
+        secAgendaBtnCancel.addEventListener('click', closeSecretaryAgendaModal);
+    }
+
+    if (secAgendaBtnSave) {
+        secAgendaBtnSave.addEventListener('click', async () => {
+            const agId = secAgendaId.value;
+            const client = secAgendaClient.value.trim();
+            const title = secAgendaTitle.value.trim();
+            const date = secAgendaDate.value;
+            const time = secAgendaTime.value;
+
+            if (!client) {
+                alert('O nome do cliente é obrigatório.');
+                secAgendaClient.focus();
+                return;
+            }
+            if (!title) {
+                alert('O título do problema / serviço é obrigatório.');
+                secAgendaTitle.focus();
+                return;
+            }
+            if (!date) {
+                alert('A data agendada é obrigatória.');
+                secAgendaDate.focus();
+                return;
+            }
+
+            const payload = {
+                client_name: client,
+                phone: secAgendaPhone.value.trim(),
+                car_plate: secAgendaPlate.value.trim().toUpperCase(),
+                car_model: secAgendaModel.value.trim(),
+                scheduled_date: date,
+                scheduled_time: time || '08:30',
+                status: secAgendaStatus.value,
+                title: title,
+                description: secAgendaDesc.value.trim(),
+                notes: secAgendaNotes.value.trim()
+            };
+
+            try {
+                let url = '/api/agendamentos';
+                let method = 'POST';
+                if (agId) {
+                    url = `/api/agendamentos/${agId}`;
+                    method = 'PUT';
+                }
+
+                secAgendaBtnSave.disabled = true;
+                secAgendaBtnSave.textContent = '⏳ Salvando...';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(agId ? '✅ Agendamento atualizado!' : '📅 Agendamento salvo com sucesso!');
+                    closeSecretaryAgendaModal();
+                    fetchSecretaryAgendamentos();
+                } else {
+                    alert('Erro ao salvar agendamento: ' + (data.error || 'Erro desconhecido'));
+                }
+            } catch (err) {
+                alert('Erro de conexão ao salvar: ' + err.message);
+            } finally {
+                secAgendaBtnSave.disabled = false;
+                secAgendaBtnSave.textContent = '💾 Salvar Agendamento';
+            }
+        });
+    }
+
     if (btnRefreshAnalytics) {
         btnRefreshAnalytics.addEventListener('click', () => {
             loadAnalyticsData(currentAnalyticsPeriod);
@@ -4029,6 +4485,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (periodBtns['all']) {
         periodBtns['all'].addEventListener('click', () => loadAnalyticsData('all'));
     }
+
+    if (secAgendaBtnDelete) {
+        secAgendaBtnDelete.addEventListener('click', async () => {
+            const agId = secAgendaId.value;
+            if (!agId) return;
+            if (confirm('Deseja realmente excluir este agendamento?')) {
+                try {
+                    const res = await fetch(`/api/agendamentos/${agId}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast('🗑️ Agendamento excluído.');
+                        closeSecretaryAgendaModal();
+                        fetchSecretaryAgendamentos();
+                    } else {
+                        alert('Erro ao excluir: ' + (data.error || 'Não foi possível excluir'));
+                    }
+                } catch (err) {
+                    alert('Erro ao excluir: ' + err.message);
+                }
+            }
+        });
+    }
+
+    // Inicialização da Sidebar e Polling em Tempo Real (a cada 6s)
+    fetchSecretaryAgendamentos();
+    setInterval(fetchSecretaryAgendamentos, 6000);
 
     // Inicialização da contagem no carregamento da tela
     updateHeaderFiscalBadge();

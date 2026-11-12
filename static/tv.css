@@ -962,3 +962,407 @@ body.tv-body {
     font-size: 14px;
     font-weight: 600;
 }
+
+/* ==========================================================================
+   TV TABS NAVIGATION (Issue #15)
+   ========================================================================== */
+.tv-tabs-nav {
+    display: inline-flex;
+    align-items: center;
+    background: #1e293b;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    gap: 6px;
+    margin-left: 20px;
+}
+
+.tv-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tv-tab-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tv-tab-btn.active {
+    background: var(--mec-yellow);
+    color: #111827;
+    box-shadow: 0 2px 8px rgba(249, 204, 1, 0.35);
+}
+
+.tv-tab-pill {
+    background: rgba(0, 0, 0, 0.2);
+    color: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 12px;
+}
+
+.tv-tab-btn.active .tv-tab-pill {
+    background: #111827;
+    color: var(--mec-yellow);
+}
+
+/* ==========================================================================
+   TV CALENDAR VIEW (Issue #15)
+   ========================================================================== */
+.tv-calendar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px;
+    overflow-y: auto;
+    background: #0b0f19;
+}
+
+.tv-cal-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-bottom: 2px solid var(--mec-yellow);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 18px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.tv-cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tv-cal-date-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e293b;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    margin-left: 8px;
+}
+
+.tv-cal-indicator-icon {
+    font-size: 18px;
+}
+
+.tv-cal-current-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: -0.3px;
+}
+
+.tv-cal-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e293b;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.tv-filter-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.tv-filter-btn:hover {
+    color: #ffffff;
+}
+
+.tv-filter-btn.active {
+    background: #334155;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.tv-filter-count {
+    background: #0f172a;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    color: var(--mec-yellow);
+}
+
+.tv-cal-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tv-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
+}
+
+/* Card de Agendamento na TV */
+.tv-agenda-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-left: 5px solid var(--mec-yellow);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.tv-agenda-card:hover {
+    border-color: #475569;
+    transform: translateY(-2px);
+}
+
+.tv-agenda-card.status-confirmado {
+    border-left-color: #0284c7;
+}
+
+.tv-agenda-card.status-concluido {
+    border-left-color: #10b981;
+    opacity: 0.85;
+}
+
+.tv-agenda-card.status-cancelado {
+    border-left-color: #ef4444;
+    opacity: 0.65;
+}
+
+.tv-card-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 10px;
+}
+
+.tv-card-time-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tv-card-time {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+
+.tv-card-date-badge {
+    background: #0f172a;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.tv-card-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tv-badge-agendado {
+    background: rgba(249, 204, 1, 0.15);
+    color: var(--mec-yellow);
+    border: 1px solid rgba(249, 204, 1, 0.4);
+}
+
+.tv-badge-confirmado {
+    background: rgba(2, 132, 199, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(2, 132, 199, 0.4);
+}
+
+.tv-badge-concluido {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.tv-badge-cancelado {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.tv-card-vehicle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tv-card-plate-badge {
+    background: #ffffff;
+    color: #000000;
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 2px solid #000000;
+    letter-spacing: 1px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.tv-card-model {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.tv-card-client-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #cbd5e1;
+}
+
+.tv-card-client-name {
+    font-weight: 600;
+}
+
+.tv-card-client-phone {
+    color: #94a3b8;
+}
+
+.tv-card-issue-box {
+    background: #0f172a;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tv-card-issue-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--mec-yellow);
+}
+
+.tv-card-issue-desc {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.4;
+    max-height: 48px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tv-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #334155;
+}
+
+.tv-card-btn {
+    background: #334155;
+    border: none;
+    color: #ffffff;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tv-card-btn:hover {
+    background: #475569;
+}
+
+.tv-card-btn-confirm {
+    background: #0284c7;
+}
+
+.tv-card-btn-confirm:hover {
+    background: #0369a1;
+}
+
+.tv-card-btn-edit {
+    background: #334155;
+}
+
+.tv-card-btn-edit:hover {
+    background: #475569;
+}
+
+/* Empty State do Calendário na TV */
+.tv-cal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    background: #111827;
+    border: 2px dashed #1f2937;
+    border-radius: 16px;
+    margin-top: 20px;
+}
+
+.tv-empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.tv-empty-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.tv-empty-sub {
+    font-size: 14px;
+    color: #94a3b8;
+    max-width: 450px;
+}
+
+.tv-textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
