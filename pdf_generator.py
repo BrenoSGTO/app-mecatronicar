@@ -383,6 +383,62 @@ def render_orcamento_html(parsed_data, auto_print=False):
             color: #0f172a;
             font-weight: 700;
         }}
+        .plate-mercosul {{
+            display: inline-flex;
+            flex-direction: column;
+            width: 122px;
+            height: 46px;
+            background: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            vertical-align: middle;
+        }}
+        .plate-top-bar {{
+            background: #003399 !important;
+            color: #ffffff;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+        .plate-country {{
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1;
+        }}
+        .plate-br-tag {{
+            font-size: 7.5px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }}
+        .plate-body {{
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            padding: 1px 4px;
+        }}
+        .plate-number-text {{
+            font-family: "Impact", "Arial Black", monospace, sans-serif;
+            font-size: 16.5px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #000000;
+            line-height: 1;
+            text-transform: uppercase;
+        }}
         .plate-text {{
             font-family: "Consolas", "Courier New", monospace;
             font-weight: 800;
@@ -571,10 +627,10 @@ def render_orcamento_html(parsed_data, auto_print=False):
         </div>
         <div class="toolbar-actions">
             <a class="btn-action btn-secondary" href="/api/checklist_pdf?file_path={html.escape(d.get('file_path', ''), quote=True)}">
-                📋 Mudar para Checklist (Sem Valores)
+                Mudar para Checklist (Sem Valores)
             </a>
             <button class="btn-action btn-primary" onclick="window.print()">
-                🖨️ Imprimir / Salvar como PDF
+                Imprimir / Salvar como PDF
             </button>
         </div>
     </div>
@@ -634,7 +690,17 @@ def render_orcamento_html(parsed_data, auto_print=False):
                 <table class="info-table">
                     <tr>
                         <td class="lbl">Placa:</td>
-                        <td class="val"><span class="plate-text">{_esc(plate_disp)}</span></td>
+                        <td class="val">
+                            <div class="plate-mercosul">
+                                <div class="plate-top-bar">
+                                    <span class="plate-country">BRASIL</span>
+                                    <span class="plate-br-tag">BR</span>
+                                </div>
+                                <div class="plate-body">
+                                    <span class="plate-number-text">{_esc(plate_disp)}</span>
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <td class="lbl">Veículo:</td>
@@ -800,7 +866,7 @@ def render_checklist_html(parsed_data, auto_print=False):
     pecas_rows_html = ""
     if pecas:
         for idx, it in enumerate(pecas, 1):
-            note_html = f'<div class="item-tech-note">📌 Obs: {_esc(it.get("comment"))}</div>' if it.get("comment") else ""
+            note_html = f'<div class="item-tech-note">Obs: {_esc(it.get("comment"))}</div>' if it.get("comment") else ""
             pecas_rows_html += f"""
             <tr>
                 <td class="col-check"><div class="check-box"></div></td>
@@ -822,7 +888,7 @@ def render_checklist_html(parsed_data, auto_print=False):
     servicos_rows_html = ""
     if servicos:
         for idx, it in enumerate(servicos, 1):
-            note_html = f'<div class="item-tech-note">📌 Obs: {_esc(it.get("comment"))}</div>' if it.get("comment") else ""
+            note_html = f'<div class="item-tech-note">Obs: {_esc(it.get("comment"))}</div>' if it.get("comment") else ""
             servicos_rows_html += f"""
             <tr>
                 <td class="col-check"><div class="check-box"></div></td>
@@ -846,7 +912,7 @@ def render_checklist_html(parsed_data, auto_print=False):
         scanner_block_html = f"""
         <div class="section-box">
             <div class="section-title-bar">
-                <span>🔎 CÓDIGOS DE FALHA (SCANNER) / ANOTAÇÕES DE DIAGNÓSTICO</span>
+                <span>CÓDIGOS DE FALHA (SCANNER) / ANOTAÇÕES DE DIAGNÓSTICO</span>
             </div>
             <pre class="scanner-pre">{_esc(complaint_comment)}</pre>
         </div>
@@ -1276,10 +1342,10 @@ def render_checklist_html(parsed_data, auto_print=False):
         </div>
         <div class="toolbar-actions">
             <a class="btn-action btn-secondary" href="/api/orcamento_pdf?file_path={html.escape(d.get('file_path', ''), quote=True)}">
-                📄 Mudar para Orçamento Completo (Com Valores)
+                Mudar para Orçamento Completo (Com Valores)
             </a>
             <button class="btn-action btn-primary" onclick="window.print()">
-                🖨️ Imprimir Checklist
+                Imprimir Checklist
             </button>
         </div>
     </div>
@@ -1298,11 +1364,11 @@ def render_checklist_html(parsed_data, auto_print=False):
                 <div class="ws-car-model">{_esc(car_full)} <span class="ws-car-spec">({_esc(car_color)} • {_esc(car_year)})</span></div>
                 <div class="ws-car-meta">
                     <div class="ws-client-row">
-                        👤 <strong>Cliente:</strong> <span class="ws-client-name">{_esc(client_name)}</span>
+                        <strong>Cliente:</strong> <span class="ws-client-name">{_esc(client_name)}</span>
                     </div>
                     <div class="ws-vehicle-row">
-                        <span>⏱️ <strong>KM:</strong> {_esc(odometer)}</span>
-                        <span>📅 <strong>Entrada:</strong> {_esc(entry_date)} {_esc(entry_time)}</span>
+                        <span><strong>KM:</strong> {_esc(odometer)}</span>
+                        <span><strong>Entrada:</strong> {_esc(entry_date)} {_esc(entry_time)}</span>
                     </div>
                 </div>
             </div>
@@ -1334,14 +1400,14 @@ def render_checklist_html(parsed_data, auto_print=False):
 
         <!-- Symptom / Complaint -->
         <div class="symptom-box">
-            <div class="symptom-title">⚠️ DEFEITO RELATADO / SOLICITAÇÃO DO CLIENTE</div>
+            <div class="symptom-title">DEFEITO RELATADO / SOLICITAÇÃO DO CLIENTE</div>
             <div class="symptom-text">{_esc(complaint)}</div>
         </div>
 
         <!-- Approved Parts Table (Zero Prices) -->
         <div class="section-box">
             <div class="section-title-bar">
-                <span>🔩 PEÇAS APROVADAS PARA SUBSTITUIÇÃO / APLICAÇÃO ({len(pecas)})</span>
+                <span>PEÇAS APROVADAS PARA SUBSTITUIÇÃO / APLICAÇÃO ({len(pecas)})</span>
                 <span>SEM VALORES • USO INTERNO OFICINA</span>
             </div>
             <table class="check-table">
@@ -1362,7 +1428,7 @@ def render_checklist_html(parsed_data, auto_print=False):
         <!-- Approved Services Table (Zero Prices) -->
         <div class="section-box">
             <div class="section-title-bar">
-                <span>🛠️ SERVIÇOS E MÃO DE OBRA APROVADOS ({len(servicos)})</span>
+                <span>SERVIÇOS E MÃO DE OBRA APROVADOS ({len(servicos)})</span>
                 <span>CONFERÊNCIA DE EXECUÇÃO</span>
             </div>
             <table class="check-table">
@@ -1384,7 +1450,7 @@ def render_checklist_html(parsed_data, auto_print=False):
 
         <!-- Handwritten Mechanic Observations -->
         <div class="mechanic-notes-box">
-            <div class="mechanic-notes-title">📝 ANOTAÇÕES DO MECÂNICO / PEÇAS ADICIONAIS IDENTIFICADAS NA DESMONTAGEM:</div>
+            <div class="mechanic-notes-title">ANOTAÇÕES DO MECÂNICO / PEÇAS ADICIONAIS IDENTIFICADAS NA DESMONTAGEM:</div>
             <div class="ruled-line"></div>
             <div class="ruled-line"></div>
             <div class="ruled-line"></div>
@@ -1392,15 +1458,15 @@ def render_checklist_html(parsed_data, auto_print=False):
 
         <!-- Final Quality Check Footer -->
         <div class="inspection-footer">
-            <div>🔧 Mecânico Responsável:<br><br>_______________________________</div>
+            <div>Mecânico Responsável:<br><br>_______________________________</div>
             <div>
-                ✅ Conferência Final:<br>
+                Conferência Final:<br>
                 [ &nbsp; ] Nível de Óleo / Fluidos<br>
                 [ &nbsp; ] Reaperto de Rodas / Torque<br>
                 [ &nbsp; ] Peças Substituídas Guardadas
             </div>
             <div>
-                🚗 Teste de Rodagem / Liberação:<br>
+                Teste de Rodagem / Liberação:<br>
                 [ &nbsp; ] Aprovado sem Anomalias<br><br>
                 Data/Hora: ____/____ às ____:____
             </div>

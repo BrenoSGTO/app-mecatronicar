@@ -327,20 +327,131 @@ body.tv-body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
 }
 
-/* Mini Placa de Carro Estilo Brasil */
-.tv-plate-tag {
+/* Placa Mercosul Oficial na TV */
+.mercosul-plate {
+    display: inline-flex;
+    flex-direction: column;
     background: #ffffff;
-    color: #000000;
-    border: 1.5px solid #000000;
-    border-radius: 4px;
+    border: 2px solid #000000;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    user-select: none;
+    box-sizing: border-box;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    flex-shrink: 0;
+}
+
+.mercosul-top-bar {
+    background: #003399; /* Azul Oficial Mercosul */
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1px 5px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    height: 13px;
+    box-sizing: border-box;
+}
+
+.mercosul-country {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 7px;
     font-weight: 900;
-    font-size: 14px;
-    letter-spacing: 1px;
-    padding: 2px 6px;
-    font-family: "Courier New", monospace, sans-serif;
+    letter-spacing: 0.8px;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.mercosul-br-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mercosul-br-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 6.5px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+
+.mercosul-mini-flag {
+    display: inline-block;
+    vertical-align: middle;
+    border-radius: 1px;
+}
+
+.mercosul-body-area {
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 0 4px;
+}
+
+.mercosul-number {
+    font-family: "Arial Black", Impact, "Segoe UI", -apple-system, sans-serif;
+    color: #000000;
+    font-size: 14.5px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    line-height: 1.1;
+}
+
+.mercosul-plate-sm {
+    width: 104px;
+    height: 42px;
+}
+
+.tv-plate-tag {
+    display: none;
+}
+
+/* Logo da Montadora na TV */
+.brand-logo-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 3px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+}
+.brand-logo-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Silhueta do Carro na TV */
+.car-silhouette-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: #0f172a;
+    border-radius: 6px;
+    padding: 4px;
+    border: 1px solid #1e293b;
+    overflow: hidden;
+}
+.car-silhouette-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 
 .tv-card-box-badge {
@@ -351,6 +462,15 @@ body.tv-body {
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 4px;
+    margin-left: auto;
+}
+
+.app-icon {
+    display: inline-block;
+    vertical-align: -2px;
+    stroke: currentColor;
+    fill: none;
+    flex-shrink: 0;
 }
 
 .tv-card-car-model {
@@ -358,6 +478,7 @@ body.tv-body {
     font-weight: 700;
     color: #ffffff;
     white-space: nowrap;
+
     overflow: hidden;
     text-overflow: ellipsis;
 }

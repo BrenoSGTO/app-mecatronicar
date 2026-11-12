@@ -43,7 +43,7 @@ class OficinaApp(ctk.CTk):
 
         self.folder_label = ctk.CTkLabel(
             self.top_frame, 
-            text=f"📁 Pasta: {self.current_folder or 'Nenhuma pasta selecionada'}", 
+            text=f"Pasta: {self.current_folder or 'Nenhuma pasta selecionada'}", 
             font=ctk.CTkFont(size=12, weight="bold"),
             anchor="w"
         )
@@ -51,7 +51,7 @@ class OficinaApp(ctk.CTk):
 
         self.btn_change_folder = ctk.CTkButton(
             self.top_frame, 
-            text="📂 Alterar Pasta", 
+            text="Alterar Pasta", 
             width=120, 
             command=self.on_change_folder
         )
@@ -59,7 +59,7 @@ class OficinaApp(ctk.CTk):
 
         self.btn_reindex = ctk.CTkButton(
             self.top_frame, 
-            text="🔄 Atualizar Lista", 
+            text="Atualizar Lista", 
             width=120, 
             fg_color="#334155", 
             command=self.on_reindex
@@ -72,7 +72,7 @@ class OficinaApp(ctk.CTk):
 
         self.search_entry = ctk.CTkEntry(
             self.search_frame, 
-            placeholder_text="🔍 Digite a placa (ex: FNB 1A77) ou nome do cliente (ex: Danilo, Natanael)...",
+            placeholder_text="Digite a placa (ex: FNB 1A77) ou nome do cliente (ex: Danilo, Natanael)...",
             height=40,
             font=ctk.CTkFont(size=14)
         )
@@ -81,7 +81,7 @@ class OficinaApp(ctk.CTk):
 
         self.btn_clear = ctk.CTkButton(
             self.search_frame, 
-            text="✕ Limpar", 
+            text="Limpar", 
             width=80, 
             fg_color="#64748b",
             command=self.on_clear_search
@@ -179,7 +179,7 @@ class OficinaApp(ctk.CTk):
             self.current_folder = os.path.normpath(folder)
             self.cfg["spreadsheet_folder"] = self.current_folder
             config.save_config(self.cfg, BASE_DIR)
-            self.folder_label.configure(text=f"📁 Pasta: {self.current_folder}")
+            self.folder_label.configure(text=f"Pasta: {self.current_folder}")
             threading.Thread(target=self.index_and_refresh, daemon=True).start()
 
     def on_reindex(self):
@@ -227,7 +227,7 @@ class OficinaApp(ctk.CTk):
         latest = visits[0]
         details = latest.get("details", {})
 
-        self.banner_plate.configure(text=f"🚗 {latest.get('plate_display', plate)}")
+        self.banner_plate.configure(text=f"{latest.get('plate_display', plate)}")
         info_str = f"Cliente: {latest.get('client_name', 'N/I')}  |  Modelo: {latest.get('car_model', 'N/I')}  |  Ano: {latest.get('car_year', 'N/I')}  |  Cor: {latest.get('car_color', 'N/I')}"
         if details.get("phone"):
             info_str += f"  |  Celular: {details.get('phone')}"
@@ -248,7 +248,7 @@ class OficinaApp(ctk.CTk):
 
             lbl_v = ctk.CTkLabel(
                 v_head, 
-                text=f"📅 {date_str}   ⏱️ {km_str}   {v_num}", 
+                text=f"{date_str}   |   {km_str}   {v_num}", 
                 font=ctk.CTkFont(size=13, weight="bold"),
                 text_color="#1e293b"
             )
@@ -256,7 +256,7 @@ class OficinaApp(ctk.CTk):
 
             btn_open_excel = ctk.CTkButton(
                 v_head,
-                text="📂 Abrir no Excel",
+                text="Abrir no Excel",
                 width=110,
                 height=26,
                 fg_color="#15803d",
@@ -270,7 +270,7 @@ class OficinaApp(ctk.CTk):
             if visit.get("complaint"):
                 c_lbl = ctk.CTkLabel(
                     v_frame, 
-                    text=f"⚠️ Queixa: {visit.get('complaint')}", 
+                    text=f"Queixa: {visit.get('complaint')}", 
                     font=ctk.CTkFont(size=12, weight="bold"),
                     text_color="#92400e",
                     anchor="w"
@@ -312,7 +312,7 @@ class OficinaApp(ctk.CTk):
                 if it.get("comment"):
                     btn_note = ctk.CTkButton(
                         it_frame,
-                        text="📝 Ver Nota",
+                        text="Ver Nota",
                         width=70,
                         height=22,
                         fg_color="#ef4444",
@@ -334,7 +334,7 @@ class OficinaApp(ctk.CTk):
                     )
                     it_frame.pack(fill="x", padx=8, pady=3)
                     text_col = it.get("text_color") or "#0c4a6e"
-                    desc_text = f"🛠️ [Serviço] {it.get('description', '')}"
+                    desc_text = f"[Serviço] {it.get('description', '')}"
                     if it.get("quantity"):
                         desc_text += f" (Qtd: {it.get('quantity')})"
                     if it.get("total_price") and it.get("total_price") != "R$ 0,00":
@@ -350,7 +350,7 @@ class OficinaApp(ctk.CTk):
                     if it.get("comment"):
                         btn_note = ctk.CTkButton(
                             it_frame,
-                            text="📝 Ver Nota",
+                            text="Ver Nota",
                             width=70,
                             height=22,
                             fg_color="#ef4444",
@@ -372,7 +372,7 @@ class OficinaApp(ctk.CTk):
                 state = {"open": False}
                 btn_srv = ctk.CTkButton(
                     v_head,
-                    text=f"🛠️ Ver Serviços Executados ({count_val})",
+                    text=f"Ver Serviços Executados ({count_val})",
                     width=175,
                     height=26,
                     fg_color="#0284c7",
@@ -383,10 +383,10 @@ class OficinaApp(ctk.CTk):
                     state["open"] = not state["open"]
                     if state["open"]:
                         frame_ref.pack(fill="x", padx=10, pady=(4, 6))
-                        btn_srv.configure(text=f"🛠️ Ocultar Serviços ({count_val})", fg_color="#0369a1")
+                        btn_srv.configure(text=f"Ocultar Serviços ({count_val})", fg_color="#0369a1")
                     else:
                         frame_ref.pack_forget()
-                        btn_srv.configure(text=f"🛠️ Ver Serviços Executados ({count_val})", fg_color="#0284c7")
+                        btn_srv.configure(text=f"Ver Serviços Executados ({count_val})", fg_color="#0284c7")
                 btn_srv.configure(command=_toggle)
                 btn_srv.pack(side="right", padx=6, pady=6)
 

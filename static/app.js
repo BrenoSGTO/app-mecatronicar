@@ -116,19 +116,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnZoomOut) {
         btnZoomOut.addEventListener('click', () => {
             applyZoom(currentZoom - 10, true);
-            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+            showToast(`Zoom ajustado para ${currentZoom}%`);
         });
     }
     if (btnZoomIn) {
         btnZoomIn.addEventListener('click', () => {
             applyZoom(currentZoom + 10, true);
-            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+            showToast(`Zoom ajustado para ${currentZoom}%`);
         });
     }
     if (zoomValueText) {
         zoomValueText.addEventListener('click', () => {
             applyZoom(100, true);
-            showToast('🔍 Zoom restaurado para 100%');
+            showToast('Zoom restaurado para 100%');
         });
     }
     
@@ -180,8 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             showToast(
                 showAllServicesGlobal
-                    ? '🛠️ Exibindo serviços executados em todas as planilhas'
-                    : '🔩 Exibindo apenas peças (clique em "Ver Serviços Executados" na planilha desejada)'
+                    ? 'Exibindo serviços executados em todas as planilhas'
+                    : 'Exibindo apenas peças (clique em "Ver Serviços Executados" na planilha desejada)'
             );
         });
     }
@@ -190,8 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btnToggleAllServices) return;
         btnToggleAllServices.classList.toggle('active', showAllServicesGlobal);
         btnToggleAllServices.innerHTML = showAllServicesGlobal
-            ? '🛠️ Ocultar Serviços Feitos em Todas as Planilhas'
-            : '🛠️ Mostrar Serviços Feitos em Todas as Planilhas';
+            ? 'Ocultar Serviços Feitos em Todas as Planilhas'
+            : 'Mostrar Serviços Feitos em Todas as Planilhas';
     }
 
     // Banner Vehicle Actions (CP-04 e CP-05)
@@ -245,10 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCopyBtn.addEventListener('click', () => {
         const text = modalCommentText.textContent;
         navigator.clipboard.writeText(text).then(() => {
-            showToast('✓ Texto copiado para a área de transferência!');
-            modalCopyBtn.textContent = '✓ Copiado!';
+            showToast('Texto copiado com sucesso para a área de transferência!');
+            modalCopyBtn.textContent = 'Copiado!';
             setTimeout(() => {
-                modalCopyBtn.textContent = '📋 Copiar Texto';
+                modalCopyBtn.textContent = 'Copiar Texto';
             }, 2000);
         }).catch(() => {
             showToast('Erro ao copiar texto');
@@ -271,15 +271,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
             e.preventDefault();
             applyZoom(currentZoom - 10, true);
-            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+            showToast(`Zoom ajustado para ${currentZoom}%`);
         } else if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
             e.preventDefault();
             applyZoom(currentZoom + 10, true);
-            showToast(`🔍 Zoom ajustado para ${currentZoom}%`);
+            showToast(`Zoom ajustado para ${currentZoom}%`);
         } else if (e.ctrlKey && e.key === '0') {
             e.preventDefault();
             applyZoom(100, true);
-            showToast('🔍 Zoom restaurado para 100%');
+            showToast('Zoom restaurado para 100%');
         }
     });
 
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleSelectFolder() {
         btnChangeFolder.disabled = true;
-        btnChangeFolder.textContent = '⏳ Escolhendo...';
+        btnChangeFolder.textContent = 'Escolhendo...';
         showToast('Selecione a pasta na janela do Windows...');
         
         try {
@@ -333,20 +333,20 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Erro ao selecionar pasta.');
         } finally {
             btnChangeFolder.disabled = false;
-            btnChangeFolder.textContent = '📂 Alterar Pasta';
+            btnChangeFolder.textContent = 'Alterar Pasta';
         }
     }
 
     async function handleReindex() {
         btnReindex.disabled = true;
-        btnReindex.textContent = '⏳ Atualizando...';
+        btnReindex.textContent = 'Atualizando...';
         showToast('Atualizando lista de planilhas...');
         
         try {
             const res = await fetch('/api/reindex', { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                showToast(`✓ Atualizado! Total de ${data.stats.total_files} arquivos.`);
+                showToast(`Atualizado! Total de ${data.stats.total_files} arquivos.`);
                 await loadCarsList();
                 if (searchInput.value.trim()) {
                     performSearch(searchInput.value.trim());
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Erro ao atualizar planilhas.');
         } finally {
             btnReindex.disabled = false;
-            btnReindex.textContent = '🔄 Atualizar Lista';
+            btnReindex.textContent = 'Atualizar Lista';
         }
     }
 
@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (data.success) {
-                showToast('✓ Planilha aberta no Excel com sucesso!');
+                showToast('Planilha aberta no Excel com sucesso!');
             } else {
                 showToast(`Erro ao abrir: ${data.error}`);
             }
@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateProgressBar.style.width = '100%';
                     updateProgressPercent.textContent = '100%';
                     updateProgressStatus.textContent = 'Reiniciando o sistema...';
-                    showToast('✓ Atualização instalada! O MecatroniCar está reiniciando...');
+                    showToast('Atualização instalada! O MecatroniCar está reiniciando...');
                     setTimeout(() => {
                         window.location.reload();
                     }, 4000);
@@ -539,14 +539,32 @@ document.addEventListener('DOMContentLoaded', () => {
         results.forEach(item => {
             const card = document.createElement('div');
             card.className = 'search-card';
+
+            const plateFmt = item.plate_display || item.plate || 'SEM PLACA';
+            const plateHtml = window.CarCatalog
+                ? window.CarCatalog.renderMercosulPlateHtml(plateFmt, 'md')
+                : `<div class="mercosul-plate mercosul-plate-md"><div class="mercosul-body-area"><span class="mercosul-number">${escapeHtml(plateFmt)}</span></div></div>`;
+
+            const carInfo = window.CarCatalog ? window.CarCatalog.identifyCar(item.car_model || '') : null;
+            const brandLogoHtml = (carInfo && window.CarCatalog) ? window.CarCatalog.renderBrandLogoHtml(carInfo.brandKey, 36) : '';
+            const silhouetteHtml = (carInfo && window.CarCatalog) ? window.CarCatalog.renderCarSilhouetteHtml(carInfo, 46) : '';
+
+            const calIcon = window.CarCatalog ? window.CarCatalog.getIcon('calendar', 13) : '';
+            const userIcon = window.CarCatalog ? window.CarCatalog.getIcon('user', 14) : '';
+            const gaugeIcon = window.CarCatalog ? window.CarCatalog.getIcon('gauge', 13) : '';
+
             card.innerHTML = `
                 <div class="search-card-top">
-                    <span class="search-card-plate">🚗 ${item.plate_display || item.plate}</span>
-                    <span class="search-card-date">📅 ${item.entry_date || 'Sem data'}</span>
+                    ${plateHtml}
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                        ${brandLogoHtml}
+                        <span class="search-card-date">${calIcon} ${item.entry_date || 'Sem data'}</span>
+                    </div>
                 </div>
-                <div class="search-card-owner">👤 ${item.client_name || 'Cliente não identificado'}</div>
-                <div class="search-card-car">${item.car_model || ''} ${item.car_year ? '(' + item.car_year + ')' : ''}</div>
-                ${item.odometer ? `<div style="font-size: 12px; color: #475569;">⏱️ Hodômetro: <strong>${formatKm(item.odometer)}</strong></div>` : ''}
+                ${silhouetteHtml}
+                <div class="search-card-owner">${userIcon} ${escapeHtml(item.client_name || 'Cliente não identificado')}</div>
+                <div class="search-card-car"><strong>${escapeHtml(item.car_model || '')}</strong> ${item.car_year ? '(' + escapeHtml(item.car_year) + ')' : ''} ${item.car_color ? '• ' + escapeHtml(item.car_color) : ''}</div>
+                ${item.odometer ? `<div style="font-size: 12px; color: #475569;">${gaugeIcon} Hodômetro: <strong>${formatKm(item.odometer)}</strong></div>` : ''}
                 ${item.complaint ? `<div class="search-card-complaint" title="${escapeHtml(item.complaint)}">${escapeHtml(item.complaint)}</div>` : ''}
             `;
             card.addEventListener('click', () => {
@@ -569,10 +587,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detailPlate.textContent = latest.plate_display || latest.plate || 'SEM PLACA';
         detailOwnerName.textContent = latest.client_name || 'Cliente';
-        detailPhone.textContent = details.phone ? `📞 ${details.phone}` : '';
+        detailPhone.textContent = details.phone ? `${details.phone}` : '';
         detailPhone.style.display = details.phone ? 'inline-block' : 'none';
 
         detailCarModel.textContent = latest.car_model || 'Veículo';
+
+        const carInfo = window.CarCatalog ? window.CarCatalog.identifyCar(latest.car_model || '') : null;
+        const brandLogoEl = document.getElementById('detail-brand-logo');
+        const silhouetteEl = document.getElementById('detail-car-silhouette');
+        if (brandLogoEl && carInfo) {
+            brandLogoEl.src = carInfo.brandLogo;
+            brandLogoEl.alt = carInfo.brandName;
+            brandLogoEl.title = `Montadora: ${carInfo.brandName}`;
+        }
+        if (silhouetteEl && carInfo) {
+            silhouetteEl.src = carInfo.silhouette;
+            silhouetteEl.alt = carInfo.modelName;
+            silhouetteEl.title = `Modelo: ${carInfo.modelName}`;
+        }
         detailCarYear.textContent = latest.car_year ? `Ano: ${latest.car_year}` : '';
         detailCarYear.style.display = latest.car_year ? 'inline-block' : 'none';
 
@@ -766,8 +798,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     row.innerHTML = `
                         <div class="match-meta-pills">
-                            <span class="match-pill-date">📅 ${escapeHtml(dateStr)}</span>
-                            <span class="match-pill-km">⏱️ ${escapeHtml(kmStr)}</span>
+                            <span class="match-pill-date">${escapeHtml(dateStr)}</span>
+                            <span class="match-pill-km">${escapeHtml(kmStr)}</span>
                             ${vNum ? `<span class="match-pill-visit">${escapeHtml(vNum)}</span>` : ''}
                         </div>
                         <div class="match-item-desc">
@@ -861,7 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasNote) {
                 noteBadgeHtml = `
                     <button class="note-btn-inline" title="Clique para abrir a anotação da célula">
-                        💬 Ver nota
+                        Ver nota
                     </button>
                 `;
             }
@@ -906,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
         srvHeader.className = 'services-panel-header';
         srvHeader.innerHTML = `
             <div class="services-panel-title">
-                <span>🛠️ Serviços Executados / Mão de Obra nesta Planilha</span>
+                <span>Serviços Executados / Mão de Obra nesta Planilha</span>
                 <span class="services-count-pill">${servicosItems.length} ${servicosItems.length === 1 ? 'serviço' : 'serviços'}</span>
             </div>
             ${totalServicos && totalServicos !== 'R$ 0,00' ? `<div class="services-subtotal col-price">Total de Serviços: <strong>${escapeHtml(totalServicos)}</strong></div>` : ''}
@@ -943,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
         header.className = 'extra-sheet-panel-header';
         header.innerHTML = `
             <div>
-                <span class="extra-sheet-panel-title">📑 Aba: ${escapeHtml(sheetData.sheet_name)}</span>
+                <span class="extra-sheet-panel-title">Aba: ${escapeHtml(sheetData.sheet_name)}</span>
                 ${sheetData.title ? `<span style="margin-left: 10px; font-weight: 500; color: #e2e8f0;">— ${escapeHtml(sheetData.title)}</span>` : ''}
             </div>
             <div class="totals-group" style="margin-left: auto;">
@@ -961,12 +993,12 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionBar.className = 'sheet-section-bar';
             sectionBar.innerHTML = `
                 <div class="sheet-section-bar-left">
-                    <span class="sheet-section-label">🔩 Peças da Aba (${pecasItems.length})</span>
+                    <span class="sheet-section-label">Peças da Aba (${pecasItems.length})</span>
                     ${totalPecas ? `<span class="sheet-section-subtotal col-price">Subtotal Peças: <strong>${escapeHtml(totalPecas)}</strong></span>` : ''}
                 </div>
                 <div class="sheet-section-bar-right">
                     <button type="button" class="btn-toggle-services">
-                        🛠️ Ver Serviços Executados (${servicosItems.length})
+                        Ver Serviços Executados (${servicosItems.length})
                     </button>
                 </div>
             `;
@@ -994,8 +1026,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 srvPanel.style.display = vis ? 'block' : 'none';
                 toggleBtn.classList.toggle('active', vis);
                 toggleBtn.innerHTML = vis
-                    ? `🛠️ Ocultar Serviços Executados (${servicosItems.length})`
-                    : `🛠️ Ver Serviços Executados (${servicosItems.length})`;
+                    ? `Ocultar Serviços Executados (${servicosItems.length})`
+                    : `Ver Serviços Executados (${servicosItems.length})`;
             };
             setServicesVisible(autoOpen);
             toggleBtn.addEventListener('click', () => {
@@ -1057,41 +1089,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const numServ = nfControl.nf_servico_num || nfControl.nfse_number || '';
             const numPecas = nfControl.nf_pecas_num || nfControl.nfe_number || '';
             const numsStr = [numServ ? `NFS-e #${numServ}` : 'NFS-e', numPecas ? `NF-e #${numPecas}` : 'NF-e'].join(' • ');
-            nfBadgeHtml = `<span class="badge-visit-nf emitted" title="Notas Fiscais emitidas para esta visita">✅ ${numsStr}</span>`;
+            nfBadgeHtml = `<span class="badge-visit-nf emitted" title="Notas Fiscais emitidas para esta visita">${numsStr}</span>`;
         } else if (isServicoDone || isPecasDone) {
-            nfBadgeHtml = `<span class="badge-visit-nf partial" title="Uma nota fiscal emitida e outra pendente">🟡 NF Parcial</span>`;
+            nfBadgeHtml = `<span class="badge-visit-nf partial" title="Uma nota fiscal emitida e outra pendente">NF Parcial</span>`;
         } else if (hasServicoVal || hasPecasVal) {
-            nfBadgeHtml = `<span class="badge-visit-nf pending" title="Notas Fiscais pendentes de emissão. Clique para abrir no Copiloto.">⏳ NF Pendente</span>`;
+            nfBadgeHtml = `<span class="badge-visit-nf pending" title="Notas Fiscais pendentes de emissão. Clique para abrir no Copiloto.">NF Pendente</span>`;
         } else {
-            nfBadgeHtml = `<span class="badge-visit-nf none" title="Nenhuma nota fiscal emitida ainda">🧾 NF</span>`;
+            nfBadgeHtml = `<span class="badge-visit-nf none" title="Nenhuma nota fiscal emitida ainda">NF</span>`;
         }
 
         header.innerHTML = `
             <div class="visit-meta-left">
-                <span class="badge-date">📅 ${dateDisplay}</span>
-                <span class="badge-km">⏱️ ${kmDisplay}</span>
+                <span class="badge-date">${dateDisplay}</span>
+                <span class="badge-km">${kmDisplay}</span>
                 ${visitNumDisplay ? `<span class="badge-visit-num">${visitNumDisplay}</span>` : ''}
                 ${nfBadgeHtml}
             </div>
             <div class="visit-meta-right">
-                <span class="visit-filename" title="${escapeHtml(visit.file_name)}">📄 ${escapeHtml(visit.file_name)}</span>
+                <span class="visit-filename" title="${escapeHtml(visit.file_name)}">${escapeHtml(visit.file_name)}</span>
                 <button type="button" class="btn btn-primary btn-sm btn-doc-orcamento" title="Gerar Orçamento / OS Profissional com Logotipo MecatroniCar em PDF">
-                    📄 Orçamento / OS
+                    Orçamento / OS
                 </button>
                 <button type="button" class="btn btn-checklist btn-sm btn-doc-checklist" title="Gerar Checklist para os mecânicos (sem valores financeiros)">
-                    📋 Checklist
+                    Checklist
                 </button>
                 <button type="button" class="btn btn-sm btn-visit-fiscal" style="background: #fefce8; border: 1.5px solid #fde047; color: #854d0e; font-weight: 700;" title="Abrir Copiloto Fiscal para emissão de NFS-e (Santos) e NF-e 55 desta OS">
-                    🧾 Copiloto NF
+                    Copiloto NF
                 </button>
                 <button type="button" class="btn-toggle-services btn-sm" title="Mostrar ou ocultar os serviços executados nesta planilha">
-                    🛠️ Serviços (${servicosItems.length})
+                    Serviços (${servicosItems.length})
                 </button>
                 <button type="button" class="btn btn-sm btn-edit-os" title="Editar dados, peças ou serviços desta OS no Excel">
-                    ✏️ Editar OS
+                    Editar OS
                 </button>
                 <button class="btn btn-excel btn-sm" title="Abrir planilha original no Microsoft Excel">
-                    📂 Excel
+                    Excel
                 </button>
             </div>
         `;
@@ -1139,13 +1171,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (d.complaint_comment) {
                 commentBtnHtml = `
                     <button class="btn-scanner-note" title="Ver relatório do scanner ou nota técnica">
-                        📝 Relatório do Scanner / Nota Técnica
+                        Relatório do Scanner / Nota Técnica
                     </button>
                 `;
             }
 
             compBox.innerHTML = `
-                <div class="complaint-text">⚠️ Queixa / Motivo: ${compText}</div>
+                <div class="complaint-text">Queixa / Motivo: ${compText}</div>
                 ${commentBtnHtml}
             `;
 
@@ -1167,12 +1199,12 @@ document.addEventListener('DOMContentLoaded', () => {
         sectionBar.className = 'sheet-section-bar';
         sectionBar.innerHTML = `
             <div class="sheet-section-bar-left">
-                <span class="sheet-section-label">🔩 Peças da Planilha (${pecasItems.length})</span>
+                <span class="sheet-section-label">Peças da Planilha (${pecasItems.length})</span>
                 ${totalPecas && totalPecas !== 'R$ 0,00' ? `<span class="sheet-section-subtotal col-price">Total de Peças: <strong>${escapeHtml(totalPecas)}</strong></span>` : ''}
             </div>
             <div class="sheet-section-bar-right">
                 <button type="button" class="btn-toggle-services">
-                    🛠️ Ver Serviços Executados (${servicosItems.length})${totalServicos && totalServicos !== 'R$ 0,00' ? ` • ${escapeHtml(totalServicos)}` : ''}
+                    Ver Serviços Executados (${servicosItems.length})${totalServicos && totalServicos !== 'R$ 0,00' ? ` • ${escapeHtml(totalServicos)}` : ''}
                 </button>
             </div>
         `;
@@ -1209,13 +1241,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (headerToggleBtn) {
                 headerToggleBtn.innerHTML = vis
-                    ? `🛠️ Ocultar Serviços (${servicosItems.length})`
-                    : `🛠️ Ver Serviços Executados (${servicosItems.length})`;
+                    ? `Ocultar Serviços (${servicosItems.length})`
+                    : `Ver Serviços Executados (${servicosItems.length})`;
             }
             if (barToggleBtn) {
                 barToggleBtn.innerHTML = vis
-                    ? `🛠️ Ocultar Serviços Executados (${servicosItems.length})${priceSuffix}`
-                    : `🛠️ Ver Serviços Executados (${servicosItems.length})${priceSuffix}`;
+                    ? `Ocultar Serviços Executados (${servicosItems.length})${priceSuffix}`
+                    : `Ver Serviços Executados (${servicosItems.length})${priceSuffix}`;
             }
         };
 
@@ -1243,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filledExtraSheets.length > 0) {
             const lbl = document.createElement('span');
             lbl.className = 'extra-sheets-label';
-            lbl.textContent = '📑 Outras planilhas preenchidas nesta ficha:';
+            lbl.textContent = 'Outras planilhas preenchidas nesta ficha:';
             extraSheetsContainer.appendChild(lbl);
 
             filledExtraSheets.forEach((secSheet) => {
@@ -1252,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const countBadge = secSheet.items && secSheet.items.length > 0
                     ? ` (${secSheet.items.length} itens)`
                     : '';
-                btn.textContent = `👁️ Ver ${secSheet.sheet_name}${countBadge}`;
+                btn.textContent = `Ver ${secSheet.sheet_name}${countBadge}`;
                 btn.title = secSheet.title || `Clique para ver o conteúdo preenchido na aba ${secSheet.sheet_name}`;
 
                 let panelEl = null;
@@ -1410,15 +1442,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let authInfo = '';
                 if (car.status === 'Liberado p/ Retirada por Terceiro' && car.authorized_name) {
-                    authInfo = `<span style="color: #ef4444; font-weight: 700;"> • 🔑 Autorizado: ${escapeHtml(car.authorized_name)} (Doc: ${escapeHtml(car.authorized_doc || 's/ doc')})</span>`;
+                    authInfo = `<span style="color: #ef4444; font-weight: 700;"> • Autorizado: ${escapeHtml(car.authorized_name)} (Doc: ${escapeHtml(car.authorized_doc || 's/ doc')})</span>`;
                 }
 
                 row.innerHTML = `
                     <div class="patio-item-info">
                         <span class="patio-item-plate">${escapeHtml(car.plate_display || car.plate)}</span>
                         <div class="patio-item-details">
-                            <span class="patio-item-model">${escapeHtml(car.car_model || 'Veículo')} ${car.car_color ? `(${escapeHtml(car.car_color)})` : ''} - 👤 ${escapeHtml(car.client_name || 'Cliente')}</span>
-                            <span class="patio-item-sub">${car.box_mecanico ? `🔧 ${escapeHtml(car.box_mecanico)} ` : ''}${car.notes ? `• ${escapeHtml(car.notes)}` : ''}${authInfo}</span>
+                            <span class="patio-item-model">${escapeHtml(car.car_model || 'Veículo')} ${car.car_color ? `(${escapeHtml(car.car_color)})` : ''} - ${escapeHtml(car.client_name || 'Cliente')}</span>
+                            <span class="patio-item-sub">${car.box_mecanico ? `${escapeHtml(car.box_mecanico)} ` : ''}${car.notes ? `• ${escapeHtml(car.notes)}` : ''}${authInfo}</span>
                         </div>
                     </div>
                     <span class="patio-status-badge ${badgeClass}">${escapeHtml(car.status)}</span>
@@ -1798,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="text" class="os-table-input peca-total" readonly value="${formatMoeda(totalInit)}" style="text-align: right;">
             </td>
             <td style="text-align: center;">
-                <button type="button" class="btn-remove-row" title="Remover Peça">🗑️</button>
+                <button type="button" class="btn-remove-row" title="Remover Peça">&times;</button>
             </td>
         `;
 
@@ -1842,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="text" class="os-table-input servico-total" readonly value="${formatMoeda(totalInit)}" style="text-align: right;">
             </td>
             <td style="text-align: center;">
-                <button type="button" class="btn-remove-row" title="Remover Serviço">🗑️</button>
+                <button type="button" class="btn-remove-row" title="Remover Serviço">&times;</button>
             </td>
         `;
 
@@ -1941,13 +1973,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (osVisitSuggestedHint) {
-                    osVisitSuggestedHint.textContent = `✨ Sugerido: Visita ${data.suggested_visit_num} (última: ${data.max_visit_num})`;
+                    osVisitSuggestedHint.textContent = `Sugerido: Visita ${data.suggested_visit_num} (última: ${data.max_visit_num})`;
                 }
 
                 if (osPlateLookupBadge) {
                     osPlateLookupBadge.style.display = 'inline-flex';
                     osPlateLookupBadge.className = 'os-plate-badge found';
-                    osPlateLookupBadge.textContent = `🟢 Veículo Recorrente (${data.visits_count} visitas)`;
+                    osPlateLookupBadge.textContent = `Veículo Recorrente (${data.visits_count} visitas)`;
                 }
 
                 if (osLastOdometerHint) {
@@ -1964,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (osPlateLookupBadge) {
                     osPlateLookupBadge.style.display = 'inline-flex';
                     osPlateLookupBadge.className = 'os-plate-badge new';
-                    osPlateLookupBadge.textContent = '🆕 Novo Veículo na Oficina';
+                    osPlateLookupBadge.textContent = 'Novo Veículo na Oficina';
                 }
                 if (osLastOdometerHint) {
                     osLastOdometerHint.textContent = '';
@@ -1980,8 +2012,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('os-form').reset();
         osExistingFilePath.value = '';
 
-        if (osModalTitle) osModalTitle.textContent = '🛠️ Nova Visita / Ordem de Serviço';
-        if (osModalSave) osModalSave.textContent = '💾 Salvar Ficha no Excel (.xlsx) e Sistema';
+        if (osModalTitle) osModalTitle.textContent = 'Nova Visita / Ordem de Serviço';
+        if (osModalSave) osModalSave.textContent = 'Salvar Ficha no Excel (.xlsx) e Sistema';
 
         // Preenche data e hora de hoje
         const now = new Date();
@@ -2023,10 +2055,10 @@ document.addEventListener('DOMContentLoaded', () => {
         osExistingFilePath.value = visit.file_path || '';
 
         if (osModalTitle) {
-            osModalTitle.textContent = `✏️ Editar Ordem de Serviço • Visita #${visit.visit_num || '1'} (${visit.plate_display || visit.plate || ''})`;
+            osModalTitle.textContent = `Editar Ordem de Serviço • Visita #${visit.visit_num || '1'} (${visit.plate_display || visit.plate || ''})`;
         }
         if (osModalSave) {
-            osModalSave.textContent = '💾 Salvar Alterações na Planilha (.xlsx)';
+            osModalSave.textContent = 'Salvar Alterações na Planilha (.xlsx)';
         }
 
         // Dados do Veículo & Entrada
@@ -2050,7 +2082,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (osPlateLookupBadge) {
             osPlateLookupBadge.style.display = 'inline-flex';
             osPlateLookupBadge.className = 'os-plate-badge found';
-            osPlateLookupBadge.textContent = '✏️ Editando Planilha Existente';
+            osPlateLookupBadge.textContent = 'Editando Planilha Existente';
         }
 
         // Dados do Cliente
@@ -2178,7 +2210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             item.className = 'os-autocomplete-item';
                             item.innerHTML = `
                                 <div><strong>${escapeHtml(r.plate_display || r.plate)}</strong> • ${escapeHtml(r.car_model || '')} (${escapeHtml(r.car_color || '')})</div>
-                                <div style="color: #64748b; font-size: 11px;">👤 ${escapeHtml(r.client_name || 'Cliente')} • Visitas: ${r.visit_num || '1'}</div>
+                                <div style="color: #64748b; font-size: 11px;">${escapeHtml(r.client_name || 'Cliente')} • Visitas: ${r.visit_num || '1'}</div>
                             `;
                             item.addEventListener('click', () => {
                                 osCarPlate.value = r.plate_display || r.plate;
@@ -2304,7 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 osModalSave.disabled = true;
-                osModalSave.textContent = '⏳ Salvando no Excel e Sistema...';
+                osModalSave.textContent = 'Salvando no Excel e Sistema...';
 
                 const res = await fetch('/api/save_order', {
                     method: 'POST',
@@ -2314,7 +2346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    showToast(`🎉 Ficha salva com sucesso! Planilha: ${data.file_name || data.filename}`);
+                    showToast(`Ficha salva com sucesso! Planilha: ${data.file_name || data.filename}`);
                     closeOsModal();
 
                     // Atualiza a visualização da tela
@@ -2327,7 +2359,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Erro de conexão ao salvar: ' + err.message);
             } finally {
                 osModalSave.disabled = false;
-                osModalSave.textContent = '💾 Salvar Ficha no Excel (.xlsx) e Sistema';
+                osModalSave.textContent = 'Salvar Ficha no Excel (.xlsx) e Sistema';
             }
         });
     }
@@ -2422,11 +2454,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function copyToClipboard(text, successToastMsg) {
         if (!text) {
-            showToast('⚠️ Nada para copiar.');
+            showToast('Nada para copiar.');
             return;
         }
         navigator.clipboard.writeText(text).then(() => {
-            showToast(successToastMsg || '📋 Copiado com sucesso!');
+            showToast(successToastMsg || 'Copiado com sucesso!');
         }).catch(err => {
             console.error('Falha ao copiar:', err);
             // Fallback para input temporário
@@ -2436,7 +2468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tempInput.select();
             document.execCommand('copy');
             document.body.removeChild(tempInput);
-            showToast(successToastMsg || '📋 Copiado com sucesso!');
+            showToast(successToastMsg || 'Copiado com sucesso!');
         });
     }
 
@@ -2569,13 +2601,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (nfseCurrentStatusTag) {
                 if (nfseStatus === 'emitida') {
                     nfseCurrentStatusTag.className = 'badge-status-pill emitted';
-                    nfseCurrentStatusTag.textContent = `✅ Emitida (NFS-e #${nfseNum || 'S/N'})`;
+                    nfseCurrentStatusTag.textContent = `Emitida (NFS-e #${nfseNum || 'S/N'})`;
                 } else if (nfse.valor_servicos === 0 && (nfse.itens_servico || []).length === 0) {
                     nfseCurrentStatusTag.className = 'badge-status-pill na';
                     nfseCurrentStatusTag.textContent = 'Não Aplicável (Sem Serviços)';
                 } else {
                     nfseCurrentStatusTag.className = 'badge-status-pill pending';
-                    nfseCurrentStatusTag.textContent = '⏳ Pendente';
+                    nfseCurrentStatusTag.textContent = 'Pendente';
                 }
             }
 
@@ -2590,7 +2622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const row = document.createElement('div');
                         row.className = 'fiscal-item-row';
                         row.innerHTML = `
-                            <span class="fiscal-item-desc">🔧 ${escapeHtml(s.desc)} ${s.qty > 1 ? `(${s.qty}x)` : ''}</span>
+                            <span class="fiscal-item-desc">${escapeHtml(s.desc)} ${s.qty > 1 ? `(${s.qty}x)` : ''}</span>
                             <span class="fiscal-item-val">${formatMoeda(s.total || s.unit_price || 0)}</span>
                         `;
                         nfseServicesList.appendChild(row);
@@ -2614,13 +2646,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (nfeCurrentStatusTag) {
                 if (nfeStatus === 'emitida') {
                     nfeCurrentStatusTag.className = 'badge-status-pill emitted';
-                    nfeCurrentStatusTag.textContent = `✅ Emitida (NF-e #${nfeNum || 'S/N'})`;
+                    nfeCurrentStatusTag.textContent = `Emitida (NF-e #${nfeNum || 'S/N'})`;
                 } else if (nfe.valor_pecas === 0 && (nfe.itens_pecas || []).length === 0) {
                     nfeCurrentStatusTag.className = 'badge-status-pill na';
                     nfeCurrentStatusTag.textContent = 'Não Aplicável (Sem Peças)';
                 } else {
                     nfeCurrentStatusTag.className = 'badge-status-pill pending';
-                    nfeCurrentStatusTag.textContent = '⏳ Pendente';
+                    nfeCurrentStatusTag.textContent = 'Pendente';
                 }
             }
 
@@ -2671,87 +2703,87 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ações de cópia em 1 clique
     if (btnCopyNfseDesc) {
         btnCopyNfseDesc.addEventListener('click', () => {
-            copyToClipboard(nfseDescText?.value, '📋 Discriminação NFS-e copiada com sucesso!');
+            copyToClipboard(nfseDescText?.value, 'Discriminação NFS-e copiada com sucesso!');
         });
     }
 
     if (pillCopyTomadorNfse) {
         pillCopyTomadorNfse.addEventListener('click', () => {
-            copyToClipboard(currentFiscalData?.tomador?.resumo, '👤 Dados do Tomador copiados!');
+            copyToClipboard(currentFiscalData?.tomador?.resumo, 'Dados do Tomador copiados!');
         });
     }
 
     if (pillCopyCpfNfse) {
         pillCopyCpfNfse.addEventListener('click', () => {
             const rawCpf = (currentFiscalData?.tomador?.cpf_cnpj || '').replace(/\D/g, '');
-            copyToClipboard(rawCpf, `🔢 CPF sem pontuação copiado: ${rawCpf}`);
+            copyToClipboard(rawCpf, `CPF sem pontuação copiado: ${rawCpf}`);
         });
     }
 
     if (pillCopyCepNfse) {
         pillCopyCepNfse.addEventListener('click', () => {
             const rawCep = (currentFiscalData?.tomador?.cep || '').replace(/\D/g, '');
-            copyToClipboard(rawCep, `📍 CEP copiado: ${rawCep}`);
+            copyToClipboard(rawCep, `CEP copiado: ${rawCep}`);
         });
     }
 
     if (pillCopyAddrNfse) {
         pillCopyAddrNfse.addEventListener('click', () => {
-            copyToClipboard(currentFiscalData?.tomador?.endereco_linha_unica, '🗺️ Endereço em 1 linha copiado!');
+            copyToClipboard(currentFiscalData?.tomador?.endereco_linha_unica, 'Endereço em 1 linha copiado!');
         });
     }
 
     if (pillCopyServVal) {
         pillCopyServVal.addEventListener('click', () => {
             const v = (currentFiscalData?.nfse?.valor_servicos || 0).toFixed(2).replace('.', ',');
-            copyToClipboard(v, `💰 Valor de Mão de Obra copiado: R$ ${v}`);
+            copyToClipboard(v, `Valor de Mão de Obra copiado: R$ ${v}`);
         });
     }
 
     // Aba 2 - Cópia NF-e 55
     if (btnCopyNfeSummary) {
         btnCopyNfeSummary.addEventListener('click', () => {
-            copyToClipboard(currentFiscalData?.nfe?.resumo_texto, '📋 Lista de Peças e Valores copiada!');
+            copyToClipboard(currentFiscalData?.nfe?.resumo_texto, 'Lista de Peças e Valores copiada!');
         });
     }
 
     if (btnCopyNfeTsv) {
         btnCopyNfeTsv.addEventListener('click', () => {
-            copyToClipboard(currentFiscalData?.nfe?.tabela_tsv, '📊 Tabela TSV copiada! Pronta para colar no Excel ou Emissor Fiscal.');
+            copyToClipboard(currentFiscalData?.nfe?.tabela_tsv, 'Tabela TSV copiada! Pronta para colar no Excel ou Emissor Fiscal.');
         });
     }
 
     if (pillCopyPartsVal) {
         pillCopyPartsVal.addEventListener('click', () => {
             const v = (currentFiscalData?.nfe?.valor_pecas || 0).toFixed(2).replace('.', ',');
-            copyToClipboard(v, `💰 Valor de Peças copiado: R$ ${v}`);
+            copyToClipboard(v, `Valor de Peças copiado: R$ ${v}`);
         });
     }
 
     if (pillCopyTomadorNfe) {
         pillCopyTomadorNfe.addEventListener('click', () => {
-            copyToClipboard(currentFiscalData?.tomador?.resumo, '👤 Dados do Destinatário copiados!');
+            copyToClipboard(currentFiscalData?.tomador?.resumo, 'Dados do Destinatário copiados!');
         });
     }
 
     // Aba 3 - Cópia Tomador
     if (btnCopyFullTomador) {
         btnCopyFullTomador.addEventListener('click', () => {
-            copyToClipboard(currentFiscalData?.tomador?.resumo, '👤 Ficha cadastral do tomador copiada!');
+            copyToClipboard(currentFiscalData?.tomador?.resumo, 'Ficha cadastral do tomador copiada!');
         });
     }
 
     if (btnCopyCpfRaw) {
         btnCopyCpfRaw.addEventListener('click', () => {
             const rawCpf = (currentFiscalData?.tomador?.cpf_cnpj || '').replace(/\D/g, '');
-            copyToClipboard(rawCpf, `🔢 CPF sem pontuação copiado: ${rawCpf}`);
+            copyToClipboard(rawCpf, `CPF sem pontuação copiado: ${rawCpf}`);
         });
     }
 
     if (btnCopyCepRaw) {
         btnCopyCepRaw.addEventListener('click', () => {
             const rawCep = (currentFiscalData?.tomador?.cep || '').replace(/\D/g, '');
-            copyToClipboard(rawCep, `📍 CEP sem traço copiado: ${rawCep}`);
+            copyToClipboard(rawCep, `CEP sem traço copiado: ${rawCep}`);
         });
     }
 
@@ -2763,7 +2795,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetEl) {
                 const val = targetEl.textContent.trim();
                 if (val && val !== '-') {
-                    copyToClipboard(val, `📋 Copiado: ${val}`);
+                    copyToClipboard(val, `Copiado: ${val}`);
                 }
             }
         });
@@ -2798,10 +2830,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const data = await res.json();
                 if (data.success) {
-                    showToast(`✅ NFS-e #${num || 'S/N'} marcada como EMITIDA!`);
+                    showToast(`NFS-e #${num || 'S/N'} marcada como EMITIDA!`);
                     if (nfseCurrentStatusTag) {
                         nfseCurrentStatusTag.className = 'badge-status-pill emitted';
-                        nfseCurrentStatusTag.textContent = `✅ Emitida (NFS-e #${num || 'S/N'})`;
+                        nfseCurrentStatusTag.textContent = `Emitida (NFS-e #${num || 'S/N'})`;
                     }
                     updateHeaderFiscalBadge();
                     if (currentCarHistory && currentCarHistory.vehicle && currentCarHistory.vehicle.plate === currentFiscalPlate) {
@@ -2814,7 +2846,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Erro de conexão ao salvar status: ' + e.message);
             } finally {
                 btnMarkNfseDone.disabled = false;
-                btnMarkNfseDone.textContent = '✅ Marcar NFS-e Emitida';
+                btnMarkNfseDone.textContent = 'Marcar NFS-e Emitida';
             }
         });
     }
@@ -2848,10 +2880,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const data = await res.json();
                 if (data.success) {
-                    showToast(`✅ NF-e #${num || 'S/N'} marcada como EMITIDA!`);
+                    showToast(`NF-e #${num || 'S/N'} marcada como EMITIDA!`);
                     if (nfeCurrentStatusTag) {
                         nfeCurrentStatusTag.className = 'badge-status-pill emitted';
-                        nfeCurrentStatusTag.textContent = `✅ Emitida (NF-e #${num || 'S/N'})`;
+                        nfeCurrentStatusTag.textContent = `Emitida (NF-e #${num || 'S/N'})`;
                     }
                     updateHeaderFiscalBadge();
                     if (currentCarHistory && currentCarHistory.vehicle && currentCarHistory.vehicle.plate === currentFiscalPlate) {
@@ -2864,7 +2896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Erro de conexão ao salvar status: ' + e.message);
             } finally {
                 btnMarkNfeDone.disabled = false;
-                btnMarkNfeDone.textContent = '✅ Marcar NF-e Emitida';
+                btnMarkNfeDone.textContent = 'Marcar NF-e Emitida';
             }
         });
     }
@@ -2902,7 +2934,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (items.length === 0) {
                 fiscalPendingList.innerHTML = `
                     <div style="padding: 32px; text-align: center; color: #166534; font-weight: 700; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px;">
-                        🎉 Parabéns! Nenhuma nota fiscal pendente encontrada neste filtro.
+                        Nenhuma nota fiscal pendente encontrada neste filtro.
                     </div>
                 `;
                 return;
@@ -2917,12 +2949,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isPecasDone = item.status_pecas === 'emitida';
 
                 const servBadgeHtml = isServDone
-                    ? `<span class="badge-status-pill emitted">✅ NFS-e #${escapeHtml(item.nf_servico_num || 'S/N')} (${formatMoeda(item.valor_servico)})</span>`
-                    : `<span class="badge-status-pill pending">⏳ NFS-e Santos: ${formatMoeda(item.valor_servico)}</span>`;
+                    ? `<span class="badge-status-pill emitted">NFS-e #${escapeHtml(item.nf_servico_num || 'S/N')} (${formatMoeda(item.valor_servico)})</span>`
+                    : `<span class="badge-status-pill pending">NFS-e Santos: ${formatMoeda(item.valor_servico)}</span>`;
 
                 const pecasBadgeHtml = isPecasDone
-                    ? `<span class="badge-status-pill emitted">✅ NF-e #${escapeHtml(item.nf_pecas_num || 'S/N')} (${formatMoeda(item.valor_pecas)})</span>`
-                    : `<span class="badge-status-pill pending">⏳ NF-e 55: ${formatMoeda(item.valor_pecas)}</span>`;
+                    ? `<span class="badge-status-pill emitted">NF-e #${escapeHtml(item.nf_pecas_num || 'S/N')} (${formatMoeda(item.valor_pecas)})</span>`
+                    : `<span class="badge-status-pill pending">NF-e 55: ${formatMoeda(item.valor_pecas)}</span>`;
 
                 const plateDisp = item.plate_display || item.plate;
                 const vNumStr = item.visit_num ? `Visita #${item.visit_num}` : '';
@@ -2932,8 +2964,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="fiscal-card-title-row">
                             <span class="fiscal-card-plate">${escapeHtml(plateDisp)}</span>
                             <span class="fiscal-card-model">${escapeHtml(item.car_model || 'Veículo')}</span>
-                            <span class="fiscal-card-client">• 👤 ${escapeHtml(item.client_name || 'Cliente')}</span>
-                            <span class="fiscal-card-date">📅 ${escapeHtml(item.entry_date || '-')}</span>
+                            <span class="fiscal-card-client">• ${escapeHtml(item.client_name || 'Cliente')}</span>
+                            <span class="fiscal-card-date">${escapeHtml(item.entry_date || '-')}</span>
                             ${vNumStr ? `<span class="badge" style="background: #e2e8f0; color: #334155; font-size: 11px;">${vNumStr}</span>` : ''}
                         </div>
                         <div class="fiscal-card-status-row">
@@ -2949,13 +2981,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="fiscal-card-actions">
                         <button type="button" class="btn-action-mini primary btn-queue-open" title="Abrir esta OS no Copiloto Fiscal para emissão">
-                            ⚡ Abrir no Copiloto
+                            Abrir no Copiloto
                         </button>
                         <button type="button" class="btn-action-mini btn-queue-copy-nfse" title="Copiar discriminação formatada para a NFS-e Santos">
-                            📋 Copiar NFS-e
+                            Copiar NFS-e
                         </button>
                         <button type="button" class="btn-action-mini btn-queue-copy-nfe" title="Copiar resumo de peças para a NF-e 55">
-                            🔩 Copiar Peças
+                            Copiar Peças
                         </button>
                     </div>
                 `;
@@ -2970,7 +3002,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const r = await fetch(`/api/nf/copilot_text?type=nfse_discriminacao&file_path=${encodeURIComponent(item.file_path || '')}&plate=${encodeURIComponent(item.plate || '')}&visit_num=${encodeURIComponent(item.visit_num || '')}`);
                         const d = await r.json();
                         if (d.success && d.text) {
-                            copyToClipboard(d.text, `📋 Discriminação NFS-e de ${plateDisp} copiada!`);
+                            copyToClipboard(d.text, `Discriminação NFS-e de ${plateDisp} copiada!`);
                         } else {
                             showToast('Erro ao gerar discriminação.');
                         }
@@ -2984,7 +3016,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const r = await fetch(`/api/nf/copilot_text?type=nfe_pecas_tsv&file_path=${encodeURIComponent(item.file_path || '')}&plate=${encodeURIComponent(item.plate || '')}&visit_num=${encodeURIComponent(item.visit_num || '')}`);
                         const d = await r.json();
                         if (d.success && d.text) {
-                            copyToClipboard(d.text, `📊 Tabela TSV de Peças de ${plateDisp} copiada!`);
+                            copyToClipboard(d.text, `Tabela TSV de Peças de ${plateDisp} copiada!`);
                         } else {
                             showToast('Erro ao gerar dados de peças.');
                         }

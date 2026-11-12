@@ -70,14 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
         btnToggleSound.addEventListener("click", () => {
             soundEnabled = !soundEnabled;
             if (soundEnabled) {
-                soundIcon.textContent = "🔊";
+                soundIcon.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="app-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
                 btnToggleSound.classList.add("tv-btn-primary");
-                showToast("🔔 Aviso sonoro ativado!");
+                showToast("Aviso sonoro ativado!");
                 playStatusChangeChime();
             } else {
-                soundIcon.textContent = "🔔";
+                soundIcon.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="app-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
                 btnToggleSound.classList.remove("tv-btn-primary");
-                showToast("🔕 Aviso sonoro desativado.");
+                showToast("Aviso sonoro desativado.");
             }
         });
     }
@@ -170,31 +170,44 @@ document.addEventListener("DOMContentLoaded", () => {
         card.dataset.carId = car.id;
 
         const plateFmt = car.plate_display || car.plate || "SEM PLACA";
+        const plateHtml = window.CarCatalog 
+            ? window.CarCatalog.renderMercosulPlateHtml(plateFmt, 'sm')
+            : `<div class="mercosul-plate mercosul-plate-sm"><div class="mercosul-body-area"><span class="mercosul-number">${escapeHtml(plateFmt)}</span></div></div>`;
+
+        const carInfo = window.CarCatalog ? window.CarCatalog.identifyCar(car.car_model || "") : null;
+        const brandLogoHtml = (carInfo && window.CarCatalog) ? window.CarCatalog.renderBrandLogoHtml(carInfo.brandKey, 28) : "";
+        const silhouetteHtml = (carInfo && window.CarCatalog) ? window.CarCatalog.renderCarSilhouetteHtml(carInfo, 40) : "";
+
         const boxBadge = car.box_mecanico ? `<span class="tv-card-box-badge">${escapeHtml(car.box_mecanico)}</span>` : "";
         const notesHtml = car.notes ? `<div class="tv-card-notes">${escapeHtml(car.notes)}</div>` : "";
 
         let thirdPartyHtml = "";
         if (car.status === "Liberado p/ Retirada por Terceiro" && car.authorized_name) {
+            const keyIcon = window.CarCatalog ? window.CarCatalog.getIcon('key', 14) : '';
             thirdPartyHtml = `
                 <div class="tv-third-party-alert">
-                    <span class="tv-third-party-label">🔑 AUTORIZADO A RETIRAR</span>
+                    <span class="tv-third-party-label">${keyIcon} AUTORIZADO A RETIRAR</span>
                     <span class="tv-third-party-name">${escapeHtml(car.authorized_name)}</span>
                     ${car.authorized_doc ? `<span class="tv-third-party-doc">Doc: ${escapeHtml(car.authorized_doc)}</span>` : ""}
                 </div>
             `;
         }
 
+        const userIcon = window.CarCatalog ? window.CarCatalog.getIcon('user', 13) : '';
+
         card.innerHTML = `
             <div class="tv-card-header">
-                <span class="tv-plate-tag">${escapeHtml(plateFmt)}</span>
+                ${plateHtml}
+                ${brandLogoHtml}
                 ${boxBadge}
             </div>
+            ${silhouetteHtml}
             <div class="tv-card-car-model">${escapeHtml(car.car_model || "Veículo")}</div>
             <div class="tv-card-meta">
                 <span>${escapeHtml(car.car_color || "")}</span>
                 <span>${escapeHtml(car.car_year || "")}</span>
             </div>
-            <div class="tv-card-client">👤 ${escapeHtml(car.client_name || "Cliente")}</div>
+            <div class="tv-card-client">${userIcon} ${escapeHtml(car.client_name || "Cliente")}</div>
             ${notesHtml}
             ${thirdPartyHtml}
         `;
@@ -288,7 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 const resData = await res.json();
                 if (resData.success) {
-                    showToast("✅ Veículo salvo no pátio com sucesso!");
+                    showToast("Veículo salvo no pátio com sucesso!");
                     closeModal();
                     fetchPatioData();
                 } else {
@@ -310,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const res = await fetch(`/api/patio/${carId}`, { method: "DELETE" });
                     const resData = await res.json();
                     if (resData.success) {
-                        showToast("🚗 Veículo removido do pátio!");
+                        showToast("Veículo removido do pátio!");
                         closeModal();
                         fetchPatioData();
                     }

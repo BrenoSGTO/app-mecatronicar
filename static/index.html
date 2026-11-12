@@ -26,7 +26,7 @@
             <div class="header-right-controls">
                 <!-- Zoom Control -->
                 <div class="zoom-control-box" title="Ajustar tamanho da tela (Zoom)">
-                    <span class="zoom-label">🔍 Zoom:</span>
+                    <span class="zoom-label">Zoom:</span>
                     <button id="btn-zoom-out" class="btn-zoom" title="Diminuir tamanho dos botões e textos">−</button>
                     <span id="zoom-value-text" class="zoom-value" title="Clique para voltar para 100%">100%</span>
                     <button id="btn-zoom-in" class="btn-zoom" title="Aumentar tamanho dos botões e textos">+</button>
@@ -34,34 +34,34 @@
 
                 <!-- TV, Pátio e Ações Centrais v2.0 -->
                 <a href="/tv" target="_blank" id="btn-open-tv" class="btn btn-tv btn-sm" title="Abrir Painel de TV do Pátio ao Vivo em tela cheia (LAN)">
-                    📺 Painel TV
+                    Painel TV
                 </a>
                 <button id="btn-open-patio-modal" class="btn btn-patio btn-sm" title="Gerenciar carros no pátio da oficina">
-                    🚗 Pátio
+                    Pátio
                 </button>
                 <button id="btn-open-new-os" class="btn btn-primary btn-sm" title="Criar Nova Ordem de Serviço ou Visita com Salvamento no Excel">
-                    ➕ Nova Visita / OS
+                    Nova Visita / OS
                 </button>
                 <button id="btn-open-fiscal-hub" class="btn btn-fiscal btn-sm" title="Copiloto de Notas Fiscais (NFS-e Santos e NF-e Peças)">
-                    🧾 Copiloto Fiscal <span id="header-nf-badge" class="badge-nf-counter" style="display: none;">0</span>
+                    Copiloto Fiscal <span id="header-nf-badge" class="badge-nf-counter" style="display: none;">0</span>
                 </button>
 
                 <!-- Update Check Button -->
                 <button id="btn-check-updates" class="btn btn-update btn-sm" title="Verificar se há novas versões do sistema">
-                    ✨ Atualizações
+                    Atualizações
                 </button>
 
                 <div class="folder-control-box">
                     <div class="folder-info">
-                        <span class="folder-label">📁 Pasta:</span>
+                        <span class="folder-label">Pasta:</span>
                         <span id="current-folder-text" class="folder-path" title="Clique para alterar">Carregando pasta...</span>
                     </div>
                     <div class="folder-actions">
                         <button id="btn-change-folder" class="btn btn-secondary btn-sm" title="Escolher outra pasta no computador">
-                            📂 Alterar Pasta
+                            Alterar Pasta
                         </button>
                         <button id="btn-reindex" class="btn btn-primary btn-sm" title="Procurar novos arquivos adicionados">
-                            🔄 Atualizar Lista
+                            Atualizar Lista
                         </button>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
         <!-- Search Section -->
         <section class="search-section">
             <div class="search-box-wrapper">
-                <div class="search-icon">🔍</div>
+                <div class="search-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="app-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
                 <input 
                     type="text" 
                     id="search-input" 
@@ -83,7 +83,7 @@
                     autocomplete="off"
                     autofocus
                 >
-                <button id="btn-clear-search" class="btn-clear" title="Limpar busca" style="display: none;">✕</button>
+                <button id="btn-clear-search" class="btn-clear" title="Limpar busca" style="display: none;">&times;</button>
             </div>
         </section>
 
@@ -103,13 +103,26 @@
             <!-- Car Profile Banner -->
             <div class="vehicle-banner">
                 <div class="plate-card-wrapper">
-                    <div class="brasil-plate">
-                        <div class="plate-top">
-                            <span class="plate-country">BRASIL</span>
-                            <span class="plate-flag">🇧🇷</span>
+                    <div class="mercosul-plate mercosul-plate-lg" id="detail-plate-card">
+                        <div class="mercosul-top-bar">
+                            <span class="mercosul-country">BRASIL</span>
+                            <span class="mercosul-br-box">
+                                <span class="mercosul-br-text">BR</span>
+                                <svg class="mercosul-mini-flag" viewBox="0 0 20 14" width="14" height="10">
+                                    <rect width="20" height="14" fill="#009b3a" rx="1"/>
+                                    <polygon points="10,1.5 18.5,7 10,12.5 1.5,7" fill="#fedf00"/>
+                                    <circle cx="10" cy="7" r="3.2" fill="#002776"/>
+                                </svg>
+                            </span>
                         </div>
-                        <div class="plate-number" id="detail-plate">AAA-0000</div>
+                        <div class="mercosul-body-area">
+                            <span class="mercosul-number" id="detail-plate">AAA-0000</span>
+                        </div>
                     </div>
+                </div>
+
+                <div id="detail-brand-box" class="brand-logo-container" style="width: 58px; height: 58px;" title="Montadora">
+                    <img id="detail-brand-logo" src="/static/brands/generic.svg" alt="Montadora" class="brand-logo-img">
                 </div>
 
                 <div class="vehicle-info-block">
@@ -125,6 +138,10 @@
                         <span class="tag" id="detail-car-fuel">Combustível</span>
                         <span class="tag tag-chassis" id="detail-car-chassis">Chassi</span>
                     </div>
+                </div>
+
+                <div id="detail-silhouette-box" class="car-silhouette-container" style="max-width: 175px; height: 64px;" title="Silhueta do Modelo">
+                    <img id="detail-car-silhouette" src="/static/models/car-generic.svg" alt="Silhueta" class="car-silhouette-img">
                 </div>
 
                 <div class="vehicle-metrics-block">
@@ -144,25 +161,25 @@
 
                 <div class="vehicle-actions-block">
                     <button id="btn-vehicle-new-visit" class="btn btn-primary" title="Abrir uma nova visita para este carro com dados pré-preenchidos">
-                        ➕ Nova Visita
+                        Nova Visita
                     </button>
                     <button id="btn-vehicle-orcamento" class="btn btn-secondary" title="Gerar Orçamento / Ordem de Serviço em PDF com Logotipo MecatroniCar">
-                        📄 Orçamento (PDF)
+                        Orçamento (PDF)
                     </button>
                     <button id="btn-vehicle-checklist" class="btn btn-checklist-top" title="Gerar Checklist da oficina (sem valores)">
-                        📋 Checklist
+                        Checklist
                     </button>
                     <button id="btn-vehicle-fiscal" class="btn btn-fiscal-action" title="Abrir Copiloto Fiscal (NFS-e e NF-e) para este veículo">
-                        📑 Copiloto Fiscal
+                        Copiloto Fiscal
                     </button>
                     <button id="btn-vehicle-patio" class="btn btn-patio-action" title="Adicionar este veículo ao Pátio ou alterar seu status na TV">
-                        📍 Status no Pátio
+                        Status no Pátio
                     </button>
                     <button id="btn-print" class="btn btn-secondary" title="Imprimir histórico completo na tela com valores">
-                        🖨️ Imprimir
+                        Imprimir
                     </button>
                     <button id="btn-print-no-prices" class="btn btn-outline-print" title="Imprimir histórico sem os valores das peças e serviços">
-                        📄 Sem Preços
+                        Sem Preços
                     </button>
                 </div>
             </div>
@@ -170,7 +187,7 @@
             <!-- In-Vehicle Search Bar (Parts / Services Filter) -->
             <div class="vehicle-item-search-wrapper">
                 <div class="vehicle-item-search-box">
-                    <span class="vehicle-item-search-icon">🔧</span>
+                    <span class="vehicle-item-search-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="app-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                     <input
                         type="text"
                         id="vehicle-item-search-input"
@@ -178,7 +195,7 @@
                         placeholder="Buscar peça ou serviço neste veículo (ex: troca de óleo, filtro, correia, pastilha...)"
                         autocomplete="off"
                     >
-                    <button id="btn-clear-vehicle-item-search" class="btn-clear-item-search" title="Limpar filtro de peça/serviço" style="display: none;">✕</button>
+                    <button id="btn-clear-vehicle-item-search" class="btn-clear-item-search" title="Limpar filtro de peça/serviço" style="display: none;">&times;</button>
                 </div>
 
                 <!-- Summary of Matched Occurrences (When, KM, Item) -->
@@ -196,7 +213,7 @@
                 <div class="timeline-header">
                     <h3>Linha do Tempo das Visitas na Oficina (Planilha Principal)</h3>
                     <button id="btn-toggle-all-services" class="btn btn-services-global" title="Mostrar ou ocultar os serviços feitos em todas as planilhas deste veículo">
-                        🛠️ Mostrar Serviços Feitos em Todas as Planilhas
+                        Mostrar Serviços Feitos em Todas as Planilhas
                     </button>
                 </div>
 
@@ -221,10 +238,10 @@
         <div class="modal-dialog">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <span class="modal-icon">📝</span>
+                    <span class="modal-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="app-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                     <h3 id="modal-item-title">Nota da Planilha</h3>
                 </div>
-                <button id="modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
+                <button id="modal-close-btn" class="modal-close" title="Fechar (Esc)">&times;</button>
             </div>
             <div class="modal-subtitle" id="modal-item-subtitle">Local: Célula da planilha</div>
             <div class="modal-body">
@@ -232,7 +249,7 @@
             </div>
             <div class="modal-footer">
                 <button id="modal-copy-btn" class="btn btn-secondary">
-                    📋 Copiar Texto
+                    Copiar Texto
                 </button>
                 <button id="modal-dismiss-btn" class="btn btn-primary">
                     Fechar
@@ -249,17 +266,17 @@
                     <img src="logo.png" style="width: 24px; height: 24px; object-fit: contain;">
                     <h3 id="update-modal-title">Atualização do MecatroniCar</h3>
                 </div>
-                <button id="update-modal-close-btn" class="modal-close" title="Fechar">✕</button>
+                <button id="update-modal-close-btn" class="modal-close" title="Fechar">&times;</button>
             </div>
             <div class="modal-body" id="update-modal-body">
                 <div id="update-checking-state" style="text-align: center; padding: 25px 10px;">
-                    <div style="font-size: 32px; margin-bottom: 12px; animation: spin 1s infinite linear;">🔄</div>
+                    <div style="font-size: 32px; margin-bottom: 12px;"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#0284c7" stroke-width="2" class="app-icon" style="animation: spin 1s infinite linear;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></div>
                     <p style="font-size: 15px; font-weight: 600; color: #1e293b;">Verificando se há novas atualizações...</p>
                     <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Consultando o repositório no GitHub</p>
                 </div>
 
                 <div id="update-uptodate-state" style="display: none; text-align: center; padding: 25px 10px;">
-                    <div style="font-size: 38px; margin-bottom: 12px;">✅</div>
+                    <div style="font-size: 38px; margin-bottom: 12px;"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#10b981" stroke-width="2" class="app-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
                     <h4 style="font-size: 17px; font-weight: 700; color: #15803d; margin-bottom: 6px;">Seu sistema já está atualizado!</h4>
                     <p style="font-size: 13px; color: #64748b;">Você está usando a versão mais recente (<strong id="uptodate-version">v1.0.0</strong>).</p>
                 </div>
@@ -267,7 +284,7 @@
                 <div id="update-available-state" style="display: none;">
                     <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
                         <div style="font-size: 15px; font-weight: 700; color: #854d0e; margin-bottom: 4px;">
-                            🎉 Nova versão encontrada: <span id="new-version-tag">v1.0.1</span>
+                            Nova versão encontrada: <span id="new-version-tag">v1.0.1</span>
                         </div>
                         <p style="font-size: 13px; color: #a16207;">Sua versão atual: <span id="current-version-tag">v1.0.0</span></p>
                     </div>
@@ -293,7 +310,7 @@
                     Fechar
                 </button>
                 <button id="update-apply-btn" class="btn btn-primary" style="display: none;">
-                    🚀 Atualizar Agora Automaticamente
+                    Atualizar Agora Automaticamente
                 </button>
             </div>
         </div>
@@ -305,16 +322,16 @@
             <div class="modal-header">
                 <div class="modal-title-group">
                     <span class="modal-badge">PÁTIO &amp; TV AO VIVO</span>
-                    <h3 id="patio-modal-title" class="modal-title">🚗 Gerenciar Pátio da Oficina</h3>
+                    <h3 id="patio-modal-title" class="modal-title">Gerenciar Pátio da Oficina</h3>
                 </div>
-                <button type="button" class="modal-close" id="patio-modal-close-btn">✕</button>
+                <button type="button" class="modal-close" id="patio-modal-close-btn">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- Seção 1: Lista Rápida dos Carros no Pátio -->
                 <div style="margin-bottom: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <strong style="font-size: 13px; color: #334155;">Veículos no Pátio Agora (<span id="patio-list-count">0</span>):</strong>
-                        <a href="/tv" target="_blank" style="font-size: 12px; font-weight: 700; color: #0284c7; text-decoration: none;">📺 Abrir Tela de TV</a>
+                        <a href="/tv" target="_blank" style="font-size: 12px; font-weight: 700; color: #0284c7; text-decoration: none;">Abrir Tela de TV</a>
                     </div>
                     <div id="patio-cars-list" class="patio-cars-list">
                         <!-- Linhas dos carros no pátio -->
@@ -353,13 +370,13 @@
                         <div style="flex: 3;">
                             <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Status no Pátio *</label>
                             <select id="desktop-patio-status" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0 10px; font-size: 13.5px; font-weight: 700; background: #ffffff;">
-                                <option value="Em Diagnóstico">🔍 Em Diagnóstico</option>
-                                <option value="Esperando Orçamento">📝 Esperando Orçamento</option>
-                                <option value="Esperando Aprovação">⏳ Esperando Aprovação</option>
-                                <option value="Esperando Peças">📦 Esperando Peças</option>
-                                <option value="Em Execução">🔧 Em Execução</option>
-                                <option value="Esperando Cliente Buscar">✅ Esperando Cliente Buscar</option>
-                                <option value="Liberado p/ Retirada por Terceiro">🔑 Liberado p/ Retirada por Terceiro</option>
+                                <option value="Em Diagnóstico">Em Diagnóstico</option>
+                                <option value="Esperando Orçamento">Esperando Orçamento</option>
+                                <option value="Esperando Aprovação">Esperando Aprovação</option>
+                                <option value="Esperando Peças">Esperando Peças</option>
+                                <option value="Em Execução">Em Execução</option>
+                                <option value="Esperando Cliente Buscar">Esperando Cliente Buscar</option>
+                                <option value="Liberado p/ Retirada por Terceiro">Liberado p/ Retirada por Terceiro</option>
                             </select>
                         </div>
                         <div style="flex: 2;">
@@ -376,7 +393,7 @@
                     <!-- Campos Especiais de Terceiro Autorizado -->
                     <div id="desktop-third-party-box" style="display: none; background: #fff1f2; border: 1.5px solid #f43f5e; border-radius: 8px; padding: 12px; flex-direction: column; gap: 8px;">
                         <strong style="font-size: 12.5px; color: #9f1239; display: flex; align-items: center; gap: 6px;">
-                            🔑 Dados de Quem Está Autorizado a Buscar o Carro:
+                            Dados de Quem Está Autorizado a Buscar o Carro:
                         </strong>
                         <div style="display: flex; gap: 10px;">
                             <div style="flex: 3;">
@@ -396,11 +413,11 @@
 
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
                         <button type="button" id="btn-desktop-patio-delete" class="btn btn-secondary" style="color: #ef4444; display: none;">
-                            🗑️ Remover do Pátio
+                            Remover do Pátio
                         </button>
                         <div style="display: flex; gap: 8px; margin-left: auto;">
                             <button type="button" id="btn-desktop-patio-clear" class="btn btn-secondary">Limpar</button>
-                            <button type="submit" class="btn btn-primary">💾 Salvar no Pátio</button>
+                            <button type="submit" class="btn btn-primary">Salvar no Pátio</button>
                         </div>
                     </div>
                 </form>
@@ -413,16 +430,16 @@
         <div class="modal-dialog modal-dialog-xl">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <span class="modal-icon">🛠️</span>
+                    <span class="modal-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="app-icon"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                     <h3 id="os-modal-title">Nova Ficha / Ordem de Serviço</h3>
                 </div>
-                <button id="os-modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
+                <button id="os-modal-close-btn" class="modal-close" title="Fechar (Esc)">&times;</button>
             </div>
             <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
                 <form id="os-form">
                     <!-- Busca Rápida de Cliente Cadastrado -->
                     <div class="os-autocomplete-box">
-                        <label>🔍 Buscar Cliente ou Carro Já Cadastrado (Preenchimento Automático):</label>
+                        <label>Buscar Cliente ou Carro Já Cadastrado (Preenchimento Automático):</label>
                         <input type="text" id="os-search-client" class="os-input" placeholder="Digite placa ou nome para buscar..." autocomplete="off">
                         <div id="os-autocomplete-dropdown" class="os-autocomplete-dropdown" style="display: none;"></div>
                     </div>
@@ -432,7 +449,7 @@
                     <!-- Seção 1: Dados do Veículo & Ordem de Serviço -->
                     <div class="os-form-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h4 class="os-section-title" style="margin-bottom: 0;">🚗 Dados do Veículo &amp; Entrada na Oficina</h4>
+                            <h4 class="os-section-title" style="margin-bottom: 0;">Dados do Veículo &amp; Entrada na Oficina</h4>
                             <span id="os-plate-lookup-badge" class="os-plate-badge" style="display: none;"></span>
                         </div>
                         <div class="os-grid-row">
@@ -440,7 +457,7 @@
                                 <label>Placa do Veículo *</label>
                                 <div style="position: relative;">
                                     <input type="text" id="os-car-plate" class="os-input uppercase font-bold" required placeholder="Ex: BRA2E19" style="letter-spacing: 1px;">
-                                    <span id="os-plate-spinner" class="os-spinner-icon" style="display: none;">🔄</span>
+                                    <span id="os-plate-spinner" class="os-spinner-icon" style="display: none;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="app-icon"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></span>
                                 </div>
                             </div>
                             <div class="os-form-group flex-3">
@@ -491,13 +508,13 @@
                             <div class="os-form-group flex-2">
                                 <label>Status no Pátio</label>
                                 <select id="os-patio-status" class="os-input">
-                                    <option value="Em Diagnóstico">🔍 Em Diagnóstico</option>
-                                    <option value="Esperando Orçamento">📝 Esperando Orçamento</option>
-                                    <option value="Esperando Aprovação">⏳ Esperando Aprovação</option>
-                                    <option value="Esperando Peças">📦 Esperando Peças</option>
-                                    <option value="Em Execução">🔧 Em Execução</option>
-                                    <option value="Pronto / Esperando Cliente">✅ Pronto / Esperando Cliente</option>
-                                    <option value="Liberado p/ Retirada por Terceiro">🔑 Liberado p/ Terceiro</option>
+                                    <option value="Em Diagnóstico">Em Diagnóstico</option>
+                                    <option value="Esperando Orçamento">Esperando Orçamento</option>
+                                    <option value="Esperando Aprovação">Esperando Aprovação</option>
+                                    <option value="Esperando Peças">Esperando Peças</option>
+                                    <option value="Em Execução">Em Execução</option>
+                                    <option value="Pronto / Esperando Cliente">Pronto / Esperando Cliente</option>
+                                    <option value="Liberado p/ Retirada por Terceiro">Liberado p/ Terceiro</option>
                                 </select>
                             </div>
                         </div>
@@ -533,7 +550,7 @@
 
                     <!-- Seção 2: Dados do Cliente -->
                     <div class="os-form-section">
-                        <h4 class="os-section-title">👤 Dados Cadastrais do Cliente (Ficha Legacy)</h4>
+                        <h4 class="os-section-title">Dados Cadastrais do Cliente (Ficha Legacy)</h4>
                         <div class="os-grid-row">
                             <div class="os-form-group flex-3">
                                 <label>Nome do Cliente *</label>
@@ -598,15 +615,15 @@
                     <div class="os-form-section">
                         <div class="os-table-header-row">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <h4 class="os-section-title" style="margin-bottom: 0;">📦 Peças Utilizadas</h4>
+                                <h4 class="os-section-title" style="margin-bottom: 0;">Peças Utilizadas</h4>
                                 <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 11px;">NF-e 55 Autopeças</span>
                             </div>
-                            <button type="button" id="btn-add-peca-row" class="btn btn-secondary btn-sm">➕ Adicionar Peça</button>
+                            <button type="button" id="btn-add-peca-row" class="btn btn-secondary btn-sm">Adicionar Peça</button>
                         </div>
 
                         <!-- Barra de Sugestões Rápidas de Peças -->
                         <div class="os-quick-suggestions-box">
-                            <span class="os-quick-label">⚡ Sugestões Rápidas:</span>
+                            <span class="os-quick-label">Sugestões Rápidas:</span>
                             <div id="os-pecas-chips" class="os-chips-container">
                                 <!-- Chips populados via JS -->
                             </div>
@@ -632,15 +649,15 @@
                     <div class="os-form-section">
                         <div class="os-table-header-row">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <h4 class="os-section-title" style="margin-bottom: 0;">🔧 Serviços / Mão de Obra</h4>
+                                <h4 class="os-section-title" style="margin-bottom: 0;">Serviços / Mão de Obra</h4>
                                 <span class="badge" style="background: #e0f2fe; color: #075985; font-size: 11px;">NFS-e Santos Item 14.01</span>
                             </div>
-                            <button type="button" id="btn-add-servico-row" class="btn btn-secondary btn-sm">➕ Adicionar Serviço</button>
+                            <button type="button" id="btn-add-servico-row" class="btn btn-secondary btn-sm">Adicionar Serviço</button>
                         </div>
 
                         <!-- Barra de Sugestões Rápidas de Serviços -->
                         <div class="os-quick-suggestions-box">
-                            <span class="os-quick-label">⚡ Sugestões Rápidas:</span>
+                            <span class="os-quick-label">Sugestões Rápidas:</span>
                             <div id="os-servicos-chips" class="os-chips-container">
                                 <!-- Chips populados via JS -->
                             </div>
@@ -689,7 +706,7 @@
             <div class="modal-footer">
                 <button type="button" id="os-modal-cancel" class="btn btn-secondary">Cancelar</button>
                 <button type="button" id="os-modal-save" class="btn btn-primary" style="font-weight: 700;">
-                    💾 Salvar Ficha no Excel (.xlsx) e Sistema
+                    Salvar Ficha no Excel (.xlsx) e Sistema
                 </button>
             </div>
         </div>
@@ -700,22 +717,22 @@
         <div class="modal-dialog modal-dialog-xl">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <span class="modal-icon">🧾</span>
+                    <span class="modal-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="app-icon"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-8"/><path d="M16 12h-8"/><path d="M12 16h-4"/></svg></span>
                     <div>
                         <h3 id="fiscal-modal-title">Copiloto Fiscal • MecatroniCar (Santos/SP)</h3>
                         <p id="fiscal-modal-subtitle" style="font-size: 12px; color: #94a3b8; margin: 0;">Prefeitura de Santos (NFS-e Item 14.01) & Sefaz-SP (NF-e 55 Autopeças)</p>
                     </div>
                 </div>
-                <button id="fiscal-modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
+                <button id="fiscal-modal-close-btn" class="modal-close" title="Fechar (Esc)">&times;</button>
             </div>
             <div class="modal-body" style="padding-top: 12px;">
                 <!-- Abas Fiscais -->
                 <div class="fiscal-tabs">
-                    <button id="tab-btn-nfse" class="fiscal-tab active">🟦 1. NFS-e Santos (Mão de Obra)</button>
-                    <button id="tab-btn-nfe" class="fiscal-tab">🟨 2. NF-e 55 (Peças / Autopeças)</button>
-                    <button id="tab-btn-tomador" class="fiscal-tab">👤 3. Dados do Tomador</button>
+                    <button id="tab-btn-nfse" class="fiscal-tab active">1. NFS-e Santos (Mão de Obra)</button>
+                    <button id="tab-btn-nfe" class="fiscal-tab">2. NF-e 55 (Peças / Autopeças)</button>
+                    <button id="tab-btn-tomador" class="fiscal-tab">3. Dados do Tomador</button>
                     <button id="tab-btn-pending" class="fiscal-tab">
-                        📋 4. Fila de Notas Pendentes <span id="modal-pending-counter" class="badge-pending-mini">0</span>
+                        4. Fila de Notas Pendentes <span id="modal-pending-counter" class="badge-pending-mini">0</span>
                     </button>
                 </div>
 
@@ -724,7 +741,7 @@
                     <div class="fiscal-alert-box nfse-alert">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div>
-                                <strong>🏛️ Prefeitura Municipal de Santos • LC 116/03 Subitem 14.01</strong>
+                                <strong>Prefeitura Municipal de Santos • LC 116/03 Subitem 14.01</strong>
                                 <p style="margin: 2px 0 0 0; font-size: 12px;">CNAE: 4520-0/01 (Serviços de Manutenção e Reparação Mecânica de Veículos)</p>
                             </div>
                             <span class="badge" style="background: #bae6fd; color: #0369a1; font-weight: 800;">Mão de Obra</span>
@@ -735,7 +752,7 @@
                         <div class="fiscal-field-header">
                             <label>Discriminação dos Serviços Formatada (com Placa, Modelo, KM e Itens):</label>
                             <button id="btn-copy-nfse-desc" class="btn btn-primary btn-sm" title="Copiar discriminação formatada para a área de transferência">
-                                📋 Copiar Discriminação Formatada (1 Clique)
+                                Copiar Discriminação Formatada
                             </button>
                         </div>
                         <textarea id="nfse-desc-text" class="fiscal-textarea" readonly placeholder="Carregando discriminação dos serviços..."></textarea>
@@ -743,18 +760,18 @@
 
                     <!-- Pílulas de Cópia Rápida em 1 Clique -->
                     <div class="fiscal-quick-pills">
-                        <span class="quick-pills-label">⚡ Cópia Rápida:</span>
-                        <button id="pill-copy-tomador-nfse" class="pill-copy-btn" title="Copiar resumo do tomador">👤 Tomador</button>
-                        <button id="pill-copy-cpf-nfse" class="pill-copy-btn" title="Copiar CPF/CNPJ limpo (só números)">🆔 CPF Limpo</button>
-                        <button id="pill-copy-cep-nfse" class="pill-copy-btn" title="Copiar CEP">📍 CEP</button>
-                        <button id="pill-copy-addr-nfse" class="pill-copy-btn" title="Copiar endereço completo em linha única">🗺️ Endereço 1 Linha</button>
-                        <button id="pill-copy-serv-val" class="pill-copy-btn" title="Copiar apenas o valor total de serviços">💰 Valor Mão de Obra</button>
+                        <span class="quick-pills-label">Cópia Rápida:</span>
+                        <button id="pill-copy-tomador-nfse" class="pill-copy-btn" title="Copiar resumo do tomador">Tomador</button>
+                        <button id="pill-copy-cpf-nfse" class="pill-copy-btn" title="Copiar CPF/CNPJ limpo (só números)">CPF Limpo</button>
+                        <button id="pill-copy-cep-nfse" class="pill-copy-btn" title="Copiar CEP">CEP</button>
+                        <button id="pill-copy-addr-nfse" class="pill-copy-btn" title="Copiar endereço completo em linha única">Endereço 1 Linha</button>
+                        <button id="pill-copy-serv-val" class="pill-copy-btn" title="Copiar apenas o valor total de serviços">Valor Mão de Obra</button>
                     </div>
 
                     <!-- Tabela Resumo dos Serviços -->
                     <div class="fiscal-section" style="margin-top: 14px;">
                         <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
-                            🛠️ Itens de Serviço Detectados nesta Ordem de Serviço:
+                            Itens de Serviço Detectados nesta Ordem de Serviço:
                         </label>
                         <div id="nfse-services-list" class="fiscal-items-container"></div>
                     </div>
@@ -770,7 +787,7 @@
                             <input type="text" id="nfse-number-input" class="os-input-sm" placeholder="Nº da NFS-e Emitida (ex: 1042)" title="Digite o número da nota emitida na prefeitura de Santos">
                             <input type="date" id="nfse-date-input" class="os-input-sm" title="Data da emissão">
                             <button id="btn-mark-nfse-done" class="btn btn-success btn-sm" title="Salvar e marcar como emitida">
-                                ✅ Marcar NFS-e Emitida
+                                Marcar NFS-e Emitida
                             </button>
                         </div>
                     </div>
@@ -781,7 +798,7 @@
                     <div class="fiscal-alert-box nfe-alert">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div>
-                                <strong>🚗 Sefaz-SP • NF-e Modelo 55 • Comércio Varejista de Autopeças</strong>
+                                <strong>Sefaz-SP • NF-e Modelo 55 • Comércio Varejista de Autopeças</strong>
                                 <p style="margin: 2px 0 0 0; font-size: 12px;">CNAE: 4530-7/03 • CFOP Padrão: 5.405 (Autopeças c/ ICMS-ST) • CSOSN 500</p>
                             </div>
                             <span class="badge" style="background: #fde68a; color: #92400e; font-weight: 800;">Peças / Mercadorias</span>
@@ -790,16 +807,16 @@
 
                     <div class="fiscal-actions-bar">
                         <button id="btn-copy-nfe-summary" class="btn btn-primary btn-sm" title="Copiar lista de peças e valores formatada">
-                            📋 Copiar Lista de Peças e Valores (1 Clique)
+                            Copiar Lista de Peças e Valores
                         </button>
                         <button id="btn-copy-nfe-tsv" class="btn btn-secondary btn-sm" title="Copiar tabela TSV para colar direto no Excel ou emissor fiscal">
-                            📊 Copiar Tabela TSV (Excel/Emissor)
+                            Copiar Tabela TSV (Excel/Emissor)
                         </button>
                         <button id="pill-copy-parts-val" class="pill-copy-btn" title="Copiar apenas o valor total de peças">
-                            💰 Copiar Total Peças
+                            Copiar Total Peças
                         </button>
                         <button id="pill-copy-tomador-nfe" class="pill-copy-btn" title="Copiar dados do destinatário">
-                            👤 Copiar Destinatário
+                            Copiar Destinatário
                         </button>
                     </div>
 
@@ -832,7 +849,7 @@
                             <input type="text" id="nfe-number-input" class="os-input-sm" placeholder="Nº da NF-e Emitida (ex: 542)" title="Digite o número da NF-e Modelo 55 emitida">
                             <input type="date" id="nfe-date-input" class="os-input-sm" title="Data da emissão">
                             <button id="btn-mark-nfe-done" class="btn btn-success btn-sm" title="Salvar e marcar como emitida">
-                                ✅ Marcar NF-e Emitida
+                                Marcar NF-e Emitida
                             </button>
                         </div>
                     </div>
@@ -842,8 +859,8 @@
                 <div id="panel-tomador" class="fiscal-panel" style="display: none;">
                     <div class="fiscal-alert-box" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155;">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                            <strong>👤 Dados Cadastrais do Tomador do Serviço / Destinatário</strong>
-                            <button id="btn-copy-full-tomador" class="btn btn-primary btn-sm">📋 Copiar Todos os Dados</button>
+                            <strong>Dados Cadastrais do Tomador do Serviço / Destinatário</strong>
+                            <button id="btn-copy-full-tomador" class="btn btn-primary btn-sm">Copiar Todos os Dados</button>
                         </div>
                     </div>
 
@@ -852,7 +869,7 @@
                             <span class="field-label">Nome / Razão Social:</span>
                             <div class="field-row">
                                 <strong id="tomador-name" class="field-value">-</strong>
-                                <button class="btn-copy-inline" data-target="tomador-name" title="Copiar nome">📋</button>
+                                <button class="btn-copy-inline" data-target="tomador-name" title="Copiar nome">Copiar</button>
                             </div>
                         </div>
 
@@ -860,8 +877,8 @@
                             <span class="field-label">CPF / CNPJ:</span>
                             <div class="field-row">
                                 <strong id="tomador-cpf" class="field-value">-</strong>
-                                <button class="btn-copy-inline" data-target="tomador-cpf" title="Copiar CPF formatado">📋 Formatado</button>
-                                <button id="btn-copy-cpf-raw" class="btn-copy-inline" title="Copiar apenas números">🔢 Sem pontuação</button>
+                                <button class="btn-copy-inline" data-target="tomador-cpf" title="Copiar CPF formatado">Formatado</button>
+                                <button id="btn-copy-cpf-raw" class="btn-copy-inline" title="Copiar apenas números">Sem pontuação</button>
                             </div>
                         </div>
 
@@ -869,7 +886,7 @@
                             <span class="field-label">Telefone / WhatsApp:</span>
                             <div class="field-row">
                                 <span id="tomador-phone" class="field-value">-</span>
-                                <button class="btn-copy-inline" data-target="tomador-phone" title="Copiar telefone">📋</button>
+                                <button class="btn-copy-inline" data-target="tomador-phone" title="Copiar telefone">Copiar</button>
                             </div>
                         </div>
 
@@ -877,7 +894,7 @@
                             <span class="field-label">E-mail:</span>
                             <div class="field-row">
                                 <span id="tomador-email" class="field-value">-</span>
-                                <button class="btn-copy-inline" data-target="tomador-email" title="Copiar e-mail">📋</button>
+                                <button class="btn-copy-inline" data-target="tomador-email" title="Copiar e-mail">Copiar</button>
                             </div>
                         </div>
 
@@ -885,7 +902,7 @@
                             <span class="field-label">Endereço Completo em 1 Linha (Ideal para colagem rápida):</span>
                             <div class="field-row">
                                 <span id="tomador-single-line" class="field-value" style="font-family: monospace; font-size: 13px;">-</span>
-                                <button class="btn-copy-inline" data-target="tomador-single-line" title="Copiar endereço completo em 1 linha">📋 Copiar 1 Linha</button>
+                                <button class="btn-copy-inline" data-target="tomador-single-line" title="Copiar endereço completo em 1 linha">Copiar 1 Linha</button>
                             </div>
                         </div>
 
@@ -893,7 +910,7 @@
                             <span class="field-label">Logradouro & Número:</span>
                             <div class="field-row">
                                 <span id="tomador-street" class="field-value">-</span>
-                                <button class="btn-copy-inline" data-target="tomador-street" title="Copiar rua e número">📋</button>
+                                <button class="btn-copy-inline" data-target="tomador-street" title="Copiar rua e número">Copiar</button>
                             </div>
                         </div>
 
@@ -901,7 +918,7 @@
                             <span class="field-label">Bairro:</span>
                             <div class="field-row">
                                 <span id="tomador-neighborhood" class="field-value">-</span>
-                                <button class="btn-copy-inline" data-target="tomador-neighborhood" title="Copiar bairro">📋</button>
+                                <button class="btn-copy-inline" data-target="tomador-neighborhood" title="Copiar bairro">Copiar</button>
                             </div>
                         </div>
 
@@ -909,7 +926,7 @@
                             <span class="field-label">Cidade / UF:</span>
                             <div class="field-row">
                                 <span id="tomador-city" class="field-value">Santos / SP</span>
-                                <button class="btn-copy-inline" data-target="tomador-city" title="Copiar cidade">📋</button>
+                                <button class="btn-copy-inline" data-target="tomador-city" title="Copiar cidade">Copiar</button>
                             </div>
                         </div>
 
@@ -917,8 +934,8 @@
                             <span class="field-label">CEP:</span>
                             <div class="field-row">
                                 <strong id="tomador-cep" class="field-value">-</strong>
-                                <button class="btn-copy-inline" data-target="tomador-cep" title="Copiar CEP">📋</button>
-                                <button id="btn-copy-cep-raw" class="btn-copy-inline" title="Copiar CEP sem traço">🔢 Sem traço</button>
+                                <button class="btn-copy-inline" data-target="tomador-cep" title="Copiar CEP">Copiar</button>
+                                <button id="btn-copy-cep-raw" class="btn-copy-inline" title="Copiar CEP sem traço">Sem traço</button>
                             </div>
                         </div>
                     </div>
@@ -929,21 +946,21 @@
                     <!-- KPI Summary Cards -->
                     <div class="fiscal-kpi-grid">
                         <div class="fiscal-kpi-card">
-                            <span class="kpi-label">⏳ Visitas c/ NFs Pendentes</span>
+                            <span class="kpi-label">Visitas c/ NFs Pendentes</span>
                             <strong id="kpi-pending-visits" class="kpi-value text-amber">0</strong>
                         </div>
                         <div class="fiscal-kpi-card">
-                            <span class="kpi-label">🛠️ NFS-e Serviços a Emitir</span>
+                            <span class="kpi-label">NFS-e Serviços a Emitir</span>
                             <strong id="kpi-pending-services" class="kpi-value text-blue">R$ 0,00</strong>
                             <small id="kpi-pending-services-sub">0 visitas</small>
                         </div>
                         <div class="fiscal-kpi-card">
-                            <span class="kpi-label">🔩 NF-e Peças a Emitir</span>
+                            <span class="kpi-label">NF-e Peças a Emitir</span>
                             <strong id="kpi-pending-parts" class="kpi-value text-amber">R$ 0,00</strong>
                             <small id="kpi-pending-parts-sub">0 visitas</small>
                         </div>
                         <div class="fiscal-kpi-card">
-                            <span class="kpi-label">✅ NFs Já Emitidas</span>
+                            <span class="kpi-label">NFs Já Emitidas</span>
                             <strong id="kpi-emitted-count" class="kpi-value text-green">0</strong>
                         </div>
                     </div>
@@ -952,25 +969,25 @@
                     <div class="fiscal-queue-toolbar">
                         <div class="fiscal-queue-filters">
                             <button class="queue-filter-btn active" data-filter="pending">Todas Pendentes</button>
-                            <button class="queue-filter-btn" data-filter="pending_servico">🛠️ Só Mão de Obra</button>
-                            <button class="queue-filter-btn" data-filter="pending_pecas">🔩 Só Peças</button>
-                            <button class="queue-filter-btn" data-filter="emitidas">✅ Já Emitidas</button>
+                            <button class="queue-filter-btn" data-filter="pending_servico">Só Mão de Obra</button>
+                            <button class="queue-filter-btn" data-filter="pending_pecas">Só Peças</button>
+                            <button class="queue-filter-btn" data-filter="emitidas">Já Emitidas</button>
                             <button class="queue-filter-btn" data-filter="all">Todas</button>
                         </div>
 
                         <div class="fiscal-queue-actions">
                             <div class="queue-search-box">
-                                <input type="text" id="queue-search-input" placeholder="🔍 Filtrar por placa, cliente, carro..." autocomplete="off">
-                                <button id="btn-clear-queue-search" style="display: none;">✕</button>
+                                <input type="text" id="queue-search-input" placeholder="Filtrar por placa, cliente, carro..." autocomplete="off">
+                                <button id="btn-clear-queue-search" style="display: none;">&times;</button>
                             </div>
                             <button id="btn-export-queue-csv" class="btn btn-secondary btn-sm" title="Baixar lista em planilha CSV para a contabilidade">
-                                📥 CSV
+                                CSV
                             </button>
                             <button id="btn-export-queue-txt" class="btn btn-secondary btn-sm" title="Baixar resumo em texto TXT">
-                                📄 TXT
+                                TXT
                             </button>
                             <button id="btn-refresh-queue" class="btn btn-primary btn-sm" title="Atualizar dados da fila">
-                                🔄
+                                Atualizar
                             </button>
                         </div>
                     </div>
@@ -995,6 +1012,7 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast" style="display: none;"></div>
 
+    <script src="car_catalog.js?v=2.0.0"></script>
     <script src="app.js?v=2.0.0"></script>
 </body>
 </html>
