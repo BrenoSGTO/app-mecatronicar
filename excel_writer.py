@@ -1035,101 +1035,152 @@ def save_os_spreadsheet(data, filepath=None, folder_path=None, auto_index=True, 
         "data": data
     }
 
-def save_new_or_updated_os(payload, filepath=None, existing_filepath=None, target_folder=None, folder_path=None, auto_index=True, db_path=None):
+def save_new_or_updated_os(payload=None, filepath=None, existing_filepath=None, target_folder=None, folder_path=None, auto_index=True, db_path=None, data=None, **kwargs):
     """
     Função facilitadora que aceita payloads em formato aninhado
     {'client': {...}, 'car': {...}, 'os': {...}, 'pecas': [...], 'servicos': [...], 'patio_status': '...'}
     ou formato plano, normalizando para save_os_spreadsheet.
     """
-    dest_dir = target_folder or folder_path
-    target_fpath = filepath or existing_filepath
-    data = {}
+    input_data = payload if payload is not None else (data if data is not None else {})
+    dest_dir = target_folder or folder_path or kwargs.get("folder") or kwargs.get("target_folder")
+    target_fpath = filepath or existing_filepath or kwargs.get("existing_file_path")
+    normalized = {}
     
-    if "client" in payload or "car" in payload or "os" in payload:
-        client = payload.get("client", {})
-        car = payload.get("car", {})
-        os_info = payload.get("os", {})
+    if "client" in input_data or "car" in input_data or "os" in input_data:
+        client = input_data.get("client") or {}
+        car = input_data.get("car") or {}
+        os_info = input_data.get("os") or {}
         
-        data["client_name"] = client.get("name") or client.get("client_name", "")
-        data["phone"] = client.get("phone", "")
-        data["cpf"] = client.get("cpf", "")
-        data["rg"] = client.get("rg", "")
-        data["address"] = client.get("address", "")
-        data["address_num"] = client.get("address_num", "")
-        data["address_compl"] = client.get("address_compl", "")
-        data["neighborhood"] = client.get("neighborhood", "")
-        data["city"] = client.get("city", "")
-        data["cep"] = client.get("cep", "")
-        data["email"] = client.get("email", "")
+        normalized["client_name"] = client.get("name") or client.get("client_name") or input_data.get("client_name", "")
+        normalized["phone"] = client.get("phone") or input_data.get("phone", "")
+        normalized["tel_res"] = client.get("tel_res") or input_data.get("tel_res", "")
+        normalized["tel_com"] = client.get("tel_com") or input_data.get("tel_com", "")
+        normalized["cpf"] = client.get("cpf") or input_data.get("cpf", "")
+        normalized["rg"] = client.get("rg") or input_data.get("rg", "")
+        normalized["address"] = client.get("address") or input_data.get("address", "")
+        normalized["address_num"] = client.get("address_num") or input_data.get("address_num", "")
+        normalized["address_compl"] = client.get("address_compl") or input_data.get("address_compl", "")
+        normalized["neighborhood"] = client.get("neighborhood") or input_data.get("neighborhood", "")
+        normalized["city"] = client.get("city") or input_data.get("city") or "Santos"
+        normalized["cep"] = client.get("cep") or input_data.get("cep", "")
+        normalized["email"] = client.get("email") or input_data.get("email", "")
         
-        data["car_plate"] = car.get("plate", "")
-        data["car_model"] = car.get("model", "")
-        data["car_year"] = car.get("year", "")
-        data["car_color"] = car.get("color", "")
-        data["car_brand"] = car.get("brand", "")
-        data["car_fuel"] = car.get("fuel", "")
-        data["car_chassis"] = car.get("chassis", "")
+        normalized["car_plate"] = car.get("plate") or car.get("car_plate") or input_data.get("car_plate") or input_data.get("plate", "")
+        normalized["car_model"] = car.get("model") or car.get("car_model") or input_data.get("car_model", "")
+        normalized["car_year"] = car.get("year") or car.get("car_year") or input_data.get("car_year", "")
+        normalized["car_color"] = car.get("color") or car.get("car_color") or input_data.get("car_color", "")
+        normalized["car_brand"] = car.get("brand") or car.get("car_brand") or input_data.get("car_brand", "")
+        normalized["car_fuel"] = car.get("fuel") or car.get("car_fuel") or input_data.get("car_fuel", "")
+        normalized["car_chassis"] = car.get("chassis") or car.get("car_chassis") or input_data.get("car_chassis", "")
         
-        data["visit_num"] = os_info.get("visit_num", "")
-        data["odometer"] = os_info.get("odometer", "")
-        data["complaint"] = os_info.get("complaint", "")
-        data["payment_method"] = os_info.get("payment_method", "")
-        data["discount"] = os_info.get("discount", 0.0)
-        data["entry_date"] = os_info.get("entry_date", "")
-        data["entry_time"] = os_info.get("entry_time", "")
-        data["exit_date"] = os_info.get("exit_date", "")
-        data["exit_time"] = os_info.get("exit_time", "")
+        normalized["visit_num"] = os_info.get("visit_num") or input_data.get("visit_num", "")
+        normalized["odometer"] = os_info.get("odometer") or input_data.get("odometer", "")
+        normalized["complaint"] = os_info.get("complaint") or input_data.get("complaint", "")
+        normalized["payment_method"] = os_info.get("payment_method") or input_data.get("payment_method", "")
+        normalized["discount"] = os_info.get("discount") or input_data.get("discount", 0.0)
+        normalized["entry_date"] = os_info.get("entry_date") or input_data.get("entry_date", "")
+        normalized["entry_time"] = os_info.get("entry_time") or input_data.get("entry_time", "")
+        normalized["exit_date"] = os_info.get("exit_date") or input_data.get("exit_date", "")
+        normalized["exit_time"] = os_info.get("exit_time") or input_data.get("exit_time", "")
         
-        pecas_raw = payload.get("pecas") or payload.get("pecas_items") or []
-        servicos_raw = payload.get("servicos") or payload.get("servicos_items") or []
+        pecas_raw = input_data.get("pecas") or input_data.get("pecas_items") or []
+        servicos_raw = input_data.get("servicos") or input_data.get("servicos_items") or []
         
-        data["pecas_items"] = [
+        normalized["pecas_items"] = [
             {
                 "description": p.get("desc") or p.get("description", ""),
-                "quantity": p.get("qty") or p.get("quantity", 1),
-                "unit_price": p.get("unit_price", 0.0),
+                "quantity": p.get("qty") if p.get("qty") is not None else p.get("quantity", 1),
+                "unit_price": p.get("unit_price") if p.get("unit_price") is not None else p.get("unit_value", p.get("price", 0.0)),
                 "color": p.get("color"),
                 "comment": p.get("comment", "")
             }
             for p in pecas_raw
         ]
-        data["servicos_items"] = [
+        normalized["servicos_items"] = [
             {
                 "description": s.get("desc") or s.get("description", ""),
-                "quantity": s.get("qty") or s.get("quantity", 1),
-                "unit_price": s.get("unit_price", 0.0),
+                "quantity": s.get("qty") if s.get("qty") is not None else s.get("quantity", 1),
+                "unit_price": s.get("unit_price") if s.get("unit_price") is not None else s.get("unit_value", s.get("price", 0.0)),
                 "color": s.get("color"),
                 "comment": s.get("comment", "")
             }
             for s in servicos_raw
         ]
     else:
-        data = dict(payload)
+        normalized = dict(input_data)
+        if "plate" in normalized and not normalized.get("car_plate"):
+            normalized["car_plate"] = normalized["plate"]
+        if "pecas" in normalized and "pecas_items" not in normalized:
+            normalized["pecas_items"] = [
+                {
+                    "description": p.get("desc") or p.get("description", ""),
+                    "quantity": p.get("qty") if p.get("qty") is not None else p.get("quantity", 1),
+                    "unit_price": p.get("unit_price") if p.get("unit_price") is not None else p.get("unit_value", p.get("price", 0.0)),
+                    "color": p.get("color"),
+                    "comment": p.get("comment", "")
+                }
+                for p in normalized["pecas"]
+            ]
+        if "servicos" in normalized and "servicos_items" not in normalized:
+            normalized["servicos_items"] = [
+                {
+                    "description": s.get("desc") or s.get("description", ""),
+                    "quantity": s.get("qty") if s.get("qty") is not None else s.get("quantity", 1),
+                    "unit_price": s.get("unit_price") if s.get("unit_price") is not None else s.get("unit_value", s.get("price", 0.0)),
+                    "color": s.get("color"),
+                    "comment": s.get("comment", "")
+                }
+                for s in normalized["servicos"]
+            ]
         
     res = save_os_spreadsheet(
-        data=data,
+        data=normalized,
         filepath=target_fpath,
         folder_path=dest_dir,
         auto_index=auto_index,
         db_path=db_path
     )
+    res["filename"] = res.get("file_name")
     
     # Atualiza status do pátio se fornecido
-    patio_st = payload.get("patio_status")
+    patio_st = input_data.get("patio_status")
     if patio_st:
         try:
             import cache
+            c_db = db_path or cache.get_db_path()
+            cache.save_patio_car({
+                "plate": normalized.get("car_plate", res.get("plate")),
+                "client_name": normalized.get("client_name", ""),
+                "car_model": normalized.get("car_model", ""),
+                "car_color": normalized.get("car_color", ""),
+                "status": patio_st,
+                "notes": normalized.get("complaint", ""),
+                "file_path": res["file_path"]
+            }, c_db)
             cache.update_patio_status(
                 file_path=res["file_path"],
                 plate=res["plate"],
                 status=patio_st,
-                db_path=db_path
+                db_path=c_db
             )
         except Exception:
             pass
             
     return res
 
+
+def save_order_to_excel(order_data, folder_path=None, existing_filepath=None, db_path=None, **kwargs):
+    """
+    Função oficial para salvar ordem de serviço diretamente no Excel e sincronizar com o banco SQLite.
+    Compatível com os payloads e parâmetros enviados pela rota /api/save_order.
+    """
+    return save_new_or_updated_os(
+        payload=order_data,
+        target_folder=folder_path,
+        existing_filepath=existing_filepath,
+        db_path=db_path,
+        **kwargs
+    )
 
 
 def get_next_visit_num(plate, db_path=None, folder_path=None):
@@ -1170,84 +1221,4 @@ def get_client_vehicle_autocomplete(q, db_path=None):
             if len(suggestions) >= 15:
                 break
     return suggestions
-
-
-def save_new_or_updated_os(data, target_folder=None, db_path=None, existing_filepath=None):
-    client = data.get("client") or {}
-    car = data.get("car") or {}
-    os_info = data.get("os") or {}
-    pecas = data.get("pecas") or data.get("pecas_items") or []
-    servicos = data.get("servicos") or data.get("servicos_items") or []
-
-    flat = dict(data)
-    flat.update({
-        "client_name": client.get("name") or client.get("client_name") or data.get("client_name"),
-        "phone": client.get("phone") or data.get("phone"),
-        "tel_res": client.get("tel_res") or data.get("tel_res"),
-        "tel_com": client.get("tel_com") or data.get("tel_com"),
-        "cpf": client.get("cpf") or data.get("cpf"),
-        "rg": client.get("rg") or data.get("rg"),
-        "email": client.get("email") or data.get("email"),
-        "address": client.get("address") or data.get("address"),
-        "address_num": client.get("address_num") or data.get("address_num"),
-        "address_compl": client.get("address_compl") or data.get("address_compl"),
-        "neighborhood": client.get("neighborhood") or data.get("neighborhood"),
-        "city": client.get("city") or data.get("city") or "Santos",
-        "cep": client.get("cep") or data.get("cep"),
-        "car_brand": car.get("brand") or car.get("car_brand") or data.get("car_brand"),
-        "car_model": car.get("model") or car.get("car_model") or data.get("car_model"),
-        "car_year": car.get("year") or car.get("car_year") or data.get("car_year"),
-        "car_plate": car.get("plate") or car.get("car_plate") or data.get("car_plate") or data.get("plate"),
-        "car_color": car.get("color") or car.get("car_color") or data.get("car_color"),
-        "car_fuel": car.get("fuel") or car.get("car_fuel") or data.get("car_fuel"),
-        "car_chassis": car.get("chassis") or car.get("car_chassis") or data.get("car_chassis"),
-        "visit_num": os_info.get("visit_num") or data.get("visit_num"),
-        "entry_date": os_info.get("entry_date") or data.get("entry_date"),
-        "entry_time": os_info.get("entry_time") or data.get("entry_time"),
-        "exit_date": os_info.get("exit_date") or data.get("exit_date"),
-        "exit_time": os_info.get("exit_time") or data.get("exit_time"),
-        "odometer": os_info.get("odometer") or data.get("odometer"),
-        "complaint": os_info.get("complaint") or data.get("complaint"),
-        "payment_method": os_info.get("payment_method") or data.get("payment_method"),
-        "discount": os_info.get("discount") or data.get("discount") or 0.0,
-        "pecas_items": [
-            {
-                "description": p.get("desc") or p.get("description"),
-                "quantity": p.get("qty") or p.get("quantity", 1),
-                "unit_value": p.get("unit_price") or p.get("unit_value", 0)
-            }
-            for p in pecas
-        ],
-        "servicos_items": [
-            {
-                "description": s.get("desc") or s.get("description"),
-                "quantity": s.get("qty") or s.get("quantity", 1),
-                "unit_value": s.get("unit_price") or s.get("unit_value", 0)
-            }
-            for s in servicos
-        ]
-    })
-
-    res = save_os_spreadsheet(flat, filepath=existing_filepath, folder_path=target_folder, db_path=db_path)
-    res["filename"] = res.get("file_name")
-
-    # Atualiza pátio e controle fiscal
-    try:
-        import cache
-        c_db = db_path or cache.get_db_path()
-        patio_st = data.get("patio_status")
-        if patio_st:
-            cache.save_patio_car({
-                "plate": flat["car_plate"],
-                "client_name": flat["client_name"],
-                "car_model": flat["car_model"],
-                "car_color": flat["car_color"],
-                "status": patio_st,
-                "notes": flat["complaint"],
-                "file_path": res["file_path"]
-            }, c_db)
-    except Exception:
-        pass
-
-    return res
 

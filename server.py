@@ -5,6 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import filedialog
 from flask import Flask, jsonify, request, send_from_directory
+from werkzeug.exceptions import HTTPException
 import socket
 import datetime
 import cache
@@ -40,6 +41,66 @@ def add_no_cache_headers(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+@app.before_request
+def check_api_method():
+    if request.path.startswith("/api/"):
+        allowed_methods = set()
+        matched_any = False
+        for rule in app.url_map.iter_rules():
+            if rule.endpoint != "static" and rule.rule == request.path:
+                matched_any = True
+                allowed_methods.update(rule.methods or [])
+        if matched_any and request.method not in allowed_methods:
+            from werkzeug.exceptions import MethodNotAllowed
+            raise MethodNotAllowed(valid_methods=list(allowed_methods))
+
+# Tratamento centralizado de erros para rotas /api/*
+@app.errorhandler(400)
+def handle_bad_request(e):
+    if request.path.startswith("/api/"):
+        msg = getattr(e, "description", "Requisição inválida (400)")
+        return jsonify({"success": False, "error": msg}), 400
+    return e
+
+@app.errorhandler(404)
+def handle_not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": "Recurso não encontrado (404)"}), 404
+    return e
+
+@app.errorhandler(405)
+def handle_method_not_allowed(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": "Método HTTP não permitido (405)"}), 405
+    return e
+
+@app.errorhandler(500)
+def handle_internal_server_error(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": "Erro interno no servidor (500)"}), 500
+    return e
+
+@app.errorhandler(HTTPException)
+def handle_http_exception(e):
+    if request.path.startswith("/api/"):
+        return jsonify({
+            "success": False,
+            "error": getattr(e, "description", str(e))
+        }), e.code
+    return e
+
+@app.errorhandler(Exception)
+def handle_general_exception(e):
+    if request.path.startswith("/api/"):
+        import traceback
+        traceback.print_exc()
+        code = getattr(e, "code", 500)
+        return jsonify({
+            "success": False,
+            "error": str(e) or "Erro interno do servidor"
+        }), code
+    raise e
 
 @app.route("/")
 def index():
@@ -199,36 +260,60 @@ def quick_suggestions_endpoint():
 @app.route("/api/save_order", methods=["POST"])
 def save_order_endpoint():
     import excel_writer
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     order_data = data.get("order_data") or data
-    existing_file_path = data.get("existing_file_path") or None
-    
+    existing_file_path = data.get("existing_file_path") or data.get("existing_filepath") or None
+
+    if not order_data:
+        return jsonify({"success": False, "error": "Dados da ordem de serviço não fornecidos."}), 400
+
+    # Validação antecipada dos dados essenciais
+    car_info = order_data.get("car") if isinstance(order_data.get("car"), dict) else {}
+    plate = car_info.get("plate") or order_data.get("car_plate") or order_data.get("plate")
+    if not plate or not str(plate).strip():
+        return jsonify({"success": False, "error": "A placa do veículo é obrigatória."}), 400
+
+    client_info = order_data.get("client") if isinstance(order_data.get("client"), dict) else {}
+    client_name = client_info.get("name") or client_info.get("client_name") or order_data.get("client_name")
+    if not client_name or not str(client_name).strip():
+        return jsonify({"success": False, "error": "O nome do cliente é obrigatório."}), 400
+
+    car_model = car_info.get("model") or order_data.get("car_model")
+    if not car_model or not str(car_model).strip():
+        return jsonify({"success": False, "error": "O modelo do veículo é obrigatório."}), 400
+
     cfg = config.load_config(BASE_DIR)
     folder = cfg.get("spreadsheet_folder", "")
     if not folder or not os.path.isdir(folder):
         sample_dir = os.path.join(BASE_DIR, "planilhas_exemplo")
         folder = sample_dir if os.path.isdir(sample_dir) else BASE_DIR
-        
+
     try:
-        res = excel_writer.save_order_to_excel(order_data, folder, existing_filepath=existing_file_path)
-        db_path = cache.get_db_path(BASE_DIR)
-        parsed = cache.index_single_file(res["file_path"], db_path, old_fpath=existing_file_path)
+        db_path = data.get("db_path") or app.config.get("TEST_DB_PATH") or cache.get_db_path(BASE_DIR)
+        res = excel_writer.save_order_to_excel(order_data, folder_path=folder, existing_filepath=existing_file_path, db_path=db_path)
+        file_path = res.get("file_path")
+        file_name = res.get("file_name") or res.get("filename")
+
+        parsed = cache.index_single_file(file_path, db_path, old_fpath=existing_file_path)
         stats = cache.get_stats(db_path)
-        
+
         return jsonify({
             "success": True,
             "message": "Ordem de serviço salva com sucesso!",
-            "file_path": res["file_path"],
-            "file_name": res["file_name"],
-            "plate": parsed.get("plate", "") if parsed else order_data.get("car_plate", ""),
-            "visit_num": parsed.get("visit_num", "") if parsed else order_data.get("visit_num", ""),
+            "file_path": file_path,
+            "file_name": file_name,
+            "plate": (parsed.get("plate_display") or parsed.get("plate")) if parsed else (res.get("plate") or plate),
+            "plate_clean": parsed.get("plate_clean", "") if parsed else cache.clean_plate(plate),
+            "visit_num": parsed.get("visit_num", "") if parsed else (res.get("visit_num") or "1"),
             "details": parsed,
             "stats": stats
-        })
+        }), 200
+    except ValueError as ve:
+        return jsonify({"success": False, "error": str(ve)}), 400
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": f"Erro interno ao salvar planilha: {str(e)}"}), 500
 
 @app.route("/api/open_file", methods=["POST"])
 def open_file_endpoint():

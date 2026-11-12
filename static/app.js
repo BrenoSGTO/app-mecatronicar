@@ -283,11 +283,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Helper para verificar status da resposta e Content-Type antes de invocar res.json()
+    async function safeParseJsonResponse(res, fallbackErrorMsg = 'Falha na comunicação com o servidor') {
+        const contentType = res.headers.get('content-type') || '';
+        let data = null;
+
+        if (contentType.includes('application/json')) {
+            try {
+                data = await res.json();
+            } catch (e) {
+                throw new Error('Falha ao interpretar dados do servidor (formato JSON corrompido).');
+            }
+        } else {
+            const raw = await res.text().catch(() => '');
+            const clean = raw.replace(/<[^>]*>?/gm, '').trim();
+            const snippet = clean ? (clean.length > 80 ? clean.substring(0, 80) + '...' : clean) : '';
+            if (!res.ok) {
+                throw new Error(`Servidor retornou erro HTTP ${res.status}${snippet ? `: ${snippet}` : '.'}`);
+            }
+            throw new Error(`Resposta do servidor não está em formato JSON válido${snippet ? `: ${snippet}` : '.'}`);
+        }
+
+        if (!res.ok) {
+            const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `${fallbackErrorMsg} (HTTP ${res.status})`;
+            const err = new Error(msg);
+            err.status = res.status;
+            err.data = data;
+            throw err;
+        }
+
+        return data;
+    }
+
     // API Functions
     async function loadInitialData() {
         try {
             const res = await fetch('/api/config');
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro ao ler configurações');
             currentConfig = data.config || {};
             if (data.version && appVersionBadge) {
                 appVersionBadge.textContent = `v${data.version}`;
@@ -307,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadCarsList() {
         try {
             const res = await fetch('/api/cars');
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro ao carregar veículos');
             allCars = data.cars || [];
         } catch (err) {
             console.error('Erro carregando veículos:', err);
@@ -321,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const res = await fetch('/api/select_folder', { method: 'POST' });
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro ao configurar pasta');
             if (data.success) {
                 updateFolderUI(data.folder);
                 showToast(`Pasta configurada com sucesso! ${data.stats.total_files} planilhas indexadas.`);
@@ -330,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('Erro escolhendo pasta:', err);
-            showToast('Erro ao selecionar pasta.');
+            showToast('Erro ao selecionar pasta: ' + err.message);
         } finally {
             btnChangeFolder.disabled = false;
             btnChangeFolder.textContent = '📂 Alterar Pasta';
@@ -344,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const res = await fetch('/api/reindex', { method: 'POST' });
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro ao reindexar');
             if (data.success) {
                 showToast(`✓ Atualizado! Total de ${data.stats.total_files} arquivos.`);
                 await loadCarsList();
@@ -356,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('Erro reindexando:', err);
-            showToast('Erro ao atualizar planilhas.');
+            showToast('Erro ao atualizar planilhas: ' + err.message);
         } finally {
             btnReindex.disabled = false;
             btnReindex.textContent = '🔄 Atualizar Lista';
@@ -371,14 +403,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ file_path: filePath })
             });
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro ao abrir arquivo');
             if (data.success) {
                 showToast('✓ Planilha aberta no Excel com sucesso!');
             } else {
                 showToast(`Erro ao abrir: ${data.error}`);
             }
         } catch (err) {
-            showToast('Falha na comunicação ao abrir o arquivo');
+            showToast('Falha na comunicação ao abrir o arquivo: ' + err.message);
         }
     }
 
@@ -386,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Carregando histórico do veículo ${plate}...`);
         try {
             const res = await fetch(`/api/car_history/${encodeURIComponent(plate)}`);
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro ao carregar histórico');
             if (data.visits && data.visits.length > 0) {
                 currentCarHistory = data;
                 renderVehicleHistory(data);
@@ -395,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('Erro carregando histórico:', err);
-            showToast('Erro ao buscar visitas do carro');
+            showToast('Erro ao buscar visitas do carro: ' + err.message);
         }
     }
 
@@ -407,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-            const data = await res.json();
+            const data = await safeParseJsonResponse(res, 'Erro na busca');
             const results = data.results || [];
 
             const uniquePlates = [...new Set(results.map(r => r.plate_clean).filter(Boolean))];
@@ -2311,9 +2343,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
 
-                if (data.success) {
+                const contentType = res.headers.get('content-type') || '';
+                let data = null;
+
+                if (contentType.includes('application/json')) {
+                    try {
+                        data = await res.json();
+                    } catch (parseErr) {
+                        throw new Error('Não foi possível interpretar a resposta do servidor (JSON inválido).');
+                    }
+                } else {
+                    const rawText = await res.text().catch(() => '');
+                    const cleanText = rawText.replace(/<[^>]*>?/gm, '').trim();
+                    const snippet = cleanText ? (cleanText.length > 80 ? cleanText.substring(0, 80) + '...' : cleanText) : '';
+                    throw new Error(`O servidor retornou um formato inesperado (${res.status} ${res.statusText || ''})${snippet ? `: ${snippet}` : ''}`);
+                }
+
+                if (res.ok && data && data.success) {
                     showToast(`🎉 Ficha salva com sucesso! Planilha: ${data.file_name || data.filename}`);
                     closeOsModal();
 
@@ -2321,10 +2368,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const savedPlate = data.plate || plate;
                     selectVehicleByPlate(savedPlate);
                 } else {
-                    alert('Erro ao salvar no Excel: ' + (data.error || 'Verifique os dados preenchidos.'));
+                    const errorMsg = (data && data.error) ? data.error : `Erro HTTP ${res.status}: Não foi possível salvar a planilha no Excel.`;
+                    alert('Erro ao salvar no Excel: ' + errorMsg);
                 }
             } catch (err) {
-                alert('Erro de conexão ao salvar: ' + err.message);
+                alert('Erro ao salvar ficha: ' + err.message);
             } finally {
                 osModalSave.disabled = false;
                 osModalSave.textContent = '💾 Salvar Ficha no Excel (.xlsx) e Sistema';

@@ -7,3 +7,4 @@ oficina_cache.db
 .idea/
 *.tmp
 update.zip
+config.json
