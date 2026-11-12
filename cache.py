@@ -162,6 +162,47 @@ def _setup_nf_table(cur):
             except Exception:
                 pass
 
+def _setup_agendamentos_table(cur):
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS agendamentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT NOT NULL,
+        phone TEXT,
+        car_plate TEXT,
+        car_plate_clean TEXT,
+        car_model TEXT,
+        title TEXT NOT NULL,
+        description TEXT,
+        scheduled_date TEXT NOT NULL,
+        scheduled_time TEXT,
+        status TEXT DEFAULT 'agendado',
+        created_at TEXT,
+        updated_at TEXT,
+        notes TEXT,
+        google_calendar_id TEXT,
+        google_calendar_sync_status TEXT DEFAULT 'pending'
+    )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_agendamentos_date ON agendamentos(scheduled_date)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_agendamentos_plate ON agendamentos(car_plate_clean)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_agendamentos_status ON agendamentos(status)")
+
+    # Migração segura de colunas caso a tabela já exista
+    cur.execute("PRAGMA table_info(agendamentos)")
+    cols = {row[1] for row in cur.fetchall()}
+    extra_cols = [
+        ("car_plate_clean", "TEXT"),
+        ("notes", "TEXT"),
+        ("google_calendar_id", "TEXT"),
+        ("google_calendar_sync_status", "TEXT DEFAULT 'pending'")
+    ]
+    for col_name, col_type in extra_cols:
+        if col_name not in cols:
+            try:
+                cur.execute(f"ALTER TABLE agendamentos ADD COLUMN {col_name} {col_type}")
+            except Exception:
+                pass
+
 def init_db(db_path=None):
     path = db_path or get_db_path()
     conn = sqlite3.connect(path)
@@ -193,9 +234,10 @@ def init_db(db_path=None):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_client_clean ON files(client_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_entry_date_sort ON files(entry_date_sort)")
 
-    # Estruturas do CP-01 (patio_status, nf_control e templates)
+    # Estruturas do CP-01 (patio_status, nf_control e templates) e Issue #15 (agendamentos)
     _setup_patio_table(cur)
     _setup_nf_table(cur)
+    _setup_agendamentos_table(cur)
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS templates (
@@ -1743,3 +1785,291 @@ def get_quick_suggestions(db_path=None):
         "pecas": default_pecas + pecas_db[:30],
         "servicos": default_servicos + servicos_db[:30]
     }
+
+# ==============================================================================
+# MÓDULO DE AGENDAMENTOS / CALENDÁRIO (Issue #15)
+# ==============================================================================
+
+VALID_AGENDAMENTO_STATUSES = [
+    "agendado",
+    "confirmado",
+    "concluido",
+    "cancelado"
+]
+
+def _normalize_date_iso(date_str):
+    """
+    Normaliza datas no formato DD/MM/AAAA ou AAAA-MM-DD para AAAA-MM-DD.
+    """
+    if not date_str:
+        return datetime.date.today().isoformat()
+    s = str(date_str).strip()
+    m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', s)
+    if m:
+        day, month, year = m.groups()
+        return f"{year}-{int(month):02d}-{int(day):02d}"
+    m2 = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})$', s)
+    if m2:
+        year, month, day = m2.groups()
+        return f"{year}-{int(month):02d}-{int(day):02d}"
+    return s
+
+def _format_date_br(date_iso_str):
+    """
+    Converte AAAA-MM-DD para DD/MM/AAAA.
+    """
+    if not date_iso_str:
+        return ""
+    m = re.match(r'^(\d{4})-(\d{2})-(\d{2})', str(date_iso_str).strip())
+    if m:
+        year, month, day = m.groups()
+        return f"{day}/{month}/{year}"
+    return str(date_iso_str)
+
+def _format_agendamento_dict(row_dict):
+    """
+    Garante chaves e formatações padronizadas para agendamentos.
+    """
+    if not row_dict:
+        return None
+    d = dict(row_dict)
+    sched_date = d.get("scheduled_date") or ""
+    d["scheduled_date_iso"] = sched_date
+    d["scheduled_date_display"] = _format_date_br(sched_date)
+    
+    plate = d.get("car_plate") or ""
+    clean = clean_plate(plate)
+    d["car_plate_clean"] = clean
+    d["car_plate_display"] = format_plate_display(plate) if plate else ""
+    
+    if not d.get("scheduled_time"):
+        d["scheduled_time"] = "08:00"
+
+    status = (d.get("status") or "agendado").lower().strip()
+    if status in ["atendido", "finalizado"]:
+        status = "concluido"
+    d["status"] = status
+    
+    return d
+
+def create_agendamento(data, db_path=None):
+    """
+    Insere um novo agendamento no banco de dados SQLite.
+    """
+    if not data:
+        raise ValueError("Dados do agendamento não podem ser vazios.")
+    
+    client_name = str(data.get("client_name") or "").strip()
+    title = str(data.get("title") or "").strip()
+    if not client_name:
+        raise ValueError("Nome do cliente é obrigatório.")
+    if not title:
+        raise ValueError("Título do problema / serviço é obrigatório.")
+        
+    phone = str(data.get("phone") or "").strip()
+    raw_plate = str(data.get("car_plate") or data.get("plate") or "").strip()
+    plate_clean = clean_plate(raw_plate)
+    plate_disp = format_plate_display(raw_plate) if raw_plate else ""
+    car_model = str(data.get("car_model") or data.get("model") or "").strip()
+    description = str(data.get("description") or data.get("complaint") or "").strip()
+    
+    sched_date = _normalize_date_iso(data.get("scheduled_date") or data.get("date"))
+    sched_time = str(data.get("scheduled_time") or data.get("time") or "08:00").strip()
+    status = str(data.get("status") or "agendado").strip().lower()
+    if status in ["atendido", "finalizado"]:
+        status = "concluido"
+    notes = str(data.get("notes") or "").strip()
+    gcal_id = str(data.get("google_calendar_id") or "").strip()
+    gcal_status = str(data.get("google_calendar_sync_status") or "pending").strip()
+
+    now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("""
+    INSERT INTO agendamentos (
+        client_name, phone, car_plate, car_plate_clean, car_model,
+        title, description, scheduled_date, scheduled_time,
+        status, created_at, updated_at, notes,
+        google_calendar_id, google_calendar_sync_status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        client_name, phone, plate_disp or raw_plate, plate_clean, car_model,
+        title, description, sched_date, sched_time,
+        status, now_iso, now_iso, notes,
+        gcal_id, gcal_status
+    ))
+    new_id = cur.lastrowid
+    conn.commit()
+
+    cur.execute("SELECT * FROM agendamentos WHERE id = ?", (new_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    return _format_agendamento_dict(dict(row))
+
+def get_agendamento(agendamento_id, db_path=None):
+    """
+    Retorna um agendamento pelo ID.
+    """
+    path = db_path or get_db_path()
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM agendamentos WHERE id = ?", (agendamento_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return _format_agendamento_dict(dict(row))
+
+def list_agendamentos(date_from=None, date_to=None, date=None, status=None, query=None, limit=200, db_path=None):
+    """
+    Lista agendamentos com filtros opcionais de data, status e busca textual.
+    """
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    conditions = []
+    params = []
+
+    if date:
+        date_iso = _normalize_date_iso(date)
+        conditions.append("scheduled_date = ?")
+        params.append(date_iso)
+    else:
+        if date_from:
+            date_from_iso = _normalize_date_iso(date_from)
+            conditions.append("scheduled_date >= ?")
+            params.append(date_from_iso)
+        if date_to:
+            date_to_iso = _normalize_date_iso(date_to)
+            conditions.append("scheduled_date <= ?")
+            params.append(date_to_iso)
+
+    if status:
+        if isinstance(status, (list, tuple)):
+            placeholders = ",".join(["?"] * len(status))
+            conditions.append(f"LOWER(status) IN ({placeholders})")
+            params.extend([str(s).lower().strip() for s in status])
+        else:
+            s_clean = str(status).lower().strip()
+            if s_clean not in ["todos", "all", ""]:
+                conditions.append("LOWER(status) = ?")
+                params.append(s_clean)
+
+    if query:
+        q_term = f"%{query.strip().lower()}%"
+        q_plate = f"%{clean_plate(query)}%"
+        conditions.append("(LOWER(client_name) LIKE ? OR LOWER(car_model) LIKE ? OR LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR car_plate_clean LIKE ?)")
+        params.extend([q_term, q_term, q_term, q_term, q_plate])
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    sql = f"""
+    SELECT * FROM agendamentos
+    {where_clause}
+    ORDER BY scheduled_date ASC, scheduled_time ASC, id ASC
+    LIMIT ?
+    """
+    params.append(limit)
+
+    cur.execute(sql, tuple(params))
+    rows = cur.fetchall()
+    conn.close()
+
+    return [_format_agendamento_dict(dict(r)) for r in rows]
+
+def update_agendamento(agendamento_id, data, db_path=None):
+    """
+    Atualiza campos de um agendamento existente.
+    """
+    if not agendamento_id:
+        return None
+    
+    path = db_path or get_db_path()
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM agendamentos WHERE id = ?", (agendamento_id,))
+    existing = cur.fetchone()
+    if not existing:
+        conn.close()
+        return None
+
+    fields_map = {
+        "client_name": "client_name",
+        "phone": "phone",
+        "car_plate": "car_plate",
+        "car_model": "car_model",
+        "title": "title",
+        "description": "description",
+        "scheduled_date": "scheduled_date",
+        "scheduled_time": "scheduled_time",
+        "status": "status",
+        "notes": "notes",
+        "google_calendar_id": "google_calendar_id",
+        "google_calendar_sync_status": "google_calendar_sync_status"
+    }
+
+    updates = []
+    params = []
+
+    for key, col in fields_map.items():
+        if key in data:
+            val = data[key]
+            if key == "scheduled_date":
+                val = _normalize_date_iso(val)
+            elif key == "car_plate":
+                val = format_plate_display(val) if val else ""
+                updates.append("car_plate_clean = ?")
+                params.append(clean_plate(val))
+            elif key == "status" and val:
+                val = str(val).lower().strip()
+                if val in ["atendido", "finalizado"]:
+                    val = "concluido"
+            updates.append(f"{col} = ?")
+            params.append(val)
+
+    now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    updates.append("updated_at = ?")
+    params.append(now_iso)
+
+    params.append(agendamento_id)
+    cur.execute(f"UPDATE agendamentos SET {', '.join(updates)} WHERE id = ?", tuple(params))
+    conn.commit()
+
+    cur.execute("SELECT * FROM agendamentos WHERE id = ?", (agendamento_id,))
+    updated = cur.fetchone()
+    conn.close()
+
+    return _format_agendamento_dict(dict(updated))
+
+def update_agendamento_status(agendamento_id, status, db_path=None):
+    """
+    Helper rápido para transição de status do agendamento.
+    """
+    return update_agendamento(agendamento_id, {"status": status}, db_path=db_path)
+
+def delete_agendamento(agendamento_id, db_path=None):
+    """
+    Remove um agendamento do banco de dados.
+    """
+    if not agendamento_id:
+        return False
+    path = db_path or get_db_path()
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM agendamentos WHERE id = ?", (agendamento_id,))
+    deleted = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+

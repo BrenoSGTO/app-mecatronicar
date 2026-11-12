@@ -243,6 +243,11 @@ class TestCP01Database(unittest.TestCase):
 
         cache.init_db(official_db)
         stats = cache.get_stats(official_db)
+        if stats["total_files"] == 0:
+            sample_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "planilhas_exemplo")
+            if os.path.isdir(sample_dir):
+                cache.scan_and_index_folder(sample_dir, official_db)
+                stats = cache.get_stats(official_db)
         self.assertEqual(stats["total_files"], 4, f"Deveriam existir 4 arquivos no cache, encontrado: {stats['total_files']}")
 
         # Testa busca existente

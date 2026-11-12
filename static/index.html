@@ -45,6 +45,9 @@
                 <button id="btn-open-fiscal-hub" class="btn btn-fiscal btn-sm" title="Copiloto de Notas Fiscais (NFS-e Santos e NF-e Peças)">
                     🧾 Copiloto Fiscal <span id="header-nf-badge" class="badge-nf-counter" style="display: none;">0</span>
                 </button>
+                <button id="btn-toggle-agenda" class="btn btn-agenda btn-sm" title="Abrir ou ocultar a Agenda de Atendimentos na lateral">
+                    📅 Agenda <span id="header-agenda-badge" class="badge-agenda-counter" style="display: none;">0</span>
+                </button>
 
                 <!-- Update Check Button -->
                 <button id="btn-check-updates" class="btn btn-update btn-sm" title="Verificar se há novas versões do sistema">
@@ -69,8 +72,10 @@
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="main-container">
+    <!-- Workspace com Painel Principal e Sidebar de Agendamentos (Issue #15) -->
+    <div class="app-workspace-layout">
+        <div class="app-workspace-content">
+            <main class="main-container">
         <!-- Search Section -->
         <section class="search-section">
             <div class="search-box-wrapper">
@@ -214,7 +219,56 @@
                 <p>Digite uma placa ou nome de cliente acima para consultar todo o histórico de visitas, serviços feitos, peças trocadas e notas de diagnóstico.</p>
             </div>
         </section>
-    </main>
+            </main>
+        </div>
+
+        <!-- Sidebar Direita de Agendamentos (Issue #15) -->
+        <aside id="secretary-agenda-sidebar" class="agenda-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title-group">
+                    <span class="sidebar-icon">📅</span>
+                    <h3 class="sidebar-title">Chegadas / Agendamentos</h3>
+                    <span id="sidebar-agenda-badge" class="badge-agenda-counter">0</span>
+                </div>
+                <div class="sidebar-header-actions">
+                    <button type="button" id="btn-sidebar-refresh-agenda" class="btn-sidebar-icon" title="Atualizar agendamentos agora">🔄</button>
+                    <button type="button" id="btn-sidebar-new-agenda" class="btn-sidebar-icon btn-sidebar-add" title="Cadastrar novo agendamento">➕</button>
+                    <button type="button" id="btn-sidebar-close-agenda" class="btn-sidebar-icon" title="Ocultar barra lateral da agenda">✕</button>
+                </div>
+            </div>
+
+            <!-- Filtros Rápidos da Sidebar -->
+            <div class="sidebar-filters">
+                <button type="button" class="sidebar-tab-btn active" data-filter="today" id="sidebar-tab-today">
+                    Hoje <span id="sidebar-count-today" class="sidebar-tab-count">0</span>
+                </button>
+                <button type="button" class="sidebar-tab-btn" data-filter="upcoming" id="sidebar-tab-upcoming">
+                    Próximos <span id="sidebar-count-upcoming" class="sidebar-tab-count">0</span>
+                </button>
+                <button type="button" class="sidebar-tab-btn" data-filter="all" id="sidebar-tab-all">
+                    Todos <span id="sidebar-count-all" class="sidebar-tab-count">0</span>
+                </button>
+            </div>
+
+            <!-- Campo de Busca Rápida na Sidebar -->
+            <div class="sidebar-search-box">
+                <input type="text" id="sidebar-agenda-search" class="sidebar-search-input" placeholder="🔍 Filtrar por placa, cliente ou carro...">
+            </div>
+
+            <!-- Lista de Agendamentos -->
+            <div id="sidebar-agenda-list" class="sidebar-agenda-list">
+                <!-- Cards renderizados dinamicamente via JS -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="sidebar-agenda-empty" class="sidebar-empty" style="display: none;">
+                <div class="sidebar-empty-icon">📅</div>
+                <div class="sidebar-empty-title">Sem agendamentos no momento</div>
+                <div class="sidebar-empty-sub">Nenhum atendimento previsto para o filtro selecionado.</div>
+                <button type="button" id="btn-sidebar-empty-add" class="btn btn-secondary btn-sm" style="margin-top: 10px;">➕ Agendar Novo Atendimento</button>
+            </div>
+        </aside>
+    </div>
 
     <!-- Modal for Cell Comments & Diagnostic Reports -->
     <div id="comment-modal" class="modal-backdrop" style="display: none;">
@@ -988,6 +1042,94 @@
                     <span id="footer-nf-summary">0 notas pendentes</span>
                 </div>
                 <button id="fiscal-modal-dismiss" class="btn btn-secondary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Agendamento da Secretária (Issue #15) -->
+    <div id="secretary-agenda-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 620px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">📅</span>
+                    <h3 id="secretary-agenda-modal-title">Novo Agendamento de Atendimento</h3>
+                </div>
+                <button id="secretary-agenda-modal-close" class="modal-close" title="Fechar (Esc)">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="secretary-agenda-form">
+                    <input type="hidden" id="sec-agenda-id" value="">
+
+                    <div class="os-grid-row">
+                        <div class="os-form-group flex-3">
+                            <label>Nome do Cliente *</label>
+                            <input type="text" id="sec-agenda-client" class="os-input" placeholder="Ex: Danilo Rodrigues" required>
+                        </div>
+                        <div class="os-form-group flex-2">
+                            <label>Celular / WhatsApp *</label>
+                            <input type="text" id="sec-agenda-phone" class="os-input" placeholder="Ex: (13) 99752-9463" required>
+                        </div>
+                    </div>
+
+                    <div class="os-grid-row">
+                        <div class="os-form-group flex-2">
+                            <label>Placa do Carro</label>
+                            <input type="text" id="sec-agenda-plate" class="os-input uppercase font-bold" placeholder="Ex: FNB-1A77" maxlength="10">
+                        </div>
+                        <div class="os-form-group flex-3">
+                            <label>Modelo do Carro *</label>
+                            <input type="text" id="sec-agenda-model" class="os-input" placeholder="Ex: VW Fox 1.0 ou Sentra" required>
+                        </div>
+                    </div>
+
+                    <div class="os-grid-row">
+                        <div class="os-form-group flex-2">
+                            <label>Data Agendada *</label>
+                            <input type="date" id="sec-agenda-date" class="os-input" required>
+                        </div>
+                        <div class="os-form-group flex-1">
+                            <label>Horário *</label>
+                            <input type="time" id="sec-agenda-time" class="os-input" value="08:30" required>
+                        </div>
+                        <div class="os-form-group flex-2">
+                            <label>Status</label>
+                            <select id="sec-agenda-status" class="os-input">
+                                <option value="agendado">🕒 Agendado</option>
+                                <option value="confirmado">👍 Confirmado</option>
+                                <option value="concluido">✅ Atendido / Concluído</option>
+                                <option value="cancelado">❌ Cancelado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="os-grid-row">
+                        <div class="os-form-group flex-1">
+                            <label>Título do Problema / Serviço Solicitado *</label>
+                            <input type="text" id="sec-agenda-title" class="os-input" placeholder="Ex: Troca de correia / Revisão 50k / Barulho na suspensão" required>
+                        </div>
+                    </div>
+
+                    <div class="os-grid-row">
+                        <div class="os-form-group flex-1">
+                            <label>Descrição dos Sintomas / Reclamação Relatada</label>
+                            <textarea id="sec-agenda-desc" class="os-input" rows="3" placeholder="Ex: Barulho agudo na roda dianteira em lombadas; luz da injeção piscou."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="os-grid-row">
+                        <div class="os-form-group flex-1">
+                            <label>Observações Internas (Opcional)</label>
+                            <input type="text" id="sec-agenda-notes" class="os-input" placeholder="Ex: Cliente aguardará no local / ligar para confirmar 1 dia antes">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" id="sec-agenda-btn-delete" class="btn btn-danger" style="display: none;">🗑️ Excluir</button>
+                <div style="display: flex; gap: 8px; margin-left: auto;">
+                    <button type="button" id="sec-agenda-btn-cancel" class="btn btn-secondary">Cancelar</button>
+                    <button type="button" id="sec-agenda-btn-save" class="btn btn-primary">💾 Salvar Agendamento</button>
+                </div>
             </div>
         </div>
     </div>

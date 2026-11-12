@@ -388,6 +388,139 @@ def remove_patio_car_post_endpoint():
     success = cache.delete_patio_car(car_id, db_path)
     return jsonify({"success": success})
 
+# ==============================================================================
+# ROTAS DE AGENDAMENTOS E CALENDÁRIO (Issue #15)
+# ==============================================================================
+
+@app.route("/api/agendamentos", methods=["GET"])
+def list_agendamentos_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    date = request.args.get("date")
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
+    status = request.args.get("status")
+    query = request.args.get("query")
+    
+    try:
+        limit = int(request.args.get("limit", 200))
+    except Exception:
+        limit = 200
+
+    items = cache.list_agendamentos(
+        date_from=date_from,
+        date_to=date_to,
+        date=date,
+        status=status,
+        query=query,
+        limit=limit,
+        db_path=db_path
+    )
+    
+    today_iso = datetime.date.today().isoformat()
+    today_items = [it for it in items if it.get("scheduled_date") == today_iso]
+    today_count = len(today_items)
+    
+    return jsonify({
+        "success": True,
+        "agendamentos": items,
+        "count": len(items),
+        "today_count": today_count,
+        "today_iso": today_iso,
+        "server_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+@app.route("/api/agendamentos", methods=["POST"])
+def create_agendamento_endpoint():
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        agendamento = cache.create_agendamento(data, db_path=db_path)
+        
+        # Engatilha sincronização com Google Calendar
+        import calendar_sync
+        gcal_result = calendar_sync.sync_agendamento_to_gcal(agendamento)
+        if gcal_result.get("synced") and gcal_result.get("google_calendar_id"):
+            agendamento = cache.update_agendamento(
+                agendamento["id"],
+                {
+                    "google_calendar_id": gcal_result["google_calendar_id"],
+                    "google_calendar_sync_status": "synced"
+                },
+                db_path=db_path
+            )
+
+        return jsonify({
+            "success": True,
+            "agendamento": agendamento,
+            "gcal": gcal_result,
+            "message": "Agendamento cadastrado com sucesso!"
+        }), 201
+    except ValueError as ve:
+        return jsonify({"success": False, "error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Erro interno ao criar agendamento: {str(e)}"}), 500
+
+@app.route("/api/agendamentos/<int:agendamento_id>", methods=["GET"])
+def get_agendamento_endpoint(agendamento_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    agendamento = cache.get_agendamento(agendamento_id, db_path=db_path)
+    if not agendamento:
+        return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+    return jsonify({"success": True, "agendamento": agendamento})
+
+@app.route("/api/agendamentos/<int:agendamento_id>", methods=["PUT", "POST"])
+def update_agendamento_endpoint(agendamento_id):
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        updated = cache.update_agendamento(agendamento_id, data, db_path=db_path)
+        if not updated:
+            return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+            
+        import calendar_sync
+        gcal_result = calendar_sync.sync_agendamento_to_gcal(updated)
+        
+        return jsonify({
+            "success": True,
+            "agendamento": updated,
+            "gcal": gcal_result,
+            "message": "Agendamento atualizado com sucesso!"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/agendamentos/<int:agendamento_id>", methods=["DELETE"])
+def delete_agendamento_endpoint(agendamento_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    success = cache.delete_agendamento(agendamento_id, db_path=db_path)
+    if not success:
+        return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+    return jsonify({"success": True, "message": "Agendamento removido com sucesso."})
+
+@app.route("/api/agendamentos/<int:agendamento_id>/status", methods=["POST"])
+def update_agendamento_status_endpoint(agendamento_id):
+    data = request.json or {}
+    status = data.get("status")
+    if not status:
+        return jsonify({"success": False, "error": "Status é obrigatório."}), 400
+    db_path = cache.get_db_path(BASE_DIR)
+    updated = cache.update_agendamento_status(agendamento_id, status, db_path=db_path)
+    if not updated:
+        return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+    return jsonify({"success": True, "agendamento": updated})
+
+@app.route("/api/agendamentos/gcal/status", methods=["GET"])
+def gcal_status_endpoint():
+    import calendar_sync
+    return jsonify(calendar_sync.get_gcal_status())
+
+@app.route("/api/agendamentos/gcal/sync", methods=["POST"])
+def gcal_sync_endpoint():
+    data = request.json or {}
+    import calendar_sync
+    result = calendar_sync.sync_agendamento_to_gcal(data)
+    return jsonify(result)
+
 # ==========================================
 # CRIAÇÃO E EDIÇÃO DE OS / MOTOR EXCEL (CP-02 / CP-03)
 # ==========================================
