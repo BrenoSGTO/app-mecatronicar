@@ -298,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFolderUI(currentConfig.spreadsheet_folder);
             
             await loadCarsList();
+            await loadDashboardData();
         } catch (err) {
             console.error('Erro carregando config inicial:', err);
             showToast('Erro ao conectar com o servidor local.');
@@ -1302,6 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (vehicleItemSearchInput) vehicleItemSearchInput.value = '';
         if (btnClearVehicleItemSearch) btnClearVehicleItemSearch.style.display = 'none';
         if (vehicleItemMatchesBox) vehicleItemMatchesBox.style.display = 'none';
+        loadDashboardData();
     }
 
     // Modal helpers
@@ -3083,6 +3085,891 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fiscalModalDismiss) {
         fiscalModalDismiss.addEventListener('click', () => {
             fiscalModal.style.display = 'none';
+        });
+    }
+
+    // ==========================================
+    // ISSUE #11 - DASHBOARD DA TELA INICIAL
+    // ==========================================
+    let currentPatioActiveCars = [];
+    let currentPatioDeliveredCars = [];
+    let currentAgendaEvents = [];
+    let activePatioStatusFilter = 'all';
+    let activeAgendaPeriodFilter = 'all';
+
+    // Elementos DOM do Dashboard
+    const tabBtnPatio = document.getElementById('tab-btn-patio');
+    const tabBtnEntregues = document.getElementById('tab-btn-entregues');
+    const tabContentPatio = document.getElementById('tab-content-patio');
+    const tabContentEntregues = document.getElementById('tab-content-entregues');
+    const patioActiveCountEl = document.getElementById('patio-active-count');
+    const patioDeliveredCountEl = document.getElementById('patio-delivered-count');
+    const patioActiveGrid = document.getElementById('patio-active-grid');
+    const patioDeliveredGrid = document.getElementById('patio-delivered-grid');
+
+    const countPillAll = document.getElementById('count-pill-all');
+    const countPillDiag = document.getElementById('count-pill-diag');
+    const countPillOrc = document.getElementById('count-pill-orc');
+    const countPillPecas = document.getElementById('count-pill-pecas');
+    const countPillExec = document.getElementById('count-pill-exec');
+    const countPillRet = document.getElementById('count-pill-ret');
+
+    const quickHistoryList = document.getElementById('quick-history-list');
+    const quickHistoryCountEl = document.getElementById('quick-history-count');
+    const quickHistoryFilter = document.getElementById('quick-history-filter');
+
+    const agendaEventsList = document.getElementById('agenda-events-list');
+    const agendaCountEl = document.getElementById('agenda-count');
+    const btnOpenAgendaModal = document.getElementById('btn-open-agenda-modal');
+    const agendaModal = document.getElementById('agenda-modal');
+    const agendaModalCloseBtn = document.getElementById('agenda-modal-close-btn');
+    const agendaModalCancelBtn = document.getElementById('agenda-modal-cancel-btn');
+    const agendaForm = document.getElementById('agenda-form');
+    const agendaInputTitle = document.getElementById('agenda-input-title');
+    const agendaInputDate = document.getElementById('agenda-input-date');
+    const agendaInputTime = document.getElementById('agenda-input-time');
+    const agendaInputClient = document.getElementById('agenda-input-client');
+    const agendaInputPlate = document.getElementById('agenda-input-plate');
+    const agendaInputModel = document.getElementById('agenda-input-model');
+    const agendaInputService = document.getElementById('agenda-input-service');
+    const agendaInputNotes = document.getElementById('agenda-input-notes');
+
+    const btnDashboardNewPatio = document.getElementById('btn-dashboard-new-patio');
+    const btnBackHomeFromSearch = document.getElementById('btn-back-home-from-search');
+    const btnBackHomeFromHistory = document.getElementById('btn-back-home-from-history');
+    const headerLogoArea = document.querySelector('.logo-area');
+
+    // Funções auxiliares de formatação
+    function getTwoFirstNames(fullName) {
+        if (!fullName) return 'Cliente';
+        const cleaned = fullName.replace(/\(.*?\)/g, '').replace(/[-_]/g, ' ').trim();
+        const parts = cleaned.split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return 'Cliente';
+        if (parts.length === 1) return parts[0];
+        const connectors = ['de', 'da', 'do', 'dos', 'das', 'e'];
+        if (connectors.includes(parts[1].toLowerCase()) && parts.length > 2) {
+            return `${parts[0]} ${parts[1]} ${parts[2]}`;
+        }
+        return `${parts[0]} ${parts[1]}`;
+    }
+
+    function formatPatioTime(timeStr) {
+        if (!timeStr) return 'Recém chegado';
+        try {
+            let entryTime = null;
+            if (timeStr.includes('-') && timeStr.includes(':')) {
+                const [datePart, timePart] = timeStr.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hour, min, sec] = timePart.split(':').map(Number);
+                entryTime = new Date(year, month - 1, day, hour, min, sec || 0);
+            } else if (timeStr.includes('/')) {
+                const [day, month, year] = timeStr.split('/').map(Number);
+                entryTime = new Date(year, month - 1, day, 8, 0, 0);
+            } else {
+                entryTime = new Date(timeStr);
+            }
+
+            if (isNaN(entryTime.getTime())) return timeStr;
+
+            const now = new Date();
+            const diffMs = Math.max(0, now - entryTime);
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMinutes < 15) return 'Recém chegado';
+            if (diffMinutes < 60) return `${diffMinutes} min no pátio`;
+            if (diffHours < 24) {
+                const remMin = diffMinutes % 60;
+                return remMin > 0 ? `${diffHours}h ${remMin}m no pátio` : `${diffHours}h no pátio`;
+            }
+            if (diffDays === 1) return '1 dia no pátio';
+            return `${diffDays} dias no pátio`;
+        } catch (e) {
+            return timeStr;
+        }
+    }
+
+    function formatDeliveredTime(timeStr) {
+        if (!timeStr) return 'Entregue recentemente';
+        try {
+            let dt = null;
+            if (timeStr.includes('-') && timeStr.includes(':')) {
+                const [datePart, timePart] = timeStr.split(' ');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hour, min] = timePart.split(':').map(Number);
+                dt = new Date(year, month - 1, day, hour, min);
+            } else {
+                dt = new Date(timeStr);
+            }
+            if (isNaN(dt.getTime())) return `Entregue em ${timeStr}`;
+
+            const now = new Date();
+            const isToday = dt.toDateString() === now.toDateString();
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const isYesterday = dt.toDateString() === yesterday.toDateString();
+
+            const timeHourMin = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            if (isToday) return `Entregue hoje às ${timeHourMin}`;
+            if (isYesterday) return `Entregue ontem às ${timeHourMin}`;
+            return `Entregue em ${dt.toLocaleDateString('pt-BR')} às ${timeHourMin}`;
+        } catch (e) {
+            return `Entregue em ${timeStr}`;
+        }
+    }
+
+    function formatAgendaDate(dateStr) {
+        if (!dateStr) return 'Data não inf.';
+        try {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const dt = new Date(year, month - 1, day);
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+            const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+
+            if (dateStr === todayStr) return 'Hoje';
+            if (dateStr === tomorrowStr) return 'Amanhã';
+            return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    function formatDateBr(dateSort) {
+        if (!dateSort || dateSort === '0000-00-00') return '';
+        try {
+            const parts = dateSort.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } catch (e) {}
+        return dateSort;
+    }
+
+    function getStatusCategory(status) {
+        if (!status) return 'diagnostico';
+        const s = status.toLowerCase();
+        if (s.includes('diagnostico') || s.includes('diagnóstico')) return 'diagnostico';
+        if (s.includes('orcamento') || s.includes('orçamento') || s.includes('aprovacao') || s.includes('aprovação')) return 'orcamento';
+        if (s.includes('pecas') || s.includes('peças')) return 'pecas';
+        if (s.includes('execucao') || s.includes('execução')) return 'execucao';
+        if (s.includes('cliente') || s.includes('retirada') || s.includes('terceiro') || s.includes('pronto')) return 'retirada';
+        if (s.includes('entregue')) return 'entregue';
+        return 'diagnostico';
+    }
+
+    function getStatusBadgeClass(status) {
+        const cat = getStatusCategory(status);
+        switch (cat) {
+            case 'diagnostico': return 'status-badge-diag';
+            case 'orcamento': return 'status-badge-orc';
+            case 'pecas': return 'status-badge-pecas';
+            case 'execucao': return 'status-badge-exec';
+            case 'retirada': return 'status-badge-retirada';
+            case 'entregue': return 'status-badge-entregue';
+            default: return 'status-badge-diag';
+        }
+    }
+
+    // Carregamento central de dados do Dashboard
+    async function loadDashboardData() {
+        try {
+            const [patioRes, agendaRes] = await Promise.all([
+                fetch('/api/patio', { cache: 'no-store' }),
+                fetch('/api/agenda', { cache: 'no-store' })
+            ]);
+
+            const patioData = await patioRes.json();
+            const agendaData = await agendaRes.json();
+
+            // Separação de carros ativos e entregues
+            const allPatioCars = patioData.cars || [];
+            currentPatioActiveCars = patioData.active_cars || allPatioCars.filter(c => (c.status || '') !== 'Entregue' && (c.status_display || '') !== 'Entregue');
+            currentPatioDeliveredCars = patioData.delivered_cars || allPatioCars.filter(c => (c.status || '') === 'Entregue' || (c.status_display || '') === 'Entregue');
+            currentAgendaEvents = agendaData.events || [];
+
+            // Atualiza contadores de abas
+            if (patioActiveCountEl) patioActiveCountEl.textContent = currentPatioActiveCars.length;
+            if (patioDeliveredCountEl) patioDeliveredCountEl.textContent = currentPatioDeliveredCars.length;
+
+            // Atualiza contadores das pílulas de filtro
+            updatePatioPillCounts(currentPatioActiveCars);
+
+            // Renderiza centro
+            renderActivePatio(currentPatioActiveCars, activePatioStatusFilter);
+            renderDeliveredPatio(currentPatioDeliveredCars);
+
+            // Renderiza Sidebars
+            renderQuickHistory(allCars, quickHistoryFilter ? quickHistoryFilter.value.trim() : '');
+            renderAgendaEvents(currentAgendaEvents, activeAgendaPeriodFilter);
+        } catch (err) {
+            console.error('Erro carregando dashboard:', err);
+        }
+    }
+
+    function updatePatioPillCounts(cars) {
+        let diag = 0, orc = 0, pecas = 0, exec = 0, ret = 0;
+        cars.forEach(c => {
+            const cat = getStatusCategory(c.status || c.status_display);
+            if (cat === 'diagnostico') diag++;
+            else if (cat === 'orcamento') orc++;
+            else if (cat === 'pecas') pecas++;
+            else if (cat === 'execucao') exec++;
+            else if (cat === 'retirada') ret++;
+        });
+
+        if (countPillAll) countPillAll.textContent = cars.length;
+        if (countPillDiag) countPillDiag.textContent = diag;
+        if (countPillOrc) countPillOrc.textContent = orc;
+        if (countPillPecas) countPillPecas.textContent = pecas;
+        if (countPillExec) countPillExec.textContent = exec;
+        if (countPillRet) countPillRet.textContent = ret;
+    }
+
+    // Renderiza Cards Grandes dos Carros Ativos (Centro da Tela)
+    function renderActivePatio(cars, filter) {
+        if (!patioActiveGrid) return;
+        patioActiveGrid.innerHTML = '';
+
+        let filtered = cars;
+        if (filter && filter !== 'all') {
+            filtered = cars.filter(c => getStatusCategory(c.status || c.status_display) === filter);
+        }
+
+        if (filtered.length === 0) {
+            patioActiveGrid.innerHTML = `
+                <div class="empty-state-box" style="grid-column: 1 / -1;">
+                    <div class="empty-icon">🚗</div>
+                    <p style="font-weight: 700; color: #1e293b; font-size: 14px;">Nenhum veículo ativo neste status no momento.</p>
+                    <p style="font-size: 12.5px; color: #64748b; margin-top: 4px;">Clique em "➕ Entrada no Pátio" para registrar a chegada de um carro.</p>
+                </div>
+            `;
+            return;
+        }
+
+        filtered.forEach(car => {
+            const card = document.createElement('div');
+            card.className = 'patio-car-card';
+            card.dataset.carId = car.id;
+            card.dataset.plate = car.plate_clean || '';
+
+            const plateDisplay = car.plate_display || car.plate || 'SEM PLACA';
+            const ownerShort = getTwoFirstNames(car.client_name);
+            const statusDisp = car.status_display || car.status || 'Em Diagnóstico';
+            const statusBadgeClass = getStatusBadgeClass(statusDisp);
+            const patioTime = formatPatioTime(car.updated_at || car.updated_time || car.entry_date);
+
+            const isSel = (opt) => (opt === statusDisp || opt === car.status) ? 'selected' : '';
+
+            card.innerHTML = `
+                <div class="car-card-top-row">
+                    <!-- Placa Mercosul Oficial MecatroniCar -->
+                    <div class="mercosul-plate-card" title="Placa Oficial do Veículo">
+                        <div class="mercosul-plate-top">
+                            <span class="mercosul-plate-country">BRASIL</span>
+                            <span class="mercosul-plate-flag">🇧🇷</span>
+                        </div>
+                        <div class="mercosul-plate-body">
+                            <span class="mercosul-plate-text">${escapeHtml(plateDisplay)}</span>
+                        </div>
+                    </div>
+
+                    <!-- Status Atual -->
+                    <div class="car-card-status-badge ${statusBadgeClass}">
+                        ${escapeHtml(statusDisp)}
+                    </div>
+                </div>
+
+                <div class="car-card-main-info">
+                    <h3 class="car-card-model" title="${escapeHtml(car.car_model || 'Veículo')}">
+                        🚗 ${escapeHtml(car.car_model || 'Modelo não informado')} ${car.car_color ? `(${escapeHtml(car.car_color)})` : ''}
+                    </h3>
+                    <div class="car-card-owner">
+                        <span class="owner-icon">👤</span>
+                        <strong class="owner-name-short">${escapeHtml(ownerShort)}</strong>
+                        <span class="owner-name-full">(${escapeHtml(car.client_name || 'Cliente')})</span>
+                    </div>
+                </div>
+
+                <div class="car-card-meta-row">
+                    <div class="car-card-time" title="Tempo no pátio">
+                        <span class="time-icon">⏱️</span> ${escapeHtml(patioTime)}
+                    </div>
+                    ${car.mechanic_name || car.box_mecanico ? `
+                        <div class="car-card-box">
+                            <span class="box-icon">🔧</span> ${escapeHtml(car.mechanic_name || car.box_mecanico)}
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${car.notes ? `
+                    <div class="car-card-notes" title="${escapeHtml(car.notes)}">
+                        📝 ${escapeHtml(car.notes)}
+                    </div>
+                ` : ''}
+
+                <div class="car-card-actions">
+                    <div class="status-select-wrapper">
+                        <select class="status-quick-select" data-car-id="${car.id}" title="Alterar status de trabalho">
+                            <option value="Em Diagnóstico" ${isSel('Em Diagnóstico')}>Diagnóstico</option>
+                            <option value="Esperando Orçamento" ${isSel('Esperando Orçamento')}>Orçamento</option>
+                            <option value="Esperando Aprovação" ${isSel('Esperando Aprovação')}>Aprovação</option>
+                            <option value="Esperando Peças" ${isSel('Esperando Peças')}>Aguardando Peças</option>
+                            <option value="Em Execução" ${isSel('Em Execução')}>Em Execução</option>
+                            <option value="Esperando Cliente Buscar" ${isSel('Esperando Cliente Buscar')}>Aguardando Retirada</option>
+                            <option value="Liberado p/ Retirada por Terceiro" ${isSel('Liberado p/ Retirada por Terceiro')}>Retirada p/ Terceiro</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-deliver-action btn-mark-delivered" data-car-id="${car.id}" data-plate="${car.plate_clean || plateDisplay}" title="Marcar como entregue e mover para a aba Entregues">
+                        ✅ Entregar
+                    </button>
+
+                    <button type="button" class="btn btn-secondary btn-sm btn-open-history" data-plate="${car.plate_clean || plateDisplay}" title="Ver histórico completo">
+                        📋 Histórico
+                    </button>
+                </div>
+            `;
+
+            // Eventos do card
+            const quickSelect = card.querySelector('.status-quick-select');
+            if (quickSelect) {
+                quickSelect.addEventListener('change', async (e) => {
+                    const newStatus = e.target.value;
+                    const cId = e.target.dataset.carId;
+                    try {
+                        const resp = await fetch('/api/patio/status', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: cId, status: newStatus })
+                        });
+                        const resJson = await resp.json();
+                        if (resJson.success) {
+                            showToast(`Status alterado para: ${newStatus}`);
+                            await loadDashboardData();
+                        } else {
+                            showToast(resJson.error || 'Erro ao alterar status');
+                        }
+                    } catch (err) {
+                        showToast('Erro de comunicação ao alterar status');
+                    }
+                });
+            }
+
+            const btnDeliver = card.querySelector('.btn-mark-delivered');
+            if (btnDeliver) {
+                btnDeliver.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const cId = btnDeliver.dataset.carId;
+                    const pName = btnDeliver.dataset.plate;
+                    try {
+                        const resp = await fetch('/api/patio/status', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: cId, status: 'Entregue' })
+                        });
+                        const resJson = await resp.json();
+                        if (resJson.success) {
+                            showToast(`✅ Veículo ${pName} marcado como Entregue e movido para "Entregues Recentemente"!`);
+                            await loadDashboardData();
+                        } else {
+                            showToast(resJson.error || 'Erro ao marcar como entregue');
+                        }
+                    } catch (err) {
+                        showToast('Erro de comunicação ao marcar como entregue');
+                    }
+                });
+            }
+
+            const btnHist = card.querySelector('.btn-open-history');
+            if (btnHist) {
+                btnHist.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const p = btnHist.dataset.plate;
+                    if (p) selectVehicleByPlate(p);
+                });
+            }
+
+            // Clicar no corpo do card abre histórico
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('select')) return;
+                const p = card.dataset.plate;
+                if (p) selectVehicleByPlate(p);
+            });
+
+            patioActiveGrid.appendChild(card);
+        });
+    }
+
+    // Renderiza Veículos Entregues Recentemente (Aba 2)
+    function renderDeliveredPatio(cars) {
+        if (!patioDeliveredGrid) return;
+        patioDeliveredGrid.innerHTML = '';
+
+        if (cars.length === 0) {
+            patioDeliveredGrid.innerHTML = `
+                <div class="empty-state-box" style="grid-column: 1 / -1;">
+                    <div class="empty-icon">✅</div>
+                    <p style="font-weight: 700; color: #1e293b; font-size: 14px;">Nenhum veículo entregue nos últimos 2 dias.</p>
+                    <p style="font-size: 12.5px; color: #64748b; margin-top: 4px;">Quando um carro for marcado como "Entregue" no pátio, ele ficará disponível aqui por 48 horas.</p>
+                </div>
+            `;
+            return;
+        }
+
+        cars.forEach(car => {
+            const card = document.createElement('div');
+            card.className = 'patio-car-card delivered-card';
+            card.dataset.carId = car.id;
+            card.dataset.plate = car.plate_clean || '';
+
+            const plateDisplay = car.plate_display || car.plate || 'SEM PLACA';
+            const ownerShort = getTwoFirstNames(car.client_name);
+            const deliveredTime = formatDeliveredTime(car.updated_at || car.updated_time);
+
+            card.innerHTML = `
+                <div class="car-card-top-row">
+                    <!-- Placa Mercosul Oficial -->
+                    <div class="mercosul-plate-card">
+                        <div class="mercosul-plate-top">
+                            <span class="mercosul-plate-country">BRASIL</span>
+                            <span class="mercosul-plate-flag">🇧🇷</span>
+                        </div>
+                        <div class="mercosul-plate-body">
+                            <span class="mercosul-plate-text">${escapeHtml(plateDisplay)}</span>
+                        </div>
+                    </div>
+
+                    <div class="car-card-status-badge status-badge-entregue">
+                        ENTREGUE
+                    </div>
+                </div>
+
+                <div class="car-card-main-info">
+                    <h3 class="car-card-model" title="${escapeHtml(car.car_model || 'Veículo')}">
+                        🚗 ${escapeHtml(car.car_model || 'Modelo não informado')} ${car.car_color ? `(${escapeHtml(car.car_color)})` : ''}
+                    </h3>
+                    <div class="car-card-owner">
+                        <span class="owner-icon">👤</span>
+                        <strong class="owner-name-short">${escapeHtml(ownerShort)}</strong>
+                        <span class="owner-name-full">(${escapeHtml(car.client_name || 'Cliente')})</span>
+                    </div>
+                </div>
+
+                <div class="car-card-meta-row">
+                    <div class="car-card-time" style="color: #10b981;" title="Data e hora da entrega">
+                        <span class="time-icon">🏁</span> ${escapeHtml(deliveredTime)}
+                    </div>
+                    ${car.mechanic_name ? `
+                        <div class="car-card-box">
+                            <span>🔧</span> ${escapeHtml(car.mechanic_name)}
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${car.notes ? `
+                    <div class="car-card-notes">
+                        📝 ${escapeHtml(car.notes)}
+                    </div>
+                ` : ''}
+
+                <div class="car-card-actions">
+                    <button type="button" class="btn btn-reactivate-action btn-reactivate-patio" data-car-id="${car.id}" title="Reativar veículo no pátio ativo">
+                        🔄 Retornar ao Pátio
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm btn-open-history" data-plate="${car.plate_clean || plateDisplay}" title="Ver histórico completo">
+                        📋 Histórico
+                    </button>
+                </div>
+            `;
+
+            const btnReactivate = card.querySelector('.btn-reactivate-patio');
+            if (btnReactivate) {
+                btnReactivate.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const cId = btnReactivate.dataset.carId;
+                    try {
+                        const resp = await fetch('/api/patio/status', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: cId, status: 'Em Diagnóstico' })
+                        });
+                        const resJson = await resp.json();
+                        if (resJson.success) {
+                            showToast(`🚗 Veículo reativado no pátio em Diagnóstico!`);
+                            await loadDashboardData();
+                            // Volta para a aba de pátio ativo
+                            if (tabBtnPatio) tabBtnPatio.click();
+                        }
+                    } catch (err) {
+                        showToast('Erro ao reativar veículo no pátio');
+                    }
+                });
+            }
+
+            const btnHist = card.querySelector('.btn-open-history');
+            if (btnHist) {
+                btnHist.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const p = btnHist.dataset.plate;
+                    if (p) selectVehicleByPlate(p);
+                });
+            }
+
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('select')) return;
+                const p = card.dataset.plate;
+                if (p) selectVehicleByPlate(p);
+            });
+
+            patioDeliveredGrid.appendChild(card);
+        });
+    }
+
+    // Renderiza Sidebar Esquerda (Histórico Rápido / Últimos Veículos)
+    function renderQuickHistory(cars, filterText) {
+        if (!quickHistoryList) return;
+        quickHistoryList.innerHTML = '';
+
+        let list = cars || [];
+        if (filterText) {
+            const q = filterText.toLowerCase();
+            list = list.filter(c => 
+                (c.plate_clean && c.plate_clean.toLowerCase().includes(q)) ||
+                (c.client_name && c.client_name.toLowerCase().includes(q)) ||
+                (c.car_model && c.car_model.toLowerCase().includes(q))
+            );
+        }
+
+        if (quickHistoryCountEl) quickHistoryCountEl.textContent = list.length;
+
+        if (list.length === 0) {
+            quickHistoryList.innerHTML = '<div style="font-size: 12.5px; color: #94a3b8; text-align: center; padding: 20px 0;">Nenhum veículo encontrado.</div>';
+            return;
+        }
+
+        list.slice(0, 50).forEach(car => {
+            const item = document.createElement('div');
+            item.className = 'quick-history-item';
+            item.dataset.plate = car.plate_clean || '';
+
+            const ownerShort = getTwoFirstNames(car.client_name);
+            const dateStr = formatDateBr(car.latest_date_sort);
+
+            item.innerHTML = `
+                <div class="quick-history-top">
+                    <span class="quick-history-plate">${escapeHtml(car.plate_display || car.plate_clean)}</span>
+                    <span class="quick-history-visits">${car.visit_count || 1} visita${(car.visit_count > 1 ? 's' : '')}</span>
+                </div>
+                <div class="quick-history-model" title="${escapeHtml(car.car_model || 'Veículo')}">
+                    ${escapeHtml(car.car_model || 'Veículo')}
+                </div>
+                <div class="quick-history-bottom">
+                    <span class="quick-history-owner" title="${escapeHtml(car.client_name || '')}">👤 ${escapeHtml(ownerShort)}</span>
+                    ${dateStr ? `<span class="quick-history-date">${escapeHtml(dateStr)}</span>` : ''}
+                </div>
+            `;
+
+            item.addEventListener('click', () => {
+                const p = item.dataset.plate;
+                if (p) selectVehicleByPlate(p);
+            });
+
+            quickHistoryList.appendChild(item);
+        });
+    }
+
+    // Renderiza Sidebar Direita (Agendamentos e Calendário)
+    function renderAgendaEvents(events, periodFilter) {
+        if (!agendaEventsList) return;
+        agendaEventsList.innerHTML = '';
+
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+        let filtered = events || [];
+        if (periodFilter === 'today') {
+            filtered = filtered.filter(ev => ev.event_date === todayStr);
+        } else if (periodFilter === 'upcoming') {
+            filtered = filtered.filter(ev => ev.event_date >= todayStr);
+        }
+
+        if (agendaCountEl) agendaCountEl.textContent = filtered.length;
+
+        if (filtered.length === 0) {
+            agendaEventsList.innerHTML = `
+                <div class="empty-state-box" style="padding: 20px 10px;">
+                    <div style="font-size: 24px;">📅</div>
+                    <p style="font-weight: 700; color: #1e293b; font-size: 13px;">Nenhum agendamento encontrado.</p>
+                    <button type="button" class="btn btn-primary btn-xs" id="btn-empty-add-agenda" style="margin-top: 8px;">
+                        ➕ Agendar Horário
+                    </button>
+                </div>
+            `;
+            const btnEmptyAdd = document.getElementById('btn-empty-add-agenda');
+            if (btnEmptyAdd) {
+                btnEmptyAdd.addEventListener('click', () => {
+                    if (btnOpenAgendaModal) btnOpenAgendaModal.click();
+                });
+            }
+            return;
+        }
+
+        filtered.forEach(ev => {
+            const card = document.createElement('div');
+            card.className = 'agenda-event-card';
+            card.dataset.eventId = ev.id;
+
+            const isToday = ev.event_date === todayStr;
+            const dateLabel = formatAgendaDate(ev.event_date);
+            const ownerShort = getTwoFirstNames(ev.client_name);
+            const statusClass = (ev.status || 'agendado').toLowerCase().replace(/\s+/g, '-');
+
+            card.innerHTML = `
+                <div class="agenda-time-pill ${isToday ? 'today' : ''}">
+                    <span class="agenda-date-str">${escapeHtml(dateLabel)}</span>
+                    <span class="agenda-hour">${escapeHtml(ev.event_time || '09:00')}</span>
+                </div>
+
+                <div class="agenda-event-title">${escapeHtml(ev.title)}</div>
+
+                <div class="agenda-event-client">
+                    👤 <strong>${escapeHtml(ownerShort)}</strong>
+                    ${ev.plate ? `<span class="agenda-plate-badge">${escapeHtml(ev.plate_display || ev.plate)}</span>` : ''}
+                </div>
+
+                ${ev.car_model ? `<div class="agenda-car-model">🚗 ${escapeHtml(ev.car_model)}</div>` : ''}
+                ${ev.notes ? `<div class="agenda-notes">💬 ${escapeHtml(ev.notes)}</div>` : ''}
+
+                <div class="agenda-event-footer">
+                    <span class="agenda-status-pill status-${statusClass}">${escapeHtml(ev.status || 'Agendado')}</span>
+                    <div class="agenda-actions-group">
+                        <button type="button" class="btn-to-patio" data-event-id="${ev.id}" title="Transferir agendamento e dar entrada no pátio">
+                            🚗 Pátio
+                        </button>
+                        <button type="button" class="btn-agenda-action btn-agenda-done" data-event-id="${ev.id}" title="Marcar como Concluído">
+                            ✔️
+                        </button>
+                        <button type="button" class="btn-agenda-action btn-agenda-delete" data-event-id="${ev.id}" title="Excluir agendamento">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Ações do agendamento
+            const btnToPatio = card.querySelector('.btn-to-patio');
+            if (btnToPatio) {
+                btnToPatio.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const eId = btnToPatio.dataset.eventId;
+                    try {
+                        const resp = await fetch(`/api/agenda/${eId}/to_patio`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'Em Diagnóstico' })
+                        });
+                        const resJson = await resp.json();
+                        if (resJson.success) {
+                            showToast(`🚗 Veículo adicionado ao Pátio com sucesso!`);
+                            await loadDashboardData();
+                            if (tabBtnPatio) tabBtnPatio.click();
+                        } else {
+                            showToast(resJson.error || 'Erro ao dar entrada no pátio');
+                        }
+                    } catch (err) {
+                        showToast('Erro de comunicação ao dar entrada no pátio');
+                    }
+                });
+            }
+
+            const btnDone = card.querySelector('.btn-agenda-done');
+            if (btnDone) {
+                btnDone.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const eId = btnDone.dataset.eventId;
+                    try {
+                        const resp = await fetch(`/api/agenda/status`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: eId, status: 'Concluído' })
+                        });
+                        const resJson = await resp.json();
+                        if (resJson.success) {
+                            showToast('Agendamento marcado como concluído!');
+                            await loadDashboardData();
+                        }
+                    } catch (err) {
+                        showToast('Erro ao atualizar agendamento');
+                    }
+                });
+            }
+
+            const btnDel = card.querySelector('.btn-agenda-delete');
+            if (btnDel) {
+                btnDel.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (!confirm('Deseja realmente excluir este agendamento?')) return;
+                    const eId = btnDel.dataset.eventId;
+                    try {
+                        const resp = await fetch(`/api/agenda/${eId}`, { method: 'DELETE' });
+                        const resJson = await resp.json();
+                        if (resJson.success) {
+                            showToast('Agendamento removido.');
+                            await loadDashboardData();
+                        }
+                    } catch (err) {
+                        showToast('Erro ao remover agendamento');
+                    }
+                });
+            }
+
+            agendaEventsList.appendChild(card);
+        });
+    }
+
+    // Configuração das Abas do Centro
+    if (tabBtnPatio && tabBtnEntregues) {
+        tabBtnPatio.addEventListener('click', () => {
+            tabBtnPatio.classList.add('active');
+            tabBtnEntregues.classList.remove('active');
+            if (tabContentPatio) tabContentPatio.style.display = 'flex';
+            if (tabContentEntregues) tabContentEntregues.style.display = 'none';
+        });
+
+        tabBtnEntregues.addEventListener('click', () => {
+            tabBtnEntregues.classList.add('active');
+            tabBtnPatio.classList.remove('active');
+            if (tabContentEntregues) tabContentEntregues.style.display = 'flex';
+            if (tabContentPatio) tabContentPatio.style.display = 'none';
+        });
+    }
+
+    // Filtros rápidos de status do pátio
+    const patioFilterPills = document.querySelectorAll('.patio-filter-pill');
+    patioFilterPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            patioFilterPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            activePatioStatusFilter = pill.dataset.filter || 'all';
+            renderActivePatio(currentPatioActiveCars, activePatioStatusFilter);
+        });
+    });
+
+    // Filtro da Sidebar Esquerda (Histórico Rápido)
+    if (quickHistoryFilter) {
+        quickHistoryFilter.addEventListener('input', (e) => {
+            renderQuickHistory(allCars, e.target.value.trim());
+        });
+    }
+
+    // Filtro de Período da Agenda
+    const agendaFilterBtns = document.querySelectorAll('.agenda-filter-btn');
+    agendaFilterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            agendaFilterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeAgendaPeriodFilter = btn.dataset.period || 'all';
+            renderAgendaEvents(currentAgendaEvents, activeAgendaPeriodFilter);
+        });
+    });
+
+    // Modal de Novo Agendamento
+    if (btnOpenAgendaModal && agendaModal) {
+        btnOpenAgendaModal.addEventListener('click', () => {
+            if (agendaForm) agendaForm.reset();
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            if (agendaInputDate) agendaInputDate.value = todayStr;
+            if (agendaInputTime) agendaInputTime.value = '09:00';
+            agendaModal.style.display = 'flex';
+        });
+    }
+
+    if (agendaModalCloseBtn && agendaModal) {
+        agendaModalCloseBtn.addEventListener('click', () => {
+            agendaModal.style.display = 'none';
+        });
+    }
+
+    if (agendaModalCancelBtn && agendaModal) {
+        agendaModalCancelBtn.addEventListener('click', () => {
+            agendaModal.style.display = 'none';
+        });
+    }
+
+    if (agendaModal) {
+        agendaModal.addEventListener('click', (e) => {
+            if (e.target === agendaModal) agendaModal.style.display = 'none';
+        });
+    }
+
+    if (agendaForm) {
+        agendaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                title: agendaInputTitle ? agendaInputTitle.value.trim() : '',
+                event_date: agendaInputDate ? agendaInputDate.value : '',
+                event_time: agendaInputTime ? agendaInputTime.value : '09:00',
+                client_name: agendaInputClient ? agendaInputClient.value.trim() : '',
+                plate: agendaInputPlate ? agendaInputPlate.value.trim().toUpperCase() : '',
+                car_model: agendaInputModel ? agendaInputModel.value.trim() : '',
+                service_type: agendaInputService ? agendaInputService.value : 'Revisão Geral',
+                notes: agendaInputNotes ? agendaInputNotes.value.trim() : '',
+                status: 'Agendado'
+            };
+
+            try {
+                const resp = await fetch('/api/agenda', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const resJson = await resp.json();
+                if (resJson.success) {
+                    showToast('Agendamento salvo com sucesso!');
+                    agendaModal.style.display = 'none';
+                    await loadDashboardData();
+                } else {
+                    showToast(resJson.error || 'Erro ao salvar agendamento');
+                }
+            } catch (err) {
+                showToast('Erro de comunicação ao salvar agendamento');
+            }
+        });
+    }
+
+    // Botões de Voltar ao Início e Ações Globais
+    if (btnDashboardNewPatio && btnOpenPatioModal) {
+        btnDashboardNewPatio.addEventListener('click', () => {
+            btnOpenPatioModal.click();
+        });
+    }
+
+    if (btnBackHomeFromSearch) {
+        btnBackHomeFromSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            btnClearSearch.style.display = 'none';
+            resetToWelcome();
+        });
+    }
+
+    if (btnBackHomeFromHistory) {
+        btnBackHomeFromHistory.addEventListener('click', () => {
+            searchInput.value = '';
+            btnClearSearch.style.display = 'none';
+            resetToWelcome();
+        });
+    }
+
+    if (headerLogoArea) {
+        headerLogoArea.style.cursor = 'pointer';
+        headerLogoArea.title = 'Voltar para a Tela Inicial / Dashboard';
+        headerLogoArea.addEventListener('click', () => {
+            searchInput.value = '';
+            btnClearSearch.style.display = 'none';
+            resetToWelcome();
         });
     }
 

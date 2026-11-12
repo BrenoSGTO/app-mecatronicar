@@ -21,7 +21,8 @@ PATIO_STATUSES = [
     "Esperando Pecas",
     "Em Execucao",
     "Esperando Cliente",
-    "Liberado Terceiro"
+    "Liberado Terceiro",
+    "Entregue"
 ]
 
 VALID_PATIO_STATUSES = PATIO_STATUSES
@@ -33,7 +34,8 @@ PATIO_STATUSES_DISPLAY = [
     "Esperando Peças",
     "Em Execução",
     "Esperando Cliente Buscar",
-    "Liberado p/ Retirada por Terceiro"
+    "Liberado p/ Retirada por Terceiro",
+    "Entregue"
 ]
 
 STATUS_DISPLAY_MAP = {
@@ -45,7 +47,8 @@ STATUS_DISPLAY_MAP = {
     "Esperando Cliente": "Esperando Cliente Buscar",
     "Esperando Cliente Buscar": "Esperando Cliente Buscar",
     "Liberado Terceiro": "Liberado p/ Retirada por Terceiro",
-    "Liberado p/ Retirada por Terceiro": "Liberado p/ Retirada por Terceiro"
+    "Liberado p/ Retirada por Terceiro": "Liberado p/ Retirada por Terceiro",
+    "Entregue": "Entregue"
 }
 
 VALID_NF_STATUSES = [
@@ -72,7 +75,9 @@ def normalize_patio_status(status_str):
         "pronto / esperando cliente": "Esperando Cliente",
         "liberado terceiro": "Liberado p/ Retirada por Terceiro",
         "liberado p/ retirada por terceiro": "Liberado p/ Retirada por Terceiro",
-        "liberado para retirada por terceiro": "Liberado p/ Retirada por Terceiro"
+        "liberado para retirada por terceiro": "Liberado p/ Retirada por Terceiro",
+        "entregue": "Entregue",
+        "entregue ao cliente": "Entregue"
     }
     return mapping.get(s, s_raw)
 
@@ -162,6 +167,28 @@ def _setup_nf_table(cur):
             except Exception:
                 pass
 
+def _setup_agenda_table(cur):
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS agenda_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        client_name TEXT,
+        plate TEXT,
+        plate_clean TEXT,
+        plate_display TEXT,
+        car_model TEXT,
+        service_type TEXT,
+        event_date TEXT,
+        event_time TEXT,
+        notes TEXT,
+        status TEXT DEFAULT 'Agendado',
+        created_at TEXT
+    )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_agenda_date ON agenda_events(event_date)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_agenda_plate ON agenda_events(plate_clean)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_agenda_status ON agenda_events(status)")
+
 def init_db(db_path=None):
     path = db_path or get_db_path()
     conn = sqlite3.connect(path)
@@ -193,9 +220,10 @@ def init_db(db_path=None):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_client_clean ON files(client_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_entry_date_sort ON files(entry_date_sort)")
 
-    # Estruturas do CP-01 (patio_status, nf_control e templates)
+    # Estruturas do CP-01 (patio_status, nf_control e templates) e Agenda
     _setup_patio_table(cur)
     _setup_nf_table(cur)
+    _setup_agenda_table(cur)
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS templates (
@@ -1743,3 +1771,281 @@ def get_quick_suggestions(db_path=None):
         "pecas": default_pecas + pecas_db[:30],
         "servicos": default_servicos + servicos_db[:30]
     }
+
+# ==============================================================================
+# CALENDÁRIO / AGENDAMENTOS DA OFICINA (agenda_events) - Issue #11
+# ==============================================================================
+
+def list_agenda_events(start_date=None, end_date=None, status=None, db_path=None):
+    """
+    Lista agendamentos e eventos futuros da oficina, ordenados por data e horário.
+    """
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    query = "SELECT * FROM agenda_events WHERE 1=1"
+    params = []
+    if start_date:
+        query += " AND event_date >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND event_date <= ?"
+        params.append(end_date)
+    if status:
+        query += " AND (status = ? OR LOWER(status) = ?)"
+        params.extend([status, status.lower()])
+
+    query += " ORDER BY event_date ASC, event_time ASC, id ASC"
+    cur.execute(query, params)
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+def get_agenda_event(event_id, db_path=None):
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM agenda_events WHERE id = ?", (event_id,))
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def save_agenda_event(data, db_path=None):
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+
+    rec_id = data.get("id")
+    title = (data.get("title") or "").strip()
+    client_name = (data.get("client_name") or "").strip()
+    plate = (data.get("plate") or "").strip().upper()
+    p_clean = clean_plate(plate) if plate else ""
+    p_disp = format_plate_display(plate) if plate else ""
+    car_model = (data.get("car_model") or "").strip()
+    service_type = (data.get("service_type") or "").strip()
+    event_date = (data.get("event_date") or "").strip() or datetime.date.today().strftime("%Y-%m-%d")
+    event_time = (data.get("event_time") or "").strip() or "09:00"
+    notes = (data.get("notes") or "").strip()
+    status = (data.get("status") or "Agendado").strip()
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Se car_model ou client_name estiverem vazios mas tiver placa, busca no cache de arquivos
+    if p_clean and (not car_model or not client_name):
+        cur.execute("SELECT client_name, car_model FROM files WHERE plate_clean = ? LIMIT 1", (p_clean,))
+        matched = cur.fetchone()
+        if matched:
+            if not client_name and matched[0]:
+                client_name = matched[0]
+            if not car_model and matched[1]:
+                car_model = matched[1]
+
+    if not title:
+        title = service_type or f"Atendimento {car_model or plate or 'Veículo'}"
+
+    if rec_id:
+        cur.execute("""
+        UPDATE agenda_events SET
+            title = ?, client_name = ?, plate = ?, plate_clean = ?, plate_display = ?,
+            car_model = ?, service_type = ?, event_date = ?, event_time = ?,
+            notes = ?, status = ?
+        WHERE id = ?
+        """, (
+            title, client_name, plate, p_clean, p_disp,
+            car_model, service_type, event_date, event_time,
+            notes, status, rec_id
+        ))
+        saved_id = rec_id
+    else:
+        cur.execute("""
+        INSERT INTO agenda_events (
+            title, client_name, plate, plate_clean, plate_display,
+            car_model, service_type, event_date, event_time,
+            notes, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            title, client_name, plate, p_clean, p_disp,
+            car_model, service_type, event_date, event_time,
+            notes, status, now_str
+        ))
+        saved_id = cur.lastrowid
+
+    conn.commit()
+    conn.close()
+    return get_agenda_event(saved_id, db_path=path)
+
+def update_agenda_event_status(event_id, status, db_path=None):
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+    cur.execute("UPDATE agenda_events SET status = ? WHERE id = ?", (status, event_id))
+    conn.commit()
+    conn.close()
+    return get_agenda_event(event_id, db_path=path)
+
+def delete_agenda_event(event_id, db_path=None):
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM agenda_events WHERE id = ?", (event_id,))
+    deleted = cur.rowcount
+    conn.commit()
+    conn.close()
+    return deleted > 0
+
+def seed_sample_agenda_if_empty(db_path=None):
+    path = db_path or get_db_path()
+    events = list_agenda_events(db_path=path)
+    if len(events) > 0:
+        return events
+    today = datetime.date.today()
+    tomorrow = today + datetime.timedelta(days=1)
+    day_after = today + datetime.timedelta(days=2)
+    next_week = today + datetime.timedelta(days=4)
+
+    samples = [
+        {
+            "title": "Revisão Preventiva e Troca de Óleo",
+            "client_name": "Danilo Pereira",
+            "plate": "FNB-1A77",
+            "car_model": "VW Fox 1.0 - Prata",
+            "service_type": "Troca de Óleo / Revisão",
+            "event_date": today.strftime("%Y-%m-%d"),
+            "event_time": "14:30",
+            "notes": "Cliente solicitou verificar barulho no freio ao parar no sinal.",
+            "status": "Confirmado"
+        },
+        {
+            "title": "Alinhamento 3D e Balanceamento",
+            "client_name": "Marcos Antônio",
+            "plate": "FQE-5724",
+            "car_model": "Nissan Sentra - Prata",
+            "service_type": "Alinhamento / Balanceamento",
+            "event_date": today.strftime("%Y-%m-%d"),
+            "event_time": "16:00",
+            "notes": "Volante puxando levemente para a direita.",
+            "status": "Agendado"
+        },
+        {
+            "title": "Diagnóstico de Injeção Eletrônica",
+            "client_name": "Cauê Raquel",
+            "plate": "EVI-2484",
+            "car_model": "Nissan Sentra - Prata",
+            "service_type": "Diagnóstico Scanner",
+            "event_date": tomorrow.strftime("%Y-%m-%d"),
+            "event_time": "09:00",
+            "notes": "Luz da injeção acendendo em marcha lenta.",
+            "status": "Agendado"
+        },
+        {
+            "title": "Substituição de Correia Dentada e Tensor",
+            "client_name": "Natanael Santos",
+            "plate": "DTZ-9080",
+            "car_model": "Peugeot Partner - Branco",
+            "service_type": "Correia Dentada",
+            "event_date": day_after.strftime("%Y-%m-%d"),
+            "event_time": "10:30",
+            "notes": "Revisão preventiva por tempo de uso (5 anos).",
+            "status": "Agendado"
+        },
+        {
+            "title": "Revisão Geral e Suspensão",
+            "client_name": "Juliana Lima",
+            "plate": "BRA-2E19",
+            "car_model": "Honda Civic - Preto",
+            "service_type": "Suspensão",
+            "event_date": next_week.strftime("%Y-%m-%d"),
+            "event_time": "13:30",
+            "notes": "Troca de buchas e batentes dianteiros.",
+            "status": "Agendado"
+        }
+    ]
+    for s in samples:
+        save_agenda_event(s, db_path=path)
+    return list_agenda_events(db_path=path)
+
+def seed_sample_patio_if_empty(db_path=None):
+    """
+    Inicializa carros de exemplo ativos e entregues no pátio caso a base esteja com poucos registros.
+    """
+    path = db_path or get_db_path()
+    cars = list_patio_status(db_path=path)
+    if len(cars) >= 4:
+        return cars
+
+    now = datetime.datetime.now()
+    samples = [
+        {
+            "plate": "FNB-1A77",
+            "client_name": "Danilo Pereira",
+            "car_model": "VW Fox 1.0 - Prata",
+            "car_color": "Prata",
+            "status": "Em Execução",
+            "mechanic_name": "Elevador 1 - Mestre Tonho",
+            "notes": "Troca de óleo 5W40, filtro e correia dentada",
+            "updated_at": (now - datetime.timedelta(hours=3, minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+        },
+        {
+            "plate": "FQE-5724",
+            "client_name": "Natanael",
+            "car_model": "Nissan Sentra 2.0 - Prata",
+            "car_color": "Prata",
+            "status": "Em Diagnóstico",
+            "mechanic_name": "Box Scanner",
+            "notes": "Luz de injeção acesa e oscilação na marcha lenta",
+            "updated_at": (now - datetime.timedelta(hours=1, minutes=40)).strftime("%Y-%m-%d %H:%M:%S")
+        },
+        {
+            "plate": "DTZ-9080",
+            "client_name": "Natanael novo dono",
+            "car_model": "Peugeot Partner - Branco",
+            "car_color": "Branco",
+            "status": "Esperando Peças",
+            "mechanic_name": "Elevador 2",
+            "notes": "Aguardando kit amortecedores e batentes dianteiros",
+            "updated_at": (now - datetime.timedelta(days=1, hours=2)).strftime("%Y-%m-%d %H:%M:%S")
+        },
+        {
+            "plate": "EVI-2484",
+            "client_name": "Cauê Raquel (cunhados ) NovoDono",
+            "car_model": "Nissan Sentra - Prata",
+            "car_color": "Prata",
+            "status": "Esperando Cliente Buscar",
+            "mechanic_name": "Vaga Pátio 2",
+            "notes": "Serviço de freios concluído. Aguardando retirada.",
+            "updated_at": (now - datetime.timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+        },
+        {
+            "plate": "ABC-1D23",
+            "client_name": "Carlos Irmão do Marcos",
+            "car_model": "Honda Civic - Preto",
+            "car_color": "Preto",
+            "status": "Entregue",
+            "mechanic_name": "Entrega",
+            "notes": "Veículo entregue com nota e checklist conferido.",
+            "updated_at": (now - datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+        }
+    ]
+    for s in samples:
+        existing = get_patio_status(plate=s["plate"], db_path=path)
+        if not existing:
+            update_patio_status(
+                plate=s["plate"],
+                client_name=s["client_name"],
+                car_model=s["car_model"],
+                car_color=s["car_color"],
+                status=s["status"],
+                mechanic_name=s["mechanic_name"],
+                notes=s["notes"],
+                updated_at=s["updated_at"],
+                db_path=path
+            )
+    return list_patio_status(db_path=path)
+
