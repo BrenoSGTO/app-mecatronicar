@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 1,
             key: "diagnostico",
             label: "Em Diagnóstico",
-            icon: "🔍",
+            icon: "",
             cssClass: "phase-diagnostico",
             badgeClass: "tv-phase-badge-diagnostico",
             matcher: (s) => /diagn[oó]st/i.test(s)
@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 2,
             key: "orcamento",
             label: "Esperando Orçamento",
-            icon: "📝",
+            icon: "",
             cssClass: "phase-orcamento",
             badgeClass: "tv-phase-badge-orcamento",
             matcher: (s) => /or[cç]am/i.test(s)
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 3,
             key: "aprovacao",
             label: "Esperando Aprovação",
-            icon: "⏳",
+            icon: "",
             cssClass: "phase-aprovacao",
             badgeClass: "tv-phase-badge-aprovacao",
             matcher: (s) => /aprov/i.test(s)
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 4,
             key: "pecas",
             label: "Esperando Peças",
-            icon: "📦",
+            icon: "",
             cssClass: "phase-pecas",
             badgeClass: "tv-phase-badge-pecas",
             matcher: (s) => /pe[cç]a/i.test(s)
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 5,
             key: "execucao",
             label: "Em Execução",
-            icon: "🔧",
+            icon: "",
             cssClass: "phase-execucao",
             badgeClass: "tv-phase-badge-execucao",
             matcher: (s) => /execu/i.test(s)
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 6,
             key: "pronto",
             label: "Aguardando Retirada",
-            icon: "✅",
+            icon: "",
             cssClass: "phase-pronto",
             badgeClass: "tv-phase-badge-pronto",
             matcher: (s) => !/terceir/i.test(s) && (/client/i.test(s) || /retir/i.test(s) || /pronto/i.test(s))
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             order: 7,
             key: "terceiro",
             label: "Retirada p/ Terceiro",
-            icon: "🔑",
+            icon: "",
             cssClass: "phase-terceiro",
             badgeClass: "tv-phase-badge-terceiro",
             matcher: (s) => /terceir/i.test(s)
@@ -209,14 +209,14 @@ document.addEventListener("DOMContentLoaded", () => {
         btnToggleSound.addEventListener("click", () => {
             soundEnabled = !soundEnabled;
             if (soundEnabled) {
-                if (soundIcon) soundIcon.textContent = "🔊";
+                if (soundIcon) soundIcon.textContent = "";
                 btnToggleSound.classList.add("tv-btn-primary");
-                showToast("🔔 Aviso sonoro ativado!");
+                showToast(" Aviso sonoro ativado!");
                 playStatusChangeChime();
             } else {
-                if (soundIcon) soundIcon.textContent = "🔔";
+                if (soundIcon) soundIcon.textContent = "";
                 btnToggleSound.classList.remove("tv-btn-primary");
-                showToast("🔕 Aviso sonoro desativado.");
+                showToast(" Aviso sonoro desativado.");
             }
         });
     }
@@ -337,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         if (hasChanges && Object.keys(previousCarStatuses).length > 0) {
             playStatusChangeChime();
-            showToast("🔔 Status de veículo atualizado no pátio!");
+            showToast(" Status de veículo atualizado no pátio!");
         }
         previousCarStatuses = currentMap;
     }
@@ -444,11 +444,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const plateFmt = car.plate_display || car.plate || "SEM PLACA";
         const boxBadge = car.box_mecanico || car.mechanic_name
-            ? `<span class="tv-card-box-badge">📍 ${escapeHtml(car.box_mecanico || car.mechanic_name)}</span>`
+            ? `<span class="tv-card-box-badge"> ${escapeHtml(car.box_mecanico || car.mechanic_name)}</span>`
             : "";
 
         const notesHtml = car.notes
-            ? `<div class="tv-card-notes" title="${escapeHtml(car.notes)}">📋 ${escapeHtml(car.notes)}</div>`
+            ? `<div class="tv-card-notes" title="${escapeHtml(car.notes)}"> ${escapeHtml(car.notes)}</div>`
             : "";
 
         let thirdPartyHtml = "";
@@ -459,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
             thirdPartyHtml = `
                 <div class="tv-third-party-alert">
                     <div class="tv-third-party-header">
-                        <span class="pulse-gold">🔑</span>
+                        <span class="pulse-gold"></span>
                         <span>RETIRADA AUTORIZADA P/ TERCEIRO</span>
                     </div>
                     <div class="tv-third-party-name">${escapeHtml(authName)}</div>
@@ -471,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const modelText = car.car_model || "Veículo";
         const colorText = car.car_color ? `<span>• ${escapeHtml(car.car_color)}</span>` : "";
         const yearText = car.car_year ? `<span>• ${escapeHtml(car.car_year)}</span>` : "";
-        const clientText = car.client_name ? `👤 ${escapeHtml(car.client_name)}` : "👤 Cliente da Oficina";
+        const clientText = car.client_name ? ` ${escapeHtml(car.client_name)}` : " Cliente da Oficina";
 
         // Exibição do horário da última atualização
         let timeFormatted = "";
@@ -513,7 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             <div class="tv-card-footer">
                 <span>${timeFormatted ? `Atualizado às ${timeFormatted}` : "No pátio"}</span>
-                <span class="tv-card-edit-hint">✎ Editar</span>
+                <span class="tv-card-edit-hint"> Editar</span>
             </div>
         `;
 
@@ -532,7 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function openNewModal() {
         if (modalForm) modalForm.reset();
         const titleEl = document.getElementById("tv-modal-title");
-        if (titleEl) titleEl.textContent = "🚗 Adicionar Carro ao Pátio";
+        if (titleEl) titleEl.textContent = " Adicionar Carro ao Pátio";
         const carIdInput = document.getElementById("form-car-id");
         if (carIdInput) carIdInput.value = "";
         if (btnDeleteCar) btnDeleteCar.style.display = "none";
@@ -545,7 +545,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function openEditModal(car) {
         if (modalForm) modalForm.reset();
         const titleEl = document.getElementById("tv-modal-title");
-        if (titleEl) titleEl.textContent = `🚗 Gerenciar: ${car.plate_display || car.plate}`;
+        if (titleEl) titleEl.textContent = ` Gerenciar: ${car.plate_display || car.plate}`;
 
         setVal("form-car-id", car.id);
         setVal("form-plate", car.plate_display || car.plate);
@@ -645,7 +645,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 const resData = await res.json();
                 if (resData.success) {
-                    showToast("✅ Veículo salvo no pátio com sucesso!");
+                    showToast(" Veículo salvo no pátio com sucesso!");
                     closeModal();
                     fetchPatioData();
                 } else {
@@ -668,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const res = await fetch(`/api/patio/${carId}`, { method: "DELETE" });
                     const resData = await res.json();
                     if (resData.success) {
-                        showToast("🚗 Veículo removido do pátio com sucesso!");
+                        showToast(" Veículo removido do pátio com sucesso!");
                         closeModal();
                         fetchPatioData();
                     }
@@ -691,7 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (tvPatioView) tvPatioView.style.display = "none";
             if (btnOpenManageModal) btnOpenManageModal.style.display = "none";
             if (btnOpenAgendamentoModal) btnOpenAgendamentoModal.style.display = "inline-flex";
-            if (tvCounterIcon) tvCounterIcon.textContent = "📅";
+            if (tvCounterIcon) tvCounterIcon.textContent = "";
             if (tvCounterLabel) tvCounterLabel.textContent = "agendados";
             renderCalendar();
             if (totalCarsEl) totalCarsEl.textContent = agendamentosData.length;
@@ -702,7 +702,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (tvCalendarView) tvCalendarView.style.display = "none";
             if (btnOpenManageModal) btnOpenManageModal.style.display = "inline-flex";
             if (btnOpenAgendamentoModal) btnOpenAgendamentoModal.style.display = "none";
-            if (tvCounterIcon) tvCounterIcon.textContent = "🚗";
+            if (tvCounterIcon) tvCounterIcon.textContent = "";
             if (tvCounterLabel) tvCounterLabel.textContent = "no pátio";
             if (totalCarsEl) totalCarsEl.textContent = patioData.total || 0;
         }
@@ -814,10 +814,10 @@ document.addEventListener("DOMContentLoaded", () => {
         card.className = `tv-agenda-card ${statusClass}`;
 
         const statusLabels = {
-            agendado: "🕒 Agendado",
-            confirmado: "👍 Confirmado",
-            concluido: "✅ Atendido",
-            cancelado: "❌ Cancelado"
+            agendado: " Agendado",
+            confirmado: " Confirmado",
+            concluido: " Atendido",
+            cancelado: " Cancelado"
         };
         const statusBadgeClass = `tv-badge-${ag.status || 'agendado'}`;
         const statusLabel = statusLabels[ag.status] || ag.status;
@@ -838,25 +838,25 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
 
             <div class="tv-card-client-row">
-                <span class="tv-card-client-name">👤 ${escapeHtml(ag.client_name)}</span>
-                <span class="tv-card-client-phone">📞 ${escapeHtml(ag.phone || 'S/ Tel')}</span>
+                <span class="tv-card-client-name"> ${escapeHtml(ag.client_name)}</span>
+                <span class="tv-card-client-phone"> ${escapeHtml(ag.phone || 'S/ Tel')}</span>
             </div>
 
             <div class="tv-card-issue-box">
-                <div class="tv-card-issue-title">🔧 ${escapeHtml(ag.title)}</div>
+                <div class="tv-card-issue-title"> ${escapeHtml(ag.title)}</div>
                 ${ag.description ? `<div class="tv-card-issue-desc">${escapeHtml(ag.description)}</div>` : ''}
             </div>
 
-            ${ag.notes ? `<div style="font-size: 11px; color: #cbd5e1; font-style: italic;">📝 ${escapeHtml(ag.notes)}</div>` : ''}
+            ${ag.notes ? `<div style="font-size: 11px; color: #cbd5e1; font-style: italic;"> ${escapeHtml(ag.notes)}</div>` : ''}
 
             <div class="tv-card-actions">
                 ${ag.status !== 'confirmado' && ag.status !== 'concluido' ? `
                     <button type="button" class="tv-card-btn tv-card-btn-confirm" data-id="${ag.id}" title="Confirmar Agendamento">
-                        👍 Confirmar
+                         Confirmar
                     </button>
                 ` : ''}
                 <button type="button" class="tv-card-btn tv-card-btn-edit" data-id="${ag.id}" title="Editar Detalhes">
-                    ✏️ Detalhes / Editar
+                    ️ Detalhes / Editar
                 </button>
             </div>
         `;
@@ -971,7 +971,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const todayIso = formatLocalDateIso(new Date());
 
         if (ag) {
-            if (tvAgendamentoModalTitle) tvAgendamentoModalTitle.textContent = "✏️ Editar Agendamento na TV";
+            if (tvAgendamentoModalTitle) tvAgendamentoModalTitle.textContent = "️ Editar Agendamento na TV";
             if (formAgendaId) formAgendaId.value = ag.id;
             if (formAgendaClient) formAgendaClient.value = ag.client_name || "";
             if (formAgendaPhone) formAgendaPhone.value = ag.phone || "";
@@ -985,7 +985,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (formAgendaNotes) formAgendaNotes.value = ag.notes || "";
             if (btnDeleteAgendamento) btnDeleteAgendamento.style.display = "inline-flex";
         } else {
-            if (tvAgendamentoModalTitle) tvAgendamentoModalTitle.textContent = "📅 Agendar Atendimento na Oficina";
+            if (tvAgendamentoModalTitle) tvAgendamentoModalTitle.textContent = " Agendar Atendimento na Oficina";
             if (formAgendaId) formAgendaId.value = "";
             if (formAgendaDate) formAgendaDate.value = formatLocalDateIso(calendarCurrentDate);
             if (formAgendaTime) formAgendaTime.value = "08:30";
@@ -1049,7 +1049,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast(agId ? "✅ Agendamento atualizado!" : "📅 Agendamento salvo com sucesso!");
+                    showToast(agId ? " Agendamento atualizado!" : " Agendamento salvo com sucesso!");
                     closeAgendamentoModal();
                     fetchAgendamentosData();
                 } else {
@@ -1071,7 +1071,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const res = await fetch(`/api/agendamentos/${agId}`, { method: "DELETE" });
                     const data = await res.json();
                     if (data.success) {
-                        showToast("🗑️ Agendamento excluído.");
+                        showToast("️ Agendamento excluído.");
                         closeAgendamentoModal();
                         fetchAgendamentosData();
                     } else {

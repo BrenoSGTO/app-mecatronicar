@@ -1,0 +1,1 @@
+window.addEventListener('load', () => { setTimeout(() => { const inp = document.getElementById('search-input'); if(inp){ inp.value='FNB'; inp.dispatchEvent(new Event('input', {bubbles:true})); } }, 600); });

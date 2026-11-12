@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 135" width="100%" height="100%">
+  <defs>
+    <linearGradient id="body-grad-HR" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="50%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glass-grad-HR" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <filter id="shadow-HR" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Sombra no Solo -->
+  <ellipse cx="160" cy="116" rx="125" ry="7" fill="#000000" opacity="0.25"/>
+
+  <!-- Grupo Carroceria com Sombra -->
+  <g filter="url(#shadow-HR)">
+    <!-- Carroceria Principal -->
+    <path d="M 30,96 L 40,90 C 46,88 52,78 56,72 L 80,70 L 98,34 C 102,30 108,28 116,28 L 274,28 C 280,28 284,32 284,38 L 284,90 C 284,94 280,96 276,96 Z" fill="url(#body-grad-HR)" stroke="#0f172a" stroke-width="1.5" stroke-linejoin="round"/>
+    
+    <!-- Linhas de Caráter e Vinco Lateral -->
+    <path d="M 54,74 Q 150,72 260,76" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.85"/>
+    <path d="M 60,86 Q 160,85 250,88" fill="none" stroke="#1e293b" stroke-width="1.2" opacity="0.6"/>
+
+    <!-- Vidros e Colunas -->
+    <path d="M 104,36 L 148,36 L 148,65 L 88,65 Z" fill="url(#glass-grad-HR)" stroke="#1e293b" stroke-width="1.5" stroke-linejoin="round"/>
+
+    <!-- Farol Dianteiro -->
+    <path d="M 30,90 Q 36,86 46,86 L 44,92 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1"/>
+
+    <!-- Lanterna Traseira -->
+    <path d="M 280,82 Q 288,84 286,92 L 278,92 Z" fill="#ef4444" stroke="#991b1b" stroke-width="1"/>
+
+    
+    <line x1='154' y1='28' x2='154' y2='92' stroke='#1e293b' stroke-width='2'/>
+  </g>
+
+  <!-- Roda Dianteira -->
+  <g>
+    <!-- Caixa de Roda Recorte -->
+    <circle cx="75" cy="100" r="23" fill="none" stroke="#1e293b" stroke-width="3"/>
+    <!-- Pneu -->
+    <circle cx="75" cy="100" r="21" fill="#0f172a"/>
+    <!-- Roda de Liga Leve -->
+    <circle cx="75" cy="100" r="15" fill="#cbd5e1" stroke="#64748b" stroke-width="1"/>
+    <!-- Raios da Roda -->
+    <circle cx="75" cy="100" r="4" fill="#3b82f6"/>
+    <line x1="65" y1="100" x2="85" y2="100" stroke="#475569" stroke-width="2"/>
+    <line x1="75" y1="90" x2="75" y2="110" stroke="#475569" stroke-width="2"/>
+  </g>
+
+  <!-- Roda Traseira -->
+  <g>
+    <!-- Caixa de Roda Recorte -->
+    <circle cx="236" cy="100" r="23" fill="none" stroke="#1e293b" stroke-width="3"/>
+    <!-- Pneu -->
+    <circle cx="236" cy="100" r="21" fill="#0f172a"/>
+    <!-- Roda de Liga Leve -->
+    <circle cx="236" cy="100" r="15" fill="#cbd5e1" stroke="#64748b" stroke-width="1"/>
+    <!-- Raios da Roda -->
+    <circle cx="236" cy="100" r="4" fill="#3b82f6"/>
+    <line x1="226" y1="100" x2="246" y2="100" stroke="#475569" stroke-width="2"/>
+    <line x1="236" y1="90" x2="236" y2="110" stroke="#475569" stroke-width="2"/>
+  </g>
+
+  <!-- Rótulo do Modelo (Metadado Sutil) -->
+  <text x="160" y="130" font-family="'Segoe UI', -apple-system, sans-serif" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle" letter-spacing="1">HYUNDAI HR</text>
+</svg>
