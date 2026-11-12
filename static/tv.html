@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MecatroniCar • Pátio ao Vivo (TV)</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="tv.css?v=2.0.0">
+    <link rel="stylesheet" href="tv.css?v=2.1.0">
 </head>
 <body class="tv-body">
     <!-- Header TV de Alto Contraste -->
@@ -19,7 +19,7 @@
                         <span class="pulse-dot"></span> AO VIVO
                     </span>
                 </div>
-                <div class="tv-brand-subtitle">Monitoramento do Pátio &amp; Fluxo de Serviços</div>
+                <div class="tv-brand-subtitle">Monitoramento do Pátio &amp; Fluxo Operacional</div>
             </div>
         </div>
 
@@ -57,106 +57,76 @@
         </div>
     </header>
 
-    <!-- Quadro Principal: 7 Colunas de Status do Pátio -->
-    <main class="tv-board-container">
-        <div class="tv-columns-grid" id="tv-columns-container">
-            <!-- Coluna 1: Em Diagnóstico -->
-            <section class="tv-column col-diagnostico" data-status="Em Diagnóstico">
-                <header class="tv-col-header">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon">🔍</span>
-                        <h2 class="tv-col-name">Em Diagnóstico</h2>
-                    </div>
-                    <span class="tv-col-badge" id="badge-Em Diagnóstico">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Em Diagnóstico">
-                    <!-- Cards preenchidos via JS -->
+    <!-- Quadro Principal: Grade Dinâmica Auto-Fit Ordenada por Fase -->
+    <main class="tv-board-container" id="tv-board-container">
+        <!-- Barra de Fases Operacionais (Macro Pipeline) -->
+        <nav class="tv-phase-bar" id="tv-phase-bar" aria-label="Fases do Pátio">
+            <div class="tv-phase-pill" data-phase="diagnostico" title="Fase 1: Em Diagnóstico">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon">🔍</span>
+                    <span class="tv-phase-name">Diagnóstico</span>
                 </div>
-            </section>
+                <span class="tv-phase-count" id="count-diagnostico">0</span>
+            </div>
+            <div class="tv-phase-pill" data-phase="orcamento" title="Fase 2: Esperando Orçamento">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon">📝</span>
+                    <span class="tv-phase-name">Orçamento</span>
+                </div>
+                <span class="tv-phase-count" id="count-orcamento">0</span>
+            </div>
+            <div class="tv-phase-pill" data-phase="aprovacao" title="Fase 3: Esperando Aprovação">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon">⏳</span>
+                    <span class="tv-phase-name">Aprovação</span>
+                </div>
+                <span class="tv-phase-count" id="count-aprovacao">0</span>
+            </div>
+            <div class="tv-phase-pill" data-phase="pecas" title="Fase 4: Esperando Peças">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon">📦</span>
+                    <span class="tv-phase-name">Aguardando Peças</span>
+                </div>
+                <span class="tv-phase-count" id="count-pecas">0</span>
+            </div>
+            <div class="tv-phase-pill" data-phase="execucao" title="Fase 5: Em Execução">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon">🔧</span>
+                    <span class="tv-phase-name">Em Execução</span>
+                </div>
+                <span class="tv-phase-count" id="count-execucao">0</span>
+            </div>
+            <div class="tv-phase-pill" data-phase="pronto" title="Fase 6: Esperando Cliente Buscar">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon">✅</span>
+                    <span class="tv-phase-name">Aguardando Retirada</span>
+                </div>
+                <span class="tv-phase-count" id="count-pronto">0</span>
+            </div>
+            <div class="tv-phase-pill tv-phase-pill-terceiro" data-phase="terceiro" title="Fase 7: Liberado p/ Retirada por Terceiro">
+                <div class="tv-phase-pill-left">
+                    <span class="tv-phase-icon pulse-gold">🔑</span>
+                    <span class="tv-phase-name">Retirada p/ Terceiro</span>
+                </div>
+                <span class="tv-phase-count" id="count-terceiro">0</span>
+            </div>
+        </nav>
 
-            <!-- Coluna 2: Esperando Orçamento -->
-            <section class="tv-column col-orcamento" data-status="Esperando Orçamento">
-                <header class="tv-col-header">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon">📝</span>
-                        <h2 class="tv-col-name">Esperando Orçamento</h2>
-                    </div>
-                    <span class="tv-col-badge" id="badge-Esperando Orçamento">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Esperando Orçamento">
-                    <!-- Cards preenchidos via JS -->
-                </div>
-            </section>
+        <!-- Grade Dinâmica Auto-Fit que Preenche 100% da Tela -->
+        <div class="tv-grid-wrapper" id="tv-grid-wrapper">
+            <div class="tv-cars-grid" id="tv-cars-grid">
+                <!-- Cards renderizados dinamicamente via tv.js -->
+            </div>
 
-            <!-- Coluna 3: Esperando Aprovação -->
-            <section class="tv-column col-aprovacao" data-status="Esperando Aprovação">
-                <header class="tv-col-header">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon">⏳</span>
-                        <h2 class="tv-col-name">Esperando Aprovação</h2>
-                    </div>
-                    <span class="tv-col-badge" id="badge-Esperando Aprovação">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Esperando Aprovação">
-                    <!-- Cards preenchidos via JS -->
-                </div>
-            </section>
-
-            <!-- Coluna 4: Esperando Peças -->
-            <section class="tv-column col-pecas" data-status="Esperando Peças">
-                <header class="tv-col-header">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon">📦</span>
-                        <h2 class="tv-col-name">Esperando Peças</h2>
-                    </div>
-                    <span class="tv-col-badge" id="badge-Esperando Peças">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Esperando Peças">
-                    <!-- Cards preenchidos via JS -->
-                </div>
-            </section>
-
-            <!-- Coluna 5: Em Execução -->
-            <section class="tv-column col-execucao" data-status="Em Execução">
-                <header class="tv-col-header">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon">🔧</span>
-                        <h2 class="tv-col-name">Em Execução</h2>
-                    </div>
-                    <span class="tv-col-badge" id="badge-Em Execução">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Em Execução">
-                    <!-- Cards preenchidos via JS -->
-                </div>
-            </section>
-
-            <!-- Coluna 6: Esperando Cliente Buscar -->
-            <section class="tv-column col-pronto" data-status="Esperando Cliente Buscar">
-                <header class="tv-col-header">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon">✅</span>
-                        <h2 class="tv-col-name">Esperando Cliente Buscar</h2>
-                    </div>
-                    <span class="tv-col-badge" id="badge-Esperando Cliente Buscar">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Esperando Cliente Buscar">
-                    <!-- Cards preenchidos via JS -->
-                </div>
-            </section>
-
-            <!-- Coluna 7: Liberado p/ Retirada por Terceiro (Super Destaque!) -->
-            <section class="tv-column col-terceiro" data-status="Liberado p/ Retirada por Terceiro">
-                <header class="tv-col-header tv-col-header-terceiro">
-                    <div class="tv-col-title-group">
-                        <span class="tv-col-icon pulse-gold">🔑</span>
-                        <h2 class="tv-col-name">Retirada por Terceiro</h2>
-                    </div>
-                    <span class="tv-col-badge badge-terceiro" id="badge-Liberado p/ Retirada por Terceiro">0</span>
-                </header>
-                <div class="tv-col-cards" id="cards-Liberado p/ Retirada por Terceiro">
-                    <!-- Cards preenchidos via JS -->
-                </div>
-            </section>
+            <!-- Estado Vazio -->
+            <div class="tv-empty-state" id="tv-empty-state" style="display: none;">
+                <div class="tv-empty-icon">🚗</div>
+                <h2 class="tv-empty-title">Pátio Livre no Momento</h2>
+                <p class="tv-empty-sub">Nenhum veículo aguardando atendimento ou em serviço no pátio da MecatroniCar.</p>
+                <button type="button" class="tv-btn tv-btn-primary" id="btn-empty-add-car">
+                    ➕ Adicionar Primeiro Veículo
+                </button>
+            </div>
         </div>
     </main>
 
@@ -164,7 +134,7 @@
     <footer class="tv-footer">
         <div class="tv-footer-left">
             <span class="tv-connection-dot" id="tv-conn-dot"></span>
-            <span id="tv-conn-status">Atualizando a cada 5 segundos</span>
+            <span id="tv-conn-status">Atualização contínua (5s)</span>
             <span class="tv-footer-sep">•</span>
             <span id="tv-last-sync">Última checagem: --:--:--</span>
         </div>
@@ -174,14 +144,14 @@
         </div>
     </footer>
 
-    <!-- Modal de Gerenciamento / Mudança Rápida de Carro no Pátio -->
+    <!-- Modal de Gerenciamento / Adicionar Carro ao Pátio -->
     <div id="tv-manage-modal" class="tv-modal-backdrop" style="display: none;">
-        <div class="tv-modal-content">
+        <div class="tv-modal-dialog">
             <div class="tv-modal-header">
-                <h3 id="tv-modal-title">🚗 Adicionar Carro ao Pátio</h3>
+                <h3 class="tv-modal-title" id="tv-modal-title">🚗 Adicionar Carro ao Pátio</h3>
                 <button type="button" class="tv-modal-close" id="btn-close-modal">✕</button>
             </div>
-            <form id="tv-car-form" class="tv-modal-body">
+            <form id="tv-car-form" class="tv-modal-form">
                 <input type="hidden" id="form-car-id" value="">
 
                 <div class="tv-form-row">
@@ -208,7 +178,7 @@
 
                 <div class="tv-form-row">
                     <div class="tv-form-group flex-3">
-                        <label for="form-status">Status no Pátio *</label>
+                        <label for="form-status">Status / Fase no Pátio *</label>
                         <select id="form-status" class="tv-select" required>
                             <option value="Em Diagnóstico">🔍 Em Diagnóstico</option>
                             <option value="Esperando Orçamento">📝 Esperando Orçamento</option>
@@ -230,16 +200,16 @@
                     <input type="text" id="form-notes" class="tv-input" placeholder="Ex: Barulho na suspensão dianteira / Troca de correia">
                 </div>
 
-                <!-- Seção especial quando status for Liberado p/ Retirada por Terceiro -->
+                <!-- Seção especial para Retirada por Terceiro -->
                 <div id="third-party-section" class="third-party-box" style="display: none;">
                     <div class="third-party-title">
                         <span>🔑 Dados do Terceiro Autorizado a Retirar</span>
-                        <span class="third-party-sub">Estes dados aparecem em destaque na TV para conferência</span>
+                        <span class="third-party-sub">Estes dados aparecem em destaque na TV para conferência imediata</span>
                     </div>
                     <div class="tv-form-row">
                         <div class="tv-form-group flex-3">
                             <label for="form-auth-name">Nome do Autorizado *</label>
-                            <input type="text" id="form-auth-name" class="tv-input" placeholder="Nome completo de quem vai buscar">
+                            <input type="text" id="form-auth-name" class="tv-input" placeholder="Nome completo de quem vai retirar">
                         </div>
                         <div class="tv-form-group flex-2">
                             <label for="form-auth-doc">RG ou CPF *</label>
@@ -268,6 +238,6 @@
     <!-- Toast Notification -->
     <div id="tv-toast" class="tv-toast" style="display: none;"></div>
 
-    <script src="tv.js?v=2.0.0"></script>
+    <script src="tv.js?v=2.1.0"></script>
 </body>
 </html>
