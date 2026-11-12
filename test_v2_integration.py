@@ -164,6 +164,10 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         self.assertIn("plate-mercosul", content_chk)
         self.assertIn("Danilo Pereira", content_chk)
         self.assertNotIn("R$ 724,00", content_chk, "Não deve conter valores monetários individuais")
+        self.assertNotIn("ANOTAÇÕES DO MECÂNICO", content_chk, "Campo de notas longas deve ser removido")
+        self.assertNotIn("Mecânico Responsável", content_chk, "Bloco de assinatura deve ser removido")
+        self.assertNotIn("Conferência Final", content_chk, "Conferência final deve ser removida")
+        self.assertNotIn("Teste de Rodagem", content_chk, "Teste de rodagem deve ser removido")
 
     def test_04_tv_panel_routes_and_patio_flow(self):
         """Valida rota /tv, consulta /api/patio e fluxo de movimentação dos 7 status."""
