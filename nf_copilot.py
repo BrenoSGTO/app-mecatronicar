@@ -176,10 +176,10 @@ def format_nfse_discriminacao(details):
     else:
         items_lines = []
         for idx, it in enumerate(servicos_items, start=1):
-            desc = it.get("description", "").strip()
-            tot = it.get("total_price", "").strip()
-            unit = it.get("unit_price", "").strip()
-            qty = it.get("quantity", "").strip()
+            desc = str(it.get("description", "") or it.get("desc", "") or "").strip()
+            tot = str(it.get("total_price", "") or "").strip()
+            unit = str(it.get("unit_price", "") or "").strip()
+            qty = str(it.get("quantity", "") or it.get("qty", "") or "").strip()
             
             # Formatação do item
             price_tag = ""
@@ -240,10 +240,10 @@ def format_nfe_pecas_text(details):
     items_lines = []
     
     for idx, it in enumerate(pecas_items, start=1):
-        desc = it.get("description", "").strip()
-        qty = it.get("quantity", "1").strip() or "1"
-        unit = it.get("unit_price", "").strip()
-        tot = it.get("total_price", "").strip() or unit
+        desc = str(it.get("description", "") or it.get("desc", "") or "").strip()
+        qty = str(it.get("quantity", "1") or it.get("qty", "1") or "1").strip()
+        unit = str(it.get("unit_price", "") or "").strip()
+        tot = str(it.get("total_price", "") or "").strip() or unit
         fisc = suggest_fiscal_classification(desc)
         
         items_lines.append(
@@ -277,8 +277,8 @@ def format_nfe_pecas_tsv(details):
     lines = ["Item\tQuantidade\tDescrição da Peça\tValor Unitário\tValor Total\tNCM Sugerido\tCFOP Sugerido"]
     
     for idx, it in enumerate(pecas_items, start=1):
-        desc = it.get("description", "").strip()
-        qty = it.get("quantity", "1").strip() or "1"
+        desc = str(it.get("description", "") or it.get("desc", "") or "").strip()
+        qty = str(it.get("quantity", "1") or it.get("qty", "1") or "1").strip() or "1"
         unit = format_currency_raw(it.get("unit_price", ""))
         tot = format_currency_raw(it.get("total_price", "") or unit)
         fisc = suggest_fiscal_classification(desc)

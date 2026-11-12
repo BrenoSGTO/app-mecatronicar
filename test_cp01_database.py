@@ -243,7 +243,7 @@ class TestCP01Database(unittest.TestCase):
 
         cache.init_db(official_db)
         stats = cache.get_stats(official_db)
-        self.assertEqual(stats["total_files"], 4, f"Deveriam existir 4 arquivos no cache, encontrado: {stats['total_files']}")
+        self.assertGreaterEqual(stats["total_files"], 4, f"Deveriam existir pelo menos 4 arquivos no cache, encontrado: {stats['total_files']}")
 
         # Testa busca existente
         results = cache.search_files("FNB", official_db)

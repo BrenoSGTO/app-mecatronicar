@@ -822,8 +822,8 @@ def populate_workbook(wb, data):
         r = 30 + idx
         if idx < len(pecas):
             item = pecas[idx]
-            desc = str(item.get("description", "")).strip()
-            qty_raw = item.get("quantity")
+            desc = str(item.get("description") or item.get("desc", "")).strip()
+            qty_raw = item.get("quantity") if "quantity" in item else item.get("qty")
             qty = float(qty_raw) if qty_raw not in (None, "") and _parse_currency_float(qty_raw) > 0 else (1.0 if desc else None)
             unit_price = _parse_currency_float(item.get("unit_price"))
             
@@ -859,8 +859,8 @@ def populate_workbook(wb, data):
         r = 47 + idx
         if idx < len(servicos):
             item = servicos[idx]
-            desc = str(item.get("description", "")).strip()
-            qty_raw = item.get("quantity")
+            desc = str(item.get("description") or item.get("desc", "")).strip()
+            qty_raw = item.get("quantity") if "quantity" in item else item.get("qty")
             qty = float(qty_raw) if qty_raw not in (None, "") and _parse_currency_float(qty_raw) > 0 else (1.0 if desc and item.get("unit_price") else None)
             unit_price = _parse_currency_float(item.get("unit_price"))
             
