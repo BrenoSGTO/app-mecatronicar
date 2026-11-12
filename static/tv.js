@@ -152,7 +152,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Preenche com os carros
         (data.cars || []).forEach(car => {
-            const container = document.getElementById(`cards-${car.status}`);
+            const stName = car.status_display || car.status;
+            let container = document.getElementById(`cards-${stName}`);
+            if (!container) {
+                container = document.getElementById(`cards-${car.status}`);
+            }
             if (container) {
                 const cardEl = createCarCard(car);
                 container.appendChild(cardEl);

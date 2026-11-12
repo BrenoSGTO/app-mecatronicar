@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MecatroniCar - Gerador de Documentos Profissionais (Orçamento/OS e Checklist de Vidro)
+MecatroniCar - Gerador de Documentos Profissionais (Orçamento/OS e Checklist)
 Implementa os Checkpoints CP-04 (Checklist sem valores para mecânicos) e CP-05 (Orçamento/OS Profissional com Logo).
 """
 import os
@@ -50,10 +50,26 @@ def _format_km(val):
     return f"{val} km"
 
 
+def _get_logo_data_uri():
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(base_dir, "static", "logo.png")
+        if os.path.exists(logo_path):
+            import base64
+            with open(logo_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("ascii")
+                return f"data:image/png;base64,{b64}"
+    except Exception:
+        pass
+    return "/logo.png"
+
+
 def render_orcamento_html(parsed_data, auto_print=False):
     """
     CP-05: Gera o HTML/PDF de alta qualidade para o Orçamento / Ordem de Serviço
-    com a Identidade Visual Oficial da MecatroniCar (fundo branco econômico em toner).
+    com layout corporativo, minimalista e profissional da MecatroniCar.
+    Títulos e subtítulos em negrito com linha de separação inferior, sem excesso
+    de bordas de caixas ou cabeçalhos visuais pesados (design limpo).
     """
     d = parsed_data or {}
     plate_disp = d.get("plate_display") or format_plate_display(d.get("plate", "")) or "SEM PLACA"
@@ -92,6 +108,7 @@ def render_orcamento_html(parsed_data, auto_print=False):
     total = d.get("total") or subtotal or "R$ 0,00"
 
     doc_title = f"Orcamento_OS_{plate_disp.replace('-', '')}_Visita_{visit_num}_MecatroniCar"
+    logo_src = _get_logo_data_uri()
 
     pecas_rows_html = ""
     if pecas:
@@ -134,9 +151,9 @@ def render_orcamento_html(parsed_data, auto_print=False):
     scanner_block_html = ""
     if complaint_comment:
         scanner_block_html = f"""
-        <div class="section-box notes-box">
-            <div class="section-title-bar">
-                <span>🔎 DIAGNÓSTICO TÉCNICO / LEITURA DE SCANNER / OBSERVAÇÕES</span>
+        <div class="section-block">
+            <div class="section-title">
+                <span>Diagnóstico Técnico / Leitura de Scanner / Observações</span>
             </div>
             <pre class="scanner-pre">{_esc(complaint_comment)}</pre>
         </div>
@@ -149,7 +166,6 @@ def render_orcamento_html(parsed_data, auto_print=False):
 <head>
     <meta charset="UTF-8">
     <title>{_esc(doc_title)}</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
         @page {{
             size: A4 portrait;
@@ -163,11 +179,11 @@ def render_orcamento_html(parsed_data, auto_print=False):
             print-color-adjust: exact !important;
         }}
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background: #e2e8f0;
             color: #0f172a;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 11.5px;
+            line-height: 1.45;
         }}
         /* Floating Action Bar (Screen Only) */
         .print-toolbar {{
@@ -175,13 +191,13 @@ def render_orcamento_html(parsed_data, auto_print=False):
             top: 0;
             z-index: 100;
             background: #111827;
-            border-bottom: 3px solid #f9cc01;
+            border-bottom: 2px solid #f9cc01;
             color: #ffffff;
             padding: 10px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }}
         .toolbar-left {{
             display: flex;
@@ -192,13 +208,14 @@ def render_orcamento_html(parsed_data, auto_print=False):
             background: #f9cc01;
             color: #111827;
             font-weight: 800;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
         .toolbar-title {{
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 600;
             color: #f8fafc;
         }}
@@ -208,9 +225,9 @@ def render_orcamento_html(parsed_data, auto_print=False):
         }}
         .btn-action {{
             border: none;
-            border-radius: 7px;
-            padding: 8px 16px;
-            font-size: 13px;
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             display: inline-flex;
@@ -240,286 +257,294 @@ def render_orcamento_html(parsed_data, auto_print=False):
             max-width: 210mm;
             margin: 20px auto;
             background: #ffffff;
-            padding: 14mm 15mm;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
-            border-radius: 4px;
+            padding: 14mm 16mm;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+            border-radius: 2px;
         }}
 
-        /* Brand Header */
+        /* Document Header */
         .doc-header {{
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #111827;
+            align-items: flex-start;
             padding-bottom: 12px;
             margin-bottom: 14px;
+            border-bottom: 2px solid #0f172a;
         }}
-        .brand-left {{
+        .header-left {{
             display: flex;
             align-items: center;
             gap: 14px;
         }}
         .brand-logo {{
-            width: 68px;
-            height: 68px;
+            width: 58px;
+            height: 58px;
             object-fit: contain;
         }}
         .brand-name {{
-            font-size: 24px;
-            font-weight: 900;
+            font-size: 22px;
+            font-weight: 800;
             letter-spacing: -0.5px;
-            color: #111827;
-            line-height: 1.05;
+            color: #0f172a;
+            line-height: 1.1;
         }}
         .brand-legal {{
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 10.5px;
+            font-weight: 600;
             color: #334155;
-            margin-top: 2px;
+            margin-top: 3px;
         }}
         .brand-meta {{
-            font-size: 10.5px;
-            color: #475569;
-            margin-top: 2px;
-        }}
-        .os-box {{
-            text-align: right;
-            background: #f8fafc;
-            border: 2px solid #111827;
-            border-left: 6px solid #f9cc01;
-            border-radius: 6px;
-            padding: 8px 14px;
-            min-width: 195px;
-        }}
-        .os-doc-type {{
             font-size: 10px;
-            font-weight: 800;
+            color: #64748b;
+            margin-top: 1px;
+        }}
+        .header-right {{
+            text-align: right;
+            padding-top: 2px;
+        }}
+        .doc-kind {{
+            font-size: 10px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            color: #475569;
+            color: #64748b;
         }}
-        .os-number {{
-            font-size: 18px;
-            font-weight: 900;
-            color: #111827;
-            margin: 2px 0;
+        .doc-number {{
+            font-size: 17px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 2px 0 3px 0;
+            letter-spacing: -0.3px;
         }}
-        .os-dates {{
+        .doc-dates {{
             font-size: 10.5px;
-            color: #334155;
-            font-weight: 600;
+            color: #475569;
+            line-height: 1.4;
+        }}
+        .doc-dates strong {{
+            color: #1e293b;
         }}
 
-        /* Info Grid (Client & Vehicle) */
+        /* Section Headings: Apenas em negrito, fonte um pouco maior e linha de separação embaixo */
+        .section-block {{
+            margin-bottom: 14px;
+        }}
+        .section-title {{
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            border-bottom: 1.5px solid #0f172a;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }}
+        .section-title .section-meta {{
+            font-size: 10px;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: none;
+            letter-spacing: 0;
+        }}
+
+        /* Client & Vehicle 2-Column Info Grid */
         .info-grid {{
             display: grid;
             grid-template-columns: 1.15fr 0.85fr;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 20px;
+            margin-bottom: 14px;
         }}
-        .section-box {{
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            overflow: hidden;
-            margin-bottom: 12px;
-        }}
-        .info-grid .section-box {{
-            margin-bottom: 0;
-        }}
-        .section-title-bar {{
-            background: #111827;
-            color: #ffffff;
-            font-size: 10.5px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            padding: 5px 10px;
-            border-bottom: 2px solid #f9cc01;
+        .info-col {{
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
         }}
-        .section-content {{
-            padding: 8px 10px;
+        .info-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
         }}
-        .field-row {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 14px;
-            margin-bottom: 4px;
-            font-size: 11.5px;
+        .info-table td {{
+            padding: 2.5px 0;
+            vertical-align: top;
         }}
-        .field-row:last-child {{
-            margin-bottom: 0;
+        .info-table .lbl {{
+            width: 78px;
+            font-weight: 600;
+            color: #64748b;
         }}
-        .field-label {{
+        .info-table .val {{
+            color: #0f172a;
+        }}
+        .info-table .val strong {{
+            color: #0f172a;
             font-weight: 700;
-            color: #475569;
         }}
-        .field-value {{
-            font-weight: 600;
-            color: #0f172a;
-        }}
-        .plate-highlight {{
-            display: inline-block;
-            background: #f9cc01;
-            color: #111827;
+        .plate-text {{
             font-family: "Consolas", "Courier New", monospace;
-            font-weight: 900;
-            font-size: 13px;
-            padding: 1px 7px;
-            border-radius: 4px;
-            border: 1px solid #111827;
-            letter-spacing: 0.8px;
-        }}
-
-        /* Complaint Banner */
-        .complaint-banner {{
-            background: #fefce8;
-            border: 1px solid #fde047;
-            border-left: 5px solid #f9cc01;
-            border-radius: 6px;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            font-size: 12px;
-        }}
-        .complaint-label {{
             font-weight: 800;
-            color: #111827;
-            text-transform: uppercase;
-            font-size: 10.5px;
-            margin-bottom: 2px;
-        }}
-        .complaint-val {{
-            font-weight: 600;
+            font-size: 12px;
             color: #0f172a;
+            letter-spacing: 0.5px;
         }}
 
-        /* Tables */
+        /* Complaint / Symptom Section */
+        .complaint-content {{
+            font-size: 11.5px;
+            color: #0f172a;
+            line-height: 1.45;
+            padding: 2px 0 4px 0;
+        }}
+
+        /* Tables for Parts and Services */
         table.doc-table {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 11.5px;
+            font-size: 11px;
         }}
         table.doc-table th {{
-            background: #f1f5f9;
-            color: #1e293b;
-            font-weight: 800;
+            color: #475569;
+            font-weight: 700;
             text-transform: uppercase;
-            font-size: 10px;
-            padding: 6px 8px;
-            border-bottom: 1px solid #cbd5e1;
+            font-size: 9.5px;
+            letter-spacing: 0.5px;
+            padding: 5px 6px;
+            border-bottom: 1.5px solid #0f172a;
             text-align: left;
         }}
         table.doc-table td {{
-            padding: 6px 8px;
+            padding: 5px 6px;
             border-bottom: 1px solid #e2e8f0;
             color: #0f172a;
+            vertical-align: middle;
         }}
         table.doc-table tr:last-child td {{
-            border-bottom: none;
+            border-bottom: 1px solid #cbd5e1;
         }}
         .col-idx {{
-            width: 34px;
-            text-align: center;
+            width: 30px;
             color: #64748b;
             font-weight: 600;
+            text-align: center;
         }}
         .col-desc {{
-            font-weight: 600;
+            font-weight: 500;
         }}
         .col-qty {{
-            width: 55px;
+            width: 50px;
             text-align: center;
-            font-weight: 700;
+            font-weight: 600;
         }}
         .col-unit {{
             width: 95px;
             text-align: right;
+            color: #334155;
         }}
         .col-total {{
             width: 100px;
             text-align: right;
             font-weight: 700;
+            color: #0f172a;
         }}
         .empty-row {{
             text-align: center;
             color: #64748b;
             font-style: italic;
-            padding: 10px !important;
+            padding: 8px !important;
         }}
-        .section-subtotal-bar {{
-            background: #f8fafc;
-            border-top: 1px solid #cbd5e1;
-            padding: 6px 10px;
+        .subtotal-row {{
             text-align: right;
+            font-size: 11px;
+            color: #475569;
+            padding: 5px 6px 4px 6px;
+        }}
+        .subtotal-row strong {{
+            color: #0f172a;
             font-size: 11.5px;
             font-weight: 700;
-            color: #1e293b;
+            margin-left: 6px;
         }}
 
-        /* Scanner / Technical Notes */
+        /* Technical Notes / Scanner */
         .scanner-pre {{
             font-family: "Consolas", "Courier New", monospace;
             font-size: 10.5px;
+            line-height: 1.45;
             white-space: pre-wrap;
-            padding: 8px 10px;
+            padding: 8px 12px;
             background: #f8fafc;
+            border-left: 3px solid #94a3b8;
             color: #1e293b;
-            max-height: 220px;
-            overflow: hidden;
         }}
 
-        /* Financial Summary & Signatures */
+        /* Bottom Grid: Terms/Signatures & Financial Summary */
         .bottom-grid {{
             display: grid;
-            grid-template-columns: 1fr 260px;
-            gap: 14px;
-            margin-top: 12px;
-            align-items: stretch;
+            grid-template-columns: 1fr 270px;
+            gap: 24px;
+            margin-top: 10px;
+            align-items: start;
+            page-break-inside: avoid;
         }}
-        .terms-box {{
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 10px 12px;
+        .terms-block {{
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             font-size: 10.5px;
-            color: #334155;
+            color: #475569;
+            line-height: 1.45;
+        }}
+        .terms-text p {{
+            margin-bottom: 5px;
+        }}
+        .terms-text strong {{
+            color: #1e293b;
         }}
         .signature-area {{
-            margin-top: 26px;
+            margin-top: 34px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 18px;
+            gap: 20px;
             text-align: center;
         }}
         .sig-line {{
-            border-top: 1px solid #0f172a;
+            border-top: 1px solid #475569;
             padding-top: 4px;
-            font-weight: 700;
-            font-size: 10.5px;
-            color: #0f172a;
+            font-weight: 600;
+            font-size: 10px;
+            color: #1e293b;
         }}
-        .totals-card {{
-            border: 2px solid #111827;
-            border-radius: 6px;
-            overflow: hidden;
-        }}
-        .totals-row {{
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 12px;
-            border-bottom: 1px solid #e2e8f0;
+
+        /* Financial Summary Table */
+        .totals-table {{
+            width: 100%;
+            border-collapse: collapse;
             font-size: 11.5px;
         }}
-        .totals-row.final {{
-            background: #f9cc01;
-            color: #111827;
-            font-size: 14px;
-            font-weight: 900;
-            border-bottom: none;
-            padding: 8px 12px;
+        .totals-table td {{
+            padding: 4px 4px;
+        }}
+        .tot-lbl {{
+            color: #475569;
+            font-weight: 500;
+        }}
+        .tot-val {{
+            text-align: right;
+            color: #0f172a;
+            font-weight: 600;
+        }}
+        .tot-val.discount {{
+            color: #15803d;
+        }}
+        .totals-table tr.final-row td {{
+            padding-top: 8px;
+            border-top: 1.5px solid #0f172a;
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #0f172a;
         }}
 
         @media print {{
@@ -535,21 +560,18 @@ def render_orcamento_html(parsed_data, auto_print=False):
                 box-shadow: none;
                 max-width: 100%;
             }}
-            .scanner-pre {{
-                max-height: none;
-            }}
         }}
     </style>
 </head>
 <body>
     <div class="print-toolbar">
         <div class="toolbar-left">
-            <span class="toolbar-badge">CP-05 • Orçamento / OS Oficial</span>
+            <span class="toolbar-badge">Orçamento / OS</span>
             <span class="toolbar-title">{_esc(plate_disp)} — {_esc(client_name)} ({_esc(car_model)})</span>
         </div>
         <div class="toolbar-actions">
             <a class="btn-action btn-secondary" href="/api/checklist_pdf?file_path={html.escape(d.get('file_path', ''), quote=True)}">
-                📋 Mudar para Checklist de Vidro (Sem Valores)
+                📋 Mudar para Checklist (Sem Valores)
             </a>
             <button class="btn-action btn-primary" onclick="window.print()">
                 🖨️ Imprimir / Salvar como PDF
@@ -560,79 +582,92 @@ def render_orcamento_html(parsed_data, auto_print=False):
     <div class="sheet">
         <!-- Header -->
         <header class="doc-header">
-            <div class="brand-left">
-                <img src="/logo.png" alt="MecatroniCar" class="brand-logo">
-                <div>
+            <div class="header-left">
+                <img src="{logo_src}" alt="MecatroniCar" class="brand-logo">
+                <div class="brand-info">
                     <div class="brand-name">MecatroniCar</div>
                     <div class="brand-legal">Mecatroni Car - Serviços e Autopeças Ltda • CNPJ: 05.961.672/0001-87</div>
                     <div class="brand-meta">Manutenção e Reparação Mecânica Automotiva &amp; Autopeças • Santos/SP</div>
                 </div>
             </div>
-            <div class="os-box">
-                <div class="os-doc-type">Ordem de Serviço / Orçamento</div>
-                <div class="os-number">VISITA Nº {_esc(visit_num)}</div>
-                <div class="os-dates">
-                    Entrada: {_esc(entry_date)} {_esc(entry_time)}<br>
-                    {f'Saída: {_esc(exit_date)} {_esc(exit_time)}' if exit_date and exit_date != '—' else f'Hodômetro: {_esc(odometer)}'}
+            <div class="header-right">
+                <div class="doc-kind">Ordem de Serviço / Orçamento</div>
+                <div class="doc-number">VISITA Nº {_esc(visit_num)}</div>
+                <div class="doc-dates">
+                    <span><strong>Entrada:</strong> {_esc(entry_date)} {_esc(entry_time)}</span>
+                    {f'<br><span><strong>Saída:</strong> {_esc(exit_date)} {_esc(exit_time)}</span>' if exit_date and exit_date != '—' else ''}
                 </div>
             </div>
         </header>
 
-        <!-- Client & Vehicle Info -->
+        <!-- Client & Vehicle Info Grid -->
         <div class="info-grid">
-            <div class="section-box">
-                <div class="section-title-bar">
-                    <span>👤 DADOS DO CLIENTE</span>
+            <div class="info-col">
+                <div class="section-title">
+                    <span>Dados do Cliente</span>
                 </div>
-                <div class="section-content">
-                    <div class="field-row">
-                        <div><span class="field-label">Cliente:</span> <span class="field-value">{_esc(client_name)}</span></div>
-                    </div>
-                    <div class="field-row">
-                        <div><span class="field-label">CPF/CNPJ:</span> <span class="field-value">{_esc(cpf)}</span></div>
-                        {f'<div><span class="field-label">RG:</span> <span class="field-value">{_esc(rg)}</span></div>' if rg else ''}
-                        <div><span class="field-label">Telefone/Celular:</span> <span class="field-value">{_esc(phone)}</span></div>
-                    </div>
-                    <div class="field-row">
-                        <div><span class="field-label">Endereço:</span> <span class="field-value">{_esc(full_address)}</span></div>
-                    </div>
-                    {f'<div class="field-row"><div><span class="field-label">E-mail:</span> <span class="field-value">{_esc(email)}</span></div></div>' if email else ''}
-                </div>
+                <table class="info-table">
+                    <tr>
+                        <td class="lbl">Cliente:</td>
+                        <td class="val"><strong>{_esc(client_name)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">CPF/CNPJ:</td>
+                        <td class="val">{_esc(cpf)}{f' &nbsp;|&nbsp; <strong>RG:</strong> {_esc(rg)}' if rg else ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Telefone:</td>
+                        <td class="val">{_esc(phone)}</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Endereço:</td>
+                        <td class="val">{_esc(full_address)}</td>
+                    </tr>
+                    {f'<tr><td class="lbl">E-mail:</td><td class="val">{_esc(email)}</td></tr>' if email else ''}
+                </table>
             </div>
 
-            <div class="section-box">
-                <div class="section-title-bar">
-                    <span>🚗 DADOS DO VEÍCULO</span>
+            <div class="info-col">
+                <div class="section-title">
+                    <span>Dados do Veículo</span>
                 </div>
-                <div class="section-content">
-                    <div class="field-row" style="align-items: center;">
-                        <div><span class="field-label">Placa:</span> <span class="plate-highlight">{_esc(plate_disp)}</span></div>
-                        <div><span class="field-label">Hodômetro:</span> <span class="field-value">{_esc(odometer)}</span></div>
-                    </div>
-                    <div class="field-row">
-                        <div><span class="field-label">Veículo:</span> <span class="field-value">{_esc(car_full)}</span></div>
-                        <div><span class="field-label">Ano:</span> <span class="field-value">{_esc(car_year)}</span></div>
-                    </div>
-                    <div class="field-row">
-                        <div><span class="field-label">Cor:</span> <span class="field-value">{_esc(car_color)}</span></div>
-                        <div><span class="field-label">Combustível:</span> <span class="field-value">{_esc(car_fuel)}</span></div>
-                    </div>
-                    {f'<div class="field-row"><div><span class="field-label">Chassi:</span> <span class="field-value">{_esc(car_chassis)}</span></div></div>' if car_chassis and car_chassis != '—' else ''}
-                </div>
+                <table class="info-table">
+                    <tr>
+                        <td class="lbl">Placa:</td>
+                        <td class="val"><span class="plate-text">{_esc(plate_disp)}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Veículo:</td>
+                        <td class="val"><strong>{_esc(car_full)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Ano / Cor:</td>
+                        <td class="val">{_esc(car_year)} • {_esc(car_color)}</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Combustível:</td>
+                        <td class="val">{_esc(car_fuel)} &nbsp;|&nbsp; <strong>KM:</strong> {_esc(odometer)}</td>
+                    </tr>
+                    {f'<tr><td class="lbl">Chassi:</td><td class="val">{_esc(car_chassis)}</td></tr>' if car_chassis and car_chassis != '—' else ''}
+                </table>
             </div>
         </div>
 
-        <!-- Complaint / Symptom -->
-        <div class="complaint-banner">
-            <div class="complaint-label">⚠️ Solicitação do Cliente / Sintoma Relatado</div>
-            <div class="complaint-val">{_esc(complaint)}</div>
+        <!-- Complaint / Symptom Section -->
+        <div class="section-block">
+            <div class="section-title">
+                <span>Solicitação do Cliente / Sintoma Relatado</span>
+            </div>
+            <div class="complaint-content">
+                {_esc(complaint)}
+            </div>
         </div>
 
         <!-- Parts Section -->
-        <div class="section-box">
-            <div class="section-title-bar">
-                <span>🔩 PEÇAS E INSUMOS AUTOMOTIVOS ({len(pecas)})</span>
-                <span>CNAE 4530-7/03</span>
+        <div class="section-block">
+            <div class="section-title">
+                <span>Peças e Insumos Aplicados</span>
+                <span class="section-meta">{len(pecas)} {('item' if len(pecas) == 1 else 'itens')} • CNAE 4530-7/03</span>
             </div>
             <table class="doc-table">
                 <thead>
@@ -648,16 +683,16 @@ def render_orcamento_html(parsed_data, auto_print=False):
                     {pecas_rows_html}
                 </tbody>
             </table>
-            <div class="section-subtotal-bar">
-                Subtotal de Peças: {_esc(total_pecas)}
+            <div class="subtotal-row">
+                Subtotal de Peças: <strong>{_esc(total_pecas)}</strong>
             </div>
         </div>
 
         <!-- Services Section -->
-        <div class="section-box">
-            <div class="section-title-bar">
-                <span>🛠️ SERVIÇOS EXECUTADOS / MÃO DE OBRA ({len(servicos)})</span>
-                <span>Item 14.01 • Mecânica Automotiva</span>
+        <div class="section-block">
+            <div class="section-title">
+                <span>Serviços Executados / Mão de Obra</span>
+                <span class="section-meta">{len(servicos)} {('item' if len(servicos) == 1 else 'itens')} • Item 14.01</span>
             </div>
             <table class="doc-table">
                 <thead>
@@ -673,20 +708,24 @@ def render_orcamento_html(parsed_data, auto_print=False):
                     {servicos_rows_html}
                 </tbody>
             </table>
-            <div class="section-subtotal-bar">
-                Subtotal de Mão de Obra / Serviços: {_esc(total_servicos)}
+            <div class="subtotal-row">
+                Subtotal de Mão de Obra: <strong>{_esc(total_servicos)}</strong>
             </div>
         </div>
 
         {scanner_block_html}
 
-        <!-- Totals & Signatures -->
+        <!-- Bottom Grid: Terms & Financial Summary -->
         <div class="bottom-grid">
-            <div class="terms-box">
+            <div class="terms-block">
                 <div>
-                    <strong>Condições e Garantia:</strong><br>
-                    • Forma de Pagamento: <strong>{_esc(payment_method)}</strong><br>
-                    • Serviços e peças contam com garantia legal de 90 dias conforme o Código de Defesa do Consumidor, respeitadas as recomendações técnicas de uso e manutenção.
+                    <div class="section-title">
+                        <span>Condições Gerais e Garantia</span>
+                    </div>
+                    <div class="terms-text">
+                        <p>• <strong>Forma de Pagamento:</strong> {_esc(payment_method)}</p>
+                        <p>• Serviços e peças contam com garantia legal de 90 dias conforme o Código de Defesa do Consumidor (Art. 26, II, Lei nº 8.078/90), respeitadas as condições de uso e especificações do fabricante.</p>
+                    </div>
                 </div>
                 <div class="signature-area">
                     <div class="sig-line">MecatroniCar — Responsável Técnico</div>
@@ -694,27 +733,29 @@ def render_orcamento_html(parsed_data, auto_print=False):
                 </div>
             </div>
 
-            <div class="totals-card">
-                <div class="section-title-bar">
-                    <span>💰 RESUMO FINANCEIRO</span>
+            <div class="totals-block">
+                <div class="section-title">
+                    <span>Resumo Financeiro</span>
                 </div>
-                <div class="totals-row">
-                    <span>Total de Peças:</span>
-                    <strong>{_esc(total_pecas)}</strong>
-                </div>
-                <div class="totals-row">
-                    <span>Total de Serviços:</span>
-                    <strong>{_esc(total_servicos)}</strong>
-                </div>
-                <div class="totals-row">
-                    <span>SubTotal:</span>
-                    <strong>{_esc(subtotal)}</strong>
-                </div>
-                {f'<div class="totals-row"><span>Desconto Concedido:</span><strong>- {_esc(discount)}</strong></div>' if discount and discount != 'R$ 0,00' else ''}
-                <div class="totals-row final">
-                    <span>TOTAL GERAL:</span>
-                    <span>{_esc(total)}</span>
-                </div>
+                <table class="totals-table">
+                    <tr>
+                        <td class="tot-lbl">Total de Peças:</td>
+                        <td class="tot-val">{_esc(total_pecas)}</td>
+                    </tr>
+                    <tr>
+                        <td class="tot-lbl">Total de Serviços:</td>
+                        <td class="tot-val">{_esc(total_servicos)}</td>
+                    </tr>
+                    <tr>
+                        <td class="tot-lbl">Subtotal:</td>
+                        <td class="tot-val">{_esc(subtotal)}</td>
+                    </tr>
+                    {f'<tr><td class="tot-lbl">Desconto:</td><td class="tot-val discount">- {_esc(discount)}</td></tr>' if discount and discount != 'R$ 0,00' else ''}
+                    <tr class="final-row">
+                        <td class="tot-lbl">TOTAL GERAL:</td>
+                        <td class="tot-val">{_esc(total)}</td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
@@ -754,7 +795,7 @@ def render_checklist_html(parsed_data, auto_print=False):
     pecas = d.get("pecas_items") or []
     servicos = d.get("servicos_items") or []
 
-    doc_title = f"Checklist_Vidro_{plate_disp.replace('-', '')}_Visita_{visit_num}_MecatroniCar"
+    doc_title = f"Checklist_{plate_disp.replace('-', '')}_Visita_{visit_num}_MecatroniCar"
 
     pecas_rows_html = ""
     if pecas:
@@ -905,7 +946,7 @@ def render_checklist_html(parsed_data, auto_print=False):
             border-radius: 4px;
         }}
 
-        /* Top Banner Designed for Windshield Visibility */
+        /* Top Banner Designed for Windshield & Shop Floor Visibility */
         .windshield-header {{
             display: flex;
             justify-content: space-between;
@@ -914,6 +955,7 @@ def render_checklist_html(parsed_data, auto_print=False):
             border-radius: 8px;
             overflow: hidden;
             margin-bottom: 12px;
+            background: #ffffff;
         }}
         .ws-brand-col {{
             background: #111827;
@@ -923,6 +965,7 @@ def render_checklist_html(parsed_data, auto_print=False):
             align-items: center;
             gap: 12px;
             border-right: 4px solid #f9cc01;
+            min-width: 210px;
         }}
         .ws-logo {{
             width: 52px;
@@ -930,65 +973,135 @@ def render_checklist_html(parsed_data, auto_print=False):
             object-fit: contain;
         }}
         .ws-title {{
-            font-size: 18px;
+            font-size: 22px;
             font-weight: 900;
             color: #f9cc01;
             text-transform: uppercase;
             line-height: 1.1;
+            letter-spacing: 0.5px;
         }}
         .ws-subtitle {{
-            font-size: 11px;
+            font-size: 10.5px;
             color: #e2e8f0;
             font-weight: 600;
-            margin-top: 2px;
+            margin-top: 3px;
+            letter-spacing: 0.3px;
         }}
         .ws-car-col {{
             flex: 1;
-            padding: 8px 14px;
+            padding: 10px 16px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             background: #f8fafc;
+            border-right: 2px solid #e2e8f0;
         }}
         .ws-car-model {{
-            font-size: 18px;
+            font-size: 26px;
             font-weight: 900;
             color: #0f172a;
+            line-height: 1.15;
+            letter-spacing: -0.3px;
+        }}
+        .ws-car-spec {{
+            font-size: 14px;
+            font-weight: 700;
+            color: #475569;
+            margin-left: 6px;
         }}
         .ws-car-meta {{
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }}
+        .ws-client-row {{
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #0f172a;
+        }}
+        .ws-client-name {{
+            font-weight: 800;
+            color: #0f172a;
+        }}
+        .ws-vehicle-row {{
             font-size: 12px;
-            font-weight: 700;
-            color: #334155;
-            margin-top: 3px;
+            font-weight: 600;
+            color: #475569;
+            display: flex;
+            gap: 16px;
         }}
         .ws-plate-col {{
-            background: #f9cc01;
-            color: #111827;
-            padding: 8px 18px;
+            background: #f1f5f9;
+            padding: 8px 16px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-left: 3px solid #111827;
-            min-width: 175px;
+            min-width: 205px;
         }}
-        .ws-plate-label {{
-            font-size: 10px;
+
+        /* Mercosul Brazilian Plate Drawing */
+        .plate-mercosul {{
+            width: 178px;
+            height: 72px;
+            background: #ffffff;
+            border: 2.5px solid #000000;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+        .plate-top-bar {{
+            background: #003399 !important;
+            color: #ffffff;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+        .plate-country {{
+            font-size: 11px;
             font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            line-height: 1;
         }}
-        .ws-plate-num {{
-            font-family: "Consolas", "Courier New", monospace;
+        .plate-body {{
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            padding: 2px 4px;
+        }}
+        .plate-number-text {{
+            font-family: "Impact", "Arial Black", "Consolas", monospace, sans-serif;
             font-size: 26px;
             font-weight: 900;
-            letter-spacing: 1px;
-            line-height: 1.1;
+            letter-spacing: 1.5px;
+            color: #000000;
+            line-height: 1;
+            text-transform: uppercase;
         }}
         .ws-visit-badge {{
             font-size: 11px;
             font-weight: 800;
-            margin-top: 2px;
+            background: #f9cc01;
+            color: #111827;
+            border: 1.5px solid #111827;
+            border-radius: 4px;
+            padding: 2px 10px;
+            margin-top: 5px;
+            letter-spacing: 0.5px;
+            text-align: center;
         }}
 
         /* Complaint Box */
@@ -1158,7 +1271,7 @@ def render_checklist_html(parsed_data, auto_print=False):
 <body>
     <div class="print-toolbar">
         <div class="toolbar-left">
-            <span class="toolbar-badge">CP-04 • Checklist de Vidro (Sem Valores)</span>
+            <span class="toolbar-badge">Checklist</span>
             <span class="toolbar-title">{_esc(plate_disp)} — {_esc(car_full)} ({_esc(client_name)})</span>
         </div>
         <div class="toolbar-actions">
@@ -1166,31 +1279,56 @@ def render_checklist_html(parsed_data, auto_print=False):
                 📄 Mudar para Orçamento Completo (Com Valores)
             </a>
             <button class="btn-action btn-primary" onclick="window.print()">
-                🖨️ Imprimir Checklist p/ Para-brisa
+                🖨️ Imprimir Checklist
             </button>
         </div>
     </div>
 
     <div class="sheet">
-        <!-- Top Windshield Identification Banner -->
+        <!-- Top Identification Banner -->
         <div class="windshield-header">
             <div class="ws-brand-col">
                 <img src="/logo.png" alt="MecatroniCar" class="ws-logo">
                 <div>
-                    <div class="ws-title">CHECKLIST DE PARA-BRISA</div>
+                    <div class="ws-title">CHECKLIST</div>
                     <div class="ws-subtitle">MecatroniCar • FOLHA DE CHÃO DE OFICINA</div>
                 </div>
             </div>
             <div class="ws-car-col">
-                <div class="ws-car-model">{_esc(car_full)} ({_esc(car_color)} • {_esc(car_year)})</div>
+                <div class="ws-car-model">{_esc(car_full)} <span class="ws-car-spec">({_esc(car_color)} • {_esc(car_year)})</span></div>
                 <div class="ws-car-meta">
-                    👤 Cliente: {_esc(client_name)} &nbsp;|&nbsp; ⏱️ KM: {_esc(odometer)} &nbsp;|&nbsp; 📅 Entrada: {_esc(entry_date)} {_esc(entry_time)}
+                    <div class="ws-client-row">
+                        👤 <strong>Cliente:</strong> <span class="ws-client-name">{_esc(client_name)}</span>
+                    </div>
+                    <div class="ws-vehicle-row">
+                        <span>⏱️ <strong>KM:</strong> {_esc(odometer)}</span>
+                        <span>📅 <strong>Entrada:</strong> {_esc(entry_date)} {_esc(entry_time)}</span>
+                    </div>
                 </div>
             </div>
             <div class="ws-plate-col">
-                <span class="ws-plate-label">PLACA DO VEÍCULO</span>
-                <span class="ws-plate-num">{_esc(plate_disp)}</span>
-                <span class="ws-visit-badge">Visita #{_esc(visit_num)}</span>
+                <div class="plate-mercosul">
+                    <div class="plate-top-bar">
+                        <svg class="mercosul-emblem" viewBox="0 0 24 16" width="16" height="11">
+                            <rect width="24" height="16" fill="#003399"/>
+                            <circle cx="12" cy="4" r="1.2" fill="#ffffff"/>
+                            <circle cx="7" cy="8" r="1.2" fill="#ffffff"/>
+                            <circle cx="17" cy="8" r="1.2" fill="#ffffff"/>
+                            <circle cx="12" cy="12" r="1.2" fill="#ffffff"/>
+                        </svg>
+                        <span class="plate-country">BRASIL</span>
+                        <svg class="brasil-flag" viewBox="0 0 20 14" width="16" height="11">
+                            <rect width="20" height="14" fill="#009c3b" rx="1"/>
+                            <polygon points="10,1.5 18.5,7 10,12.5 1.5,7" fill="#ffdf00"/>
+                            <circle cx="10" cy="7" r="3.2" fill="#002776"/>
+                            <path d="M7.2,7 A3.2,3.2 0 0,0 12.8,7" stroke="#ffffff" stroke-width="0.6" fill="none"/>
+                        </svg>
+                    </div>
+                    <div class="plate-body">
+                        <span class="plate-number-text">{_esc(plate_disp)}</span>
+                    </div>
+                </div>
+                <span class="ws-visit-badge">VISITA #{_esc(visit_num)}</span>
             </div>
         </div>
 

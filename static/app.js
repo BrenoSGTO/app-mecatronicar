@@ -1078,8 +1078,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="btn btn-primary btn-sm btn-doc-orcamento" title="Gerar Orçamento / OS Profissional com Logotipo MecatroniCar em PDF">
                     📄 Orçamento / OS
                 </button>
-                <button type="button" class="btn btn-checklist btn-sm btn-doc-checklist" title="Gerar Checklist de Para-brisa para os mecânicos (sem valores financeiros)">
-                    📋 Checklist (Vidro)
+                <button type="button" class="btn btn-checklist btn-sm btn-doc-checklist" title="Gerar Checklist para os mecânicos (sem valores financeiros)">
+                    📋 Checklist
                 </button>
                 <button type="button" class="btn btn-sm btn-visit-fiscal" style="background: #fefce8; border: 1.5px solid #fde047; color: #854d0e; font-weight: 700;" title="Abrir Copiloto Fiscal para emissão de NFS-e (Santos) e NF-e 55 desta OS">
                     🧾 Copiloto NF

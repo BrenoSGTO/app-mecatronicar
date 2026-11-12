@@ -154,12 +154,15 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         self.assertIn("05.961.672/0001-87", content_orc)
         self.assertIn("FNB 1A77", content_orc)
 
-        # Checklist de Para-brisa (Sem Valores)
+        # Checklist (Sem Valores)
         resp_chk = self.client.get(f"/api/checklist_pdf?file_path={sample_xlsx}")
         self.assertEqual(resp_chk.status_code, 200)
         content_chk = resp_chk.data.decode("utf-8")
-        self.assertIn("CHECKLIST DE PARA-BRISA", content_chk)
+        self.assertIn("CHECKLIST", content_chk)
+        self.assertNotIn("CHECKLIST DE PARA-BRISA", content_chk)
         self.assertIn("FOLHA DE CHÃO DE OFICINA", content_chk)
+        self.assertIn("plate-mercosul", content_chk)
+        self.assertIn("Danilo Pereira", content_chk)
         self.assertNotIn("R$ 724,00", content_chk, "Não deve conter valores monetários individuais")
 
     def test_04_tv_panel_routes_and_patio_flow(self):
