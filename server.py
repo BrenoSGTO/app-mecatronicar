@@ -171,6 +171,53 @@ def open_file_endpoint():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# Documentos PDF Profissionais (CP-04 e CP-05)
+@app.route("/api/orcamento_pdf", methods=["GET"])
+def orcamento_pdf_endpoint():
+    import pdf_generator
+    fpath = request.args.get("file_path", "")
+    auto_print = request.args.get("print", "0") in ("1", "true", "True")
+    
+    if not fpath or not os.path.exists(fpath):
+        plate = request.args.get("plate", "")
+        if plate:
+            db_path = cache.get_db_path(BASE_DIR)
+            history = cache.get_car_history(plate, db_path)
+            if history:
+                fpath = history[0].get("file_path", "")
+                
+    if not fpath or not os.path.exists(fpath):
+        return "Arquivo de planilha não encontrado.", 404
+        
+    try:
+        html_content = pdf_generator.generate_orcamento_from_file(fpath, auto_print=auto_print)
+        return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception as e:
+        return f"Erro gerando orçamento: {str(e)}", 500
+
+@app.route("/api/checklist_pdf", methods=["GET"])
+def checklist_pdf_endpoint():
+    import pdf_generator
+    fpath = request.args.get("file_path", "")
+    auto_print = request.args.get("print", "0") in ("1", "true", "True")
+    
+    if not fpath or not os.path.exists(fpath):
+        plate = request.args.get("plate", "")
+        if plate:
+            db_path = cache.get_db_path(BASE_DIR)
+            history = cache.get_car_history(plate, db_path)
+            if history:
+                fpath = history[0].get("file_path", "")
+                
+    if not fpath or not os.path.exists(fpath):
+        return "Arquivo de planilha não encontrado.", 404
+        
+    try:
+        html_content = pdf_generator.generate_checklist_from_file(fpath, auto_print=auto_print)
+        return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception as e:
+        return f"Erro gerando checklist: {str(e)}", 500
+
 # Updater API endpoints
 @app.route("/api/check_update", methods=["GET"])
 def check_update_endpoint():

@@ -53,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const metricLastKm = document.getElementById('metric-last-km');
     const metricKmDiff = document.getElementById('metric-km-diff');
     
+    const btnVehicleOrcamento = document.getElementById('btn-vehicle-orcamento');
+    const btnVehicleChecklist = document.getElementById('btn-vehicle-checklist');
     const btnPrint = document.getElementById('btn-print');
     const btnPrintNoPrices = document.getElementById('btn-print-no-prices');
     
@@ -190,6 +192,31 @@ document.addEventListener('DOMContentLoaded', () => {
         btnToggleAllServices.innerHTML = showAllServicesGlobal
             ? '🛠️ Ocultar Serviços Feitos em Todas as Planilhas'
             : '🛠️ Mostrar Serviços Feitos em Todas as Planilhas';
+    }
+
+    // Banner Vehicle Actions (CP-04 e CP-05)
+    if (btnVehicleOrcamento) {
+        btnVehicleOrcamento.addEventListener('click', () => {
+            if (!currentCarHistory || !currentCarHistory.visits || currentCarHistory.visits.length === 0) {
+                showToast('Nenhuma visita selecionada.');
+                return;
+            }
+            const latestVisit = currentCarHistory._sortedVisits ? currentCarHistory._sortedVisits[0] : currentCarHistory.visits[0];
+            const url = `/api/orcamento_pdf?file_path=${encodeURIComponent(latestVisit.file_path)}`;
+            window.open(url, '_blank');
+        });
+    }
+
+    if (btnVehicleChecklist) {
+        btnVehicleChecklist.addEventListener('click', () => {
+            if (!currentCarHistory || !currentCarHistory.visits || currentCarHistory.visits.length === 0) {
+                showToast('Nenhuma visita selecionada.');
+                return;
+            }
+            const latestVisit = currentCarHistory._sortedVisits ? currentCarHistory._sortedVisits[0] : currentCarHistory.visits[0];
+            const url = `/api/checklist_pdf?file_path=${encodeURIComponent(latestVisit.file_path)}`;
+            window.open(url, '_blank');
+        });
     }
 
     // Print full (with prices)
@@ -1026,14 +1053,30 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="visit-meta-right">
                 <span class="visit-filename" title="${escapeHtml(visit.file_name)}">📄 ${escapeHtml(visit.file_name)}</span>
+                <button type="button" class="btn btn-primary btn-sm btn-doc-orcamento" title="Gerar Orçamento / OS Profissional com Logotipo MecatroniCar em PDF">
+                    📄 Orçamento / OS
+                </button>
+                <button type="button" class="btn btn-checklist btn-sm btn-doc-checklist" title="Gerar Checklist de Para-brisa para os mecânicos (sem valores financeiros)">
+                    📋 Checklist (Vidro)
+                </button>
                 <button type="button" class="btn-toggle-services btn-sm" title="Mostrar ou ocultar os serviços executados nesta planilha">
-                    🛠️ Ver Serviços Executados (${servicosItems.length})
+                    🛠️ Serviços (${servicosItems.length})
                 </button>
                 <button class="btn btn-excel btn-sm" title="Abrir planilha original no Microsoft Excel">
-                    📂 Abrir no Excel
+                    📂 Excel
                 </button>
             </div>
         `;
+
+        header.querySelector('.btn-doc-orcamento').addEventListener('click', () => {
+            const url = `/api/orcamento_pdf?file_path=${encodeURIComponent(visit.file_path)}`;
+            window.open(url, '_blank');
+        });
+
+        header.querySelector('.btn-doc-checklist').addEventListener('click', () => {
+            const url = `/api/checklist_pdf?file_path=${encodeURIComponent(visit.file_path)}`;
+            window.open(url, '_blank');
+        });
 
         header.querySelector('.btn-excel').addEventListener('click', () => {
             openInExcel(visit.file_path);
