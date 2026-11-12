@@ -167,6 +167,7 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         resp_tv = self.client.get("/tv")
         self.assertEqual(resp_tv.status_code, 200)
         self.assertIn("tv-body", resp_tv.data.decode("utf-8"))
+        resp_tv.close()
 
         # Cadastro de veículo no pátio
         car_data = {
@@ -193,7 +194,8 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         })
         self.assertEqual(resp_status.status_code, 200)
         updated_car = resp_status.get_json().get("car")
-        self.assertEqual(updated_car["status"], "Liberado p/ Retirada por Terceiro")
+        self.assertIn(updated_car.get("status"), ["Liberado Terceiro", "Liberado p/ Retirada por Terceiro"])
+        self.assertEqual(updated_car.get("status_display"), "Liberado p/ Retirada por Terceiro")
         self.assertEqual(updated_car["authorized_name"], "Carlos Irmão do Marcos")
 
         # Consulta sumário
@@ -231,6 +233,23 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         res_json = resp_save.get_json()
         self.assertTrue(res_json["success"])
         self.assertEqual(res_json["plate"], "TST9999")
+
+        # Cleanup do arquivo e dos registros no banco oficial gerados pelo teste
+        created_path = res_json.get("file_path")
+        if created_path and os.path.exists(created_path):
+            try:
+                os.remove(created_path)
+            except Exception:
+                pass
+        official_db = cache.get_db_path()
+        if os.path.exists(official_db):
+            conn = sqlite3.connect(official_db)
+            cur = conn.cursor()
+            cur.execute("DELETE FROM files WHERE plate_clean = 'TST9999'")
+            cur.execute("DELETE FROM patio_status WHERE plate_clean = 'TST9999'")
+            cur.execute("DELETE FROM nf_control WHERE plate_clean = 'TST9999'")
+            conn.commit()
+            conn.close()
 
     def test_06_copiloto_fiscal_nfs_and_nfe(self):
         """Valida separação de serviços (NFS-e Santos) vs peças (NF-e 55) e controle de pendências."""

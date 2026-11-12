@@ -1045,11 +1045,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const kmDisplay = visit.odometer ? `${formatKm(visit.odometer)}` : 'KM não informado';
         const visitNumDisplay = visit.visit_num ? `Visita #${visit.visit_num}` : '';
 
+        // Fiscal status badge for visit card
+        const nfControl = visit.nf_control || {};
+        const isServicoDone = (nfControl.status_servico === 'emitida') || (nfControl.nfse_status === 'emitida');
+        const isPecasDone = (nfControl.status_pecas === 'emitida') || (nfControl.nfe_status === 'emitida');
+        const hasServicoVal = (nfControl.valor_servico > 0) || (servicosItems.length > 0);
+        const hasPecasVal = (nfControl.valor_pecas > 0) || (pecasItems.length > 0);
+
+        let nfBadgeHtml = '';
+        if (isServicoDone && isPecasDone) {
+            const numServ = nfControl.nf_servico_num || nfControl.nfse_number || '';
+            const numPecas = nfControl.nf_pecas_num || nfControl.nfe_number || '';
+            const numsStr = [numServ ? `NFS-e #${numServ}` : 'NFS-e', numPecas ? `NF-e #${numPecas}` : 'NF-e'].join(' • ');
+            nfBadgeHtml = `<span class="badge-visit-nf emitted" title="Notas Fiscais emitidas para esta visita">✅ ${numsStr}</span>`;
+        } else if (isServicoDone || isPecasDone) {
+            nfBadgeHtml = `<span class="badge-visit-nf partial" title="Uma nota fiscal emitida e outra pendente">🟡 NF Parcial</span>`;
+        } else if (hasServicoVal || hasPecasVal) {
+            nfBadgeHtml = `<span class="badge-visit-nf pending" title="Notas Fiscais pendentes de emissão. Clique para abrir no Copiloto.">⏳ NF Pendente</span>`;
+        } else {
+            nfBadgeHtml = `<span class="badge-visit-nf none" title="Nenhuma nota fiscal emitida ainda">🧾 NF</span>`;
+        }
+
         header.innerHTML = `
             <div class="visit-meta-left">
                 <span class="badge-date">📅 ${dateDisplay}</span>
                 <span class="badge-km">⏱️ ${kmDisplay}</span>
                 ${visitNumDisplay ? `<span class="badge-visit-num">${visitNumDisplay}</span>` : ''}
+                ${nfBadgeHtml}
             </div>
             <div class="visit-meta-right">
                 <span class="visit-filename" title="${escapeHtml(visit.file_name)}">📄 ${escapeHtml(visit.file_name)}</span>
@@ -1058,6 +1080,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
                 <button type="button" class="btn btn-checklist btn-sm btn-doc-checklist" title="Gerar Checklist de Para-brisa para os mecânicos (sem valores financeiros)">
                     📋 Checklist (Vidro)
+                </button>
+                <button type="button" class="btn btn-sm btn-visit-fiscal" style="background: #fefce8; border: 1.5px solid #fde047; color: #854d0e; font-weight: 700;" title="Abrir Copiloto Fiscal para emissão de NFS-e (Santos) e NF-e 55 desta OS">
+                    🧾 Copiloto NF
                 </button>
                 <button type="button" class="btn-toggle-services btn-sm" title="Mostrar ou ocultar os serviços executados nesta planilha">
                     🛠️ Serviços (${servicosItems.length})
@@ -1070,6 +1095,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
             </div>
         `;
+
+        const nfBadgeEl = header.querySelector('.badge-visit-nf');
+        if (nfBadgeEl) {
+            nfBadgeEl.addEventListener('click', () => {
+                openFiscalModal(visit.file_path, currentCarHistory?.vehicle?.plate || visit.plate, visit.visit_num);
+            });
+        }
+
+        const btnVisitFiscal = header.querySelector('.btn-visit-fiscal');
+        if (btnVisitFiscal) {
+            btnVisitFiscal.addEventListener('click', () => {
+                openFiscalModal(visit.file_path, currentCarHistory?.vehicle?.plate || visit.plate, visit.visit_num);
+            });
+        }
 
         header.querySelector('.btn-doc-orcamento').addEventListener('click', () => {
             const url = `/api/orcamento_pdf?file_path=${encodeURIComponent(visit.file_path)}`;
