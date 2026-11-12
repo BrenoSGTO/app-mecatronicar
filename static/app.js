@@ -742,20 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
             silhouetteEl.alt = carInfo.modelName;
             silhouetteEl.title = `Modelo: ${carInfo.modelName}`;
         }
-
-        const carInfo = window.CarCatalog ? window.CarCatalog.identifyCar(latest.car_model || '') : null;
-        const brandLogoEl = document.getElementById('detail-brand-logo');
-        const silhouetteEl = document.getElementById('detail-car-silhouette');
-        if (brandLogoEl && carInfo) {
-            brandLogoEl.src = carInfo.brandLogo;
-            brandLogoEl.alt = carInfo.brandName;
-            brandLogoEl.title = `Montadora: ${carInfo.brandName}`;
-        }
-        if (silhouetteEl && carInfo) {
-            silhouetteEl.src = carInfo.silhouette;
-            silhouetteEl.alt = carInfo.modelName;
-            silhouetteEl.title = `Modelo: ${carInfo.modelName}`;
-        }
         detailCarYear.textContent = latest.car_year ? `Ano: ${latest.car_year}` : '';
         detailCarYear.style.display = latest.car_year ? 'inline-block' : 'none';
 
