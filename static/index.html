@@ -32,23 +32,18 @@
                     <button id="btn-zoom-in" class="btn-zoom" title="Aumentar tamanho dos botões e textos">+</button>
                 </div>
 
-                <!-- TV & Patio Buttons -->
-                <a href="/tv" target="_blank" id="btn-open-tv" class="btn btn-tv btn-sm" title="Abrir Painel de TV / Pátio ao Vivo em tela cheia (LAN)">
+                <!-- TV, Pátio e Ações Centrais v2.0 -->
+                <a href="/tv" target="_blank" id="btn-open-tv" class="btn btn-tv btn-sm" title="Abrir Painel de TV do Pátio ao Vivo em tela cheia (LAN)">
                     📺 Painel TV
                 </a>
                 <button id="btn-open-patio-modal" class="btn btn-patio btn-sm" title="Gerenciar carros no pátio da oficina">
                     🚗 Pátio
                 </button>
-
-                <!-- Botões de Acesso Rápido v2.0 -->
-                <a href="/tv" target="_blank" class="btn btn-tv btn-sm" title="Abrir Painel de TV do Pátio ao Vivo">
-                    📺 Painel TV
-                </a>
                 <button id="btn-open-new-os" class="btn btn-primary btn-sm" title="Criar Nova Ordem de Serviço ou Visita com Salvamento no Excel">
                     ➕ Nova Visita / OS
                 </button>
                 <button id="btn-open-fiscal-hub" class="btn btn-fiscal btn-sm" title="Copiloto de Notas Fiscais (NFS-e Santos e NF-e Peças)">
-                    📑 Copiloto Fiscal
+                    🧾 Copiloto Fiscal <span id="header-nf-badge" class="badge-nf-counter" style="display: none;">0</span>
                 </button>
 
                 <!-- Update Check Button -->
@@ -702,99 +697,296 @@
 
     <!-- Modal do Copiloto Fiscal (CP-07) -->
     <div id="fiscal-modal" class="modal-backdrop" style="display: none;">
-        <div class="modal-dialog modal-dialog-lg">
+        <div class="modal-dialog modal-dialog-xl">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <span class="modal-icon">📑</span>
-                    <h3 id="fiscal-modal-title">Copiloto Fiscal • MecatroniCar (Santos/SP)</h3>
+                    <span class="modal-icon">🧾</span>
+                    <div>
+                        <h3 id="fiscal-modal-title">Copiloto Fiscal • MecatroniCar (Santos/SP)</h3>
+                        <p id="fiscal-modal-subtitle" style="font-size: 12px; color: #94a3b8; margin: 0;">Prefeitura de Santos (NFS-e Item 14.01) & Sefaz-SP (NF-e 55 Autopeças)</p>
+                    </div>
                 </div>
                 <button id="fiscal-modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding-top: 12px;">
                 <!-- Abas Fiscais -->
                 <div class="fiscal-tabs">
-                    <button id="tab-btn-nfse" class="fiscal-tab active">🟦 1. NFS-e Santos (Serviços)</button>
-                    <button id="tab-btn-nfe" class="fiscal-tab">🟨 2. NF-e 55 (Peças)</button>
-                    <button id="tab-btn-pending" class="fiscal-tab">📋 3. Fila de Notas Pendentes</button>
+                    <button id="tab-btn-nfse" class="fiscal-tab active">🟦 1. NFS-e Santos (Mão de Obra)</button>
+                    <button id="tab-btn-nfe" class="fiscal-tab">🟨 2. NF-e 55 (Peças / Autopeças)</button>
+                    <button id="tab-btn-tomador" class="fiscal-tab">👤 3. Dados do Tomador</button>
+                    <button id="tab-btn-pending" class="fiscal-tab">
+                        📋 4. Fila de Notas Pendentes <span id="modal-pending-counter" class="badge-pending-mini">0</span>
+                    </button>
                 </div>
 
-                <!-- Painel 1: NFS-e Serviços Santos -->
+                <!-- Painel 1: NFS-e Serviços Santos (Item 14.01) -->
                 <div id="panel-nfse" class="fiscal-panel">
                     <div class="fiscal-alert-box nfse-alert">
-                        <strong>Prefeitura de Santos • Item 14.01 (Mão de Obra Mecânica)</strong>
-                        <p>Copie e cole a discriminação e os dados do tomador diretamente no emissor de nota da prefeitura.</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <strong>🏛️ Prefeitura Municipal de Santos • LC 116/03 Subitem 14.01</strong>
+                                <p style="margin: 2px 0 0 0; font-size: 12px;">CNAE: 4520-0/01 (Serviços de Manutenção e Reparação Mecânica de Veículos)</p>
+                            </div>
+                            <span class="badge" style="background: #bae6fd; color: #0369a1; font-weight: 800;">Mão de Obra</span>
+                        </div>
                     </div>
 
                     <div class="fiscal-section">
                         <div class="fiscal-field-header">
-                            <label>Discriminação Formatada dos Serviços:</label>
-                            <button id="btn-copy-nfse-desc" class="btn btn-secondary btn-sm">📋 Copiar Discriminação</button>
+                            <label>Discriminação dos Serviços Formatada (com Placa, Modelo, KM e Itens):</label>
+                            <button id="btn-copy-nfse-desc" class="btn btn-primary btn-sm" title="Copiar discriminação formatada para a área de transferência">
+                                📋 Copiar Discriminação Formatada (1 Clique)
+                            </button>
                         </div>
-                        <textarea id="nfse-desc-text" class="fiscal-textarea" readonly></textarea>
+                        <textarea id="nfse-desc-text" class="fiscal-textarea" readonly placeholder="Carregando discriminação dos serviços..."></textarea>
                     </div>
 
-                    <div class="fiscal-section">
-                        <div class="fiscal-field-header">
-                            <label>Dados Cadastrais do Tomador (Cliente):</label>
-                            <button id="btn-copy-client-data" class="btn btn-secondary btn-sm">📋 Copiar Dados</button>
-                        </div>
-                        <textarea id="nfse-client-data" class="fiscal-textarea-sm" readonly></textarea>
+                    <!-- Pílulas de Cópia Rápida em 1 Clique -->
+                    <div class="fiscal-quick-pills">
+                        <span class="quick-pills-label">⚡ Cópia Rápida:</span>
+                        <button id="pill-copy-tomador-nfse" class="pill-copy-btn" title="Copiar resumo do tomador">👤 Tomador</button>
+                        <button id="pill-copy-cpf-nfse" class="pill-copy-btn" title="Copiar CPF/CNPJ limpo (só números)">🆔 CPF Limpo</button>
+                        <button id="pill-copy-cep-nfse" class="pill-copy-btn" title="Copiar CEP">📍 CEP</button>
+                        <button id="pill-copy-addr-nfse" class="pill-copy-btn" title="Copiar endereço completo em linha única">🗺️ Endereço 1 Linha</button>
+                        <button id="pill-copy-serv-val" class="pill-copy-btn" title="Copiar apenas o valor total de serviços">💰 Valor Mão de Obra</button>
                     </div>
 
+                    <!-- Tabela Resumo dos Serviços -->
+                    <div class="fiscal-section" style="margin-top: 14px;">
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
+                            🛠️ Itens de Serviço Detectados nesta Ordem de Serviço:
+                        </label>
+                        <div id="nfse-services-list" class="fiscal-items-container"></div>
+                    </div>
+
+                    <!-- Box de Registro e Emissão da NFS-e -->
                     <div class="fiscal-status-row">
                         <div class="fiscal-val-box">
-                            <span>Valor Total dos Serviços:</span>
+                            <span>Total Mão de Obra:</span>
                             <strong id="nfse-total-val">R$ 0,00</strong>
+                            <span id="nfse-current-status-tag" class="badge-status-pill">Pendente</span>
                         </div>
                         <div class="fiscal-action-inputs">
-                            <input type="text" id="nfse-number-input" class="os-input-sm" placeholder="Nº da NFS-e Emitida">
-                            <button id="btn-mark-nfse-done" class="btn btn-primary btn-sm">✅ Marcar como Emitida</button>
+                            <input type="text" id="nfse-number-input" class="os-input-sm" placeholder="Nº da NFS-e Emitida (ex: 1042)" title="Digite o número da nota emitida na prefeitura de Santos">
+                            <input type="date" id="nfse-date-input" class="os-input-sm" title="Data da emissão">
+                            <button id="btn-mark-nfse-done" class="btn btn-success btn-sm" title="Salvar e marcar como emitida">
+                                ✅ Marcar NFS-e Emitida
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Painel 2: NF-e Peças -->
+                <!-- Painel 2: NF-e Peças (Modelo 55 - Autopeças) -->
                 <div id="panel-nfe" class="fiscal-panel" style="display: none;">
                     <div class="fiscal-alert-box nfe-alert">
-                        <strong>NF-e Modelo 55 • Comércio Varejista de Autopeças</strong>
-                        <p>Classificação tributária sugerida: CFOP 5405 / CST 060 (Substituição Tributária).</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <strong>🚗 Sefaz-SP • NF-e Modelo 55 • Comércio Varejista de Autopeças</strong>
+                                <p style="margin: 2px 0 0 0; font-size: 12px;">CNAE: 4530-7/03 • CFOP Padrão: 5.405 (Autopeças c/ ICMS-ST) • CSOSN 500</p>
+                            </div>
+                            <span class="badge" style="background: #fde68a; color: #92400e; font-weight: 800;">Peças / Mercadorias</span>
+                        </div>
                     </div>
 
-                    <div class="fiscal-table-wrapper">
+                    <div class="fiscal-actions-bar">
+                        <button id="btn-copy-nfe-summary" class="btn btn-primary btn-sm" title="Copiar lista de peças e valores formatada">
+                            📋 Copiar Lista de Peças e Valores (1 Clique)
+                        </button>
+                        <button id="btn-copy-nfe-tsv" class="btn btn-secondary btn-sm" title="Copiar tabela TSV para colar direto no Excel ou emissor fiscal">
+                            📊 Copiar Tabela TSV (Excel/Emissor)
+                        </button>
+                        <button id="pill-copy-parts-val" class="pill-copy-btn" title="Copiar apenas o valor total de peças">
+                            💰 Copiar Total Peças
+                        </button>
+                        <button id="pill-copy-tomador-nfe" class="pill-copy-btn" title="Copiar dados do destinatário">
+                            👤 Copiar Destinatário
+                        </button>
+                    </div>
+
+                    <!-- Tabela de Peças com Sugestão de NCM e CFOP -->
+                    <div class="fiscal-table-wrapper" style="margin-top: 10px;">
                         <table class="fiscal-table">
                             <thead>
                                 <tr>
-                                    <th>Peça</th>
-                                    <th>Qtd</th>
-                                    <th>Unitário</th>
-                                    <th>Total</th>
-                                    <th>CFOP</th>
-                                    <th>NCM</th>
+                                    <th style="width: 40px;">#</th>
+                                    <th>Descrição da Peça / Autopeça</th>
+                                    <th style="width: 60px; text-align: right;">Qtd</th>
+                                    <th style="width: 100px; text-align: right;">Unitário</th>
+                                    <th style="width: 105px; text-align: right;">Total</th>
+                                    <th style="width: 75px; text-align: center;">CFOP</th>
+                                    <th style="width: 150px;">NCM Sugerido</th>
                                 </tr>
                             </thead>
                             <tbody id="nfe-items-tbody"></tbody>
                         </table>
                     </div>
 
+                    <!-- Box de Registro e Emissão da NF-e -->
                     <div class="fiscal-status-row">
                         <div class="fiscal-val-box">
-                            <span>Valor Total das Peças:</span>
+                            <span>Total de Peças:</span>
                             <strong id="nfe-total-val">R$ 0,00</strong>
+                            <span id="nfe-current-status-tag" class="badge-status-pill">Pendente</span>
                         </div>
                         <div class="fiscal-action-inputs">
-                            <input type="text" id="nfe-number-input" class="os-input-sm" placeholder="Nº da NF-e Emitida">
-                            <button id="btn-mark-nfe-done" class="btn btn-primary btn-sm">✅ Marcar como Emitida</button>
+                            <input type="text" id="nfe-number-input" class="os-input-sm" placeholder="Nº da NF-e Emitida (ex: 542)" title="Digite o número da NF-e Modelo 55 emitida">
+                            <input type="date" id="nfe-date-input" class="os-input-sm" title="Data da emissão">
+                            <button id="btn-mark-nfe-done" class="btn btn-success btn-sm" title="Salvar e marcar como emitida">
+                                ✅ Marcar NF-e Emitida
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Painel 3: Fila de Pendentes -->
+                <!-- Painel 3: Dados Cadastrais do Tomador (Cliente) -->
+                <div id="panel-tomador" class="fiscal-panel" style="display: none;">
+                    <div class="fiscal-alert-box" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <strong>👤 Dados Cadastrais do Tomador do Serviço / Destinatário</strong>
+                            <button id="btn-copy-full-tomador" class="btn btn-primary btn-sm">📋 Copiar Todos os Dados</button>
+                        </div>
+                    </div>
+
+                    <div class="tomador-cards-grid">
+                        <div class="tomador-field-card">
+                            <span class="field-label">Nome / Razão Social:</span>
+                            <div class="field-row">
+                                <strong id="tomador-name" class="field-value">-</strong>
+                                <button class="btn-copy-inline" data-target="tomador-name" title="Copiar nome">📋</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">CPF / CNPJ:</span>
+                            <div class="field-row">
+                                <strong id="tomador-cpf" class="field-value">-</strong>
+                                <button class="btn-copy-inline" data-target="tomador-cpf" title="Copiar CPF formatado">📋 Formatado</button>
+                                <button id="btn-copy-cpf-raw" class="btn-copy-inline" title="Copiar apenas números">🔢 Sem pontuação</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">Telefone / WhatsApp:</span>
+                            <div class="field-row">
+                                <span id="tomador-phone" class="field-value">-</span>
+                                <button class="btn-copy-inline" data-target="tomador-phone" title="Copiar telefone">📋</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">E-mail:</span>
+                            <div class="field-row">
+                                <span id="tomador-email" class="field-value">-</span>
+                                <button class="btn-copy-inline" data-target="tomador-email" title="Copiar e-mail">📋</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card full-width">
+                            <span class="field-label">Endereço Completo em 1 Linha (Ideal para colagem rápida):</span>
+                            <div class="field-row">
+                                <span id="tomador-single-line" class="field-value" style="font-family: monospace; font-size: 13px;">-</span>
+                                <button class="btn-copy-inline" data-target="tomador-single-line" title="Copiar endereço completo em 1 linha">📋 Copiar 1 Linha</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">Logradouro & Número:</span>
+                            <div class="field-row">
+                                <span id="tomador-street" class="field-value">-</span>
+                                <button class="btn-copy-inline" data-target="tomador-street" title="Copiar rua e número">📋</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">Bairro:</span>
+                            <div class="field-row">
+                                <span id="tomador-neighborhood" class="field-value">-</span>
+                                <button class="btn-copy-inline" data-target="tomador-neighborhood" title="Copiar bairro">📋</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">Cidade / UF:</span>
+                            <div class="field-row">
+                                <span id="tomador-city" class="field-value">Santos / SP</span>
+                                <button class="btn-copy-inline" data-target="tomador-city" title="Copiar cidade">📋</button>
+                            </div>
+                        </div>
+
+                        <div class="tomador-field-card">
+                            <span class="field-label">CEP:</span>
+                            <div class="field-row">
+                                <strong id="tomador-cep" class="field-value">-</strong>
+                                <button class="btn-copy-inline" data-target="tomador-cep" title="Copiar CEP">📋</button>
+                                <button id="btn-copy-cep-raw" class="btn-copy-inline" title="Copiar CEP sem traço">🔢 Sem traço</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel 4: Fila de Notas Fiscais Pendentes da Oficina -->
                 <div id="panel-pending" class="fiscal-panel" style="display: none;">
-                    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Ordens de serviço com notas fiscais pendentes de emissão:</p>
+                    <!-- KPI Summary Cards -->
+                    <div class="fiscal-kpi-grid">
+                        <div class="fiscal-kpi-card">
+                            <span class="kpi-label">⏳ Visitas c/ NFs Pendentes</span>
+                            <strong id="kpi-pending-visits" class="kpi-value text-amber">0</strong>
+                        </div>
+                        <div class="fiscal-kpi-card">
+                            <span class="kpi-label">🛠️ NFS-e Serviços a Emitir</span>
+                            <strong id="kpi-pending-services" class="kpi-value text-blue">R$ 0,00</strong>
+                            <small id="kpi-pending-services-sub">0 visitas</small>
+                        </div>
+                        <div class="fiscal-kpi-card">
+                            <span class="kpi-label">🔩 NF-e Peças a Emitir</span>
+                            <strong id="kpi-pending-parts" class="kpi-value text-amber">R$ 0,00</strong>
+                            <small id="kpi-pending-parts-sub">0 visitas</small>
+                        </div>
+                        <div class="fiscal-kpi-card">
+                            <span class="kpi-label">✅ NFs Já Emitidas</span>
+                            <strong id="kpi-emitted-count" class="kpi-value text-green">0</strong>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar de Filtros e Busca na Fila -->
+                    <div class="fiscal-queue-toolbar">
+                        <div class="fiscal-queue-filters">
+                            <button class="queue-filter-btn active" data-filter="pending">Todas Pendentes</button>
+                            <button class="queue-filter-btn" data-filter="pending_servico">🛠️ Só Mão de Obra</button>
+                            <button class="queue-filter-btn" data-filter="pending_pecas">🔩 Só Peças</button>
+                            <button class="queue-filter-btn" data-filter="emitidas">✅ Já Emitidas</button>
+                            <button class="queue-filter-btn" data-filter="all">Todas</button>
+                        </div>
+
+                        <div class="fiscal-queue-actions">
+                            <div class="queue-search-box">
+                                <input type="text" id="queue-search-input" placeholder="🔍 Filtrar por placa, cliente, carro..." autocomplete="off">
+                                <button id="btn-clear-queue-search" style="display: none;">✕</button>
+                            </div>
+                            <button id="btn-export-queue-csv" class="btn btn-secondary btn-sm" title="Baixar lista em planilha CSV para a contabilidade">
+                                📥 CSV
+                            </button>
+                            <button id="btn-export-queue-txt" class="btn btn-secondary btn-sm" title="Baixar resumo em texto TXT">
+                                📄 TXT
+                            </button>
+                            <button id="btn-refresh-queue" class="btn btn-primary btn-sm" title="Atualizar dados da fila">
+                                🔄
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Ordens de Serviço na Fila -->
                     <div id="fiscal-pending-list" class="fiscal-pending-list"></div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="justify-content: space-between;">
+                <div style="font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 8px;">
+                    <span>CNPJ: <strong>05.961.672/0001-87</strong></span>
+                    <span>•</span>
+                    <span>Santos / SP</span>
+                    <span>•</span>
+                    <span id="footer-nf-summary">0 notas pendentes</span>
+                </div>
                 <button id="fiscal-modal-dismiss" class="btn btn-secondary">Fechar</button>
             </div>
         </div>

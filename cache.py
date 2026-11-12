@@ -87,25 +87,10 @@ def _setup_patio_table(cur):
         mechanic_name TEXT,
         third_party_name TEXT,
         third_party_doc TEXT,
-        third_party_phone TEXT,
-        client_name TEXT,
-        car_model TEXT,
-        car_color TEXT,
         updated_at TEXT,
         notes TEXT
     )
     """)
-    for col, col_type in [
-        ("third_party_phone", "TEXT"),
-        ("client_name", "TEXT"),
-        ("car_model", "TEXT"),
-        ("car_color", "TEXT")
-    ]:
-        try:
-            cur.execute(f"ALTER TABLE patio_status ADD COLUMN {col} {col_type}")
-        except Exception:
-            pass
-
     cur.execute("CREATE INDEX IF NOT EXISTS idx_patio_plate ON patio_status(plate_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_patio_file_path ON patio_status(file_path)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_patio_status ON patio_status(status)")
@@ -608,7 +593,7 @@ def _format_patio_dict(row_dict):
     display = STATUS_DISPLAY_MAP.get(d.get("status"), d.get("status"))
     d["status_display"] = display
     d["status_key"] = d.get("status")
-    d["status"] = display
+    d["status"] = d.get("status")
     row_dict.clear()
     row_dict.update(d)
     return row_dict
@@ -634,10 +619,10 @@ def list_patio_status(status=None, db_path=None):
         p.mechanic_name,
         p.third_party_name,
         p.third_party_doc,
-        p.third_party_phone,
-        COALESCE(p.client_name, f.client_name) AS client_name,
-        COALESCE(p.car_model, f.car_model) AS car_model,
-        COALESCE(p.car_color, f.car_color) AS car_color,
+        '' AS third_party_phone,
+        f.client_name AS client_name,
+        f.car_model AS car_model,
+        f.car_color AS car_color,
         p.updated_at,
         p.notes,
         f.car_year,
@@ -1268,11 +1253,9 @@ def get_nf_queue(filter_type='pending', query='', db_path=None):
             f.client_name, f.client_clean, f.car_model, f.car_year, f.car_color,
             f.visit_num, f.entry_date, f.entry_date_sort, f.odometer, f.odometer_int,
             f.complaint, f.data_json,
-            n.id as nf_id, n.status_servico, n.nf_servico_num, n.valor_servico,
-            n.data_emissao_servico, n.status_pecas, n.nf_pecas_num, n.valor_pecas,
-            n.data_emissao_pecas, n.notes, n.updated_time,
-            n.nfse_status, n.nfse_number, n.nfse_date, n.nfse_value,
-            n.nfe_status, n.nfe_number, n.nfe_date, n.nfe_value
+            n.id as nf_id, n.notes, n.updated_at as updated_time,
+            n.nfse_status, n.nfse_number,
+            n.nfe_status, n.nfe_number
         FROM files f
         LEFT JOIN nf_control n ON (
             (n.file_path IS NOT NULL AND n.file_path != '' AND f.file_path = n.file_path) OR
@@ -1307,31 +1290,31 @@ def get_nf_queue(filter_type='pending', query='', db_path=None):
         tot_serv_str = d_json.get("total_servicos") or ""
         tot_geral_str = d_json.get("total") or d_json.get("subtotal") or ""
 
-        val_serv = float(r["valor_servico"] or r["nfse_value"]) if (r["valor_servico"] or r["nfse_value"]) else parse_currency_float(tot_serv_str)
-        val_pec = float(r["valor_pecas"] or r["nfe_value"]) if (r["valor_pecas"] or r["nfe_value"]) else parse_currency_float(tot_pecas_str)
+        val_serv = parse_currency_float(tot_serv_str)
+        val_pec = parse_currency_float(tot_pecas_str)
         val_tot = val_serv + val_pec if (val_serv + val_pec) > 0 else parse_currency_float(tot_geral_str)
 
         has_serv = len(servicos) > 0 or val_serv > 0
         has_pec = len(pecas) > 0 or val_pec > 0
 
-        # Status Serviço (normaliza de status_servico ou nfse_status)
-        raw_serv_status = r["status_servico"] or r["nfse_status"]
+        # Status Serviço (normaliza de nfse_status)
+        raw_serv_status = r["nfse_status"]
         if raw_serv_status:
             st_serv = raw_serv_status.lower()
         else:
             st_serv = "pendente" if has_serv else "nao_se_aplica"
 
-        # Status Peças (normaliza de status_pecas ou nfe_status)
-        raw_pec_status = r["status_pecas"] or r["nfe_status"]
+        # Status Peças (normaliza de nfe_status)
+        raw_pec_status = r["nfe_status"]
         if raw_pec_status:
             st_pec = raw_pec_status.lower()
         else:
             st_pec = "pendente" if has_pec else "nao_se_aplica"
 
-        num_serv = r["nf_servico_num"] or r["nfse_number"] or ""
-        date_serv = r["data_emissao_servico"] or r["nfse_date"] or ""
-        num_pec = r["nf_pecas_num"] or r["nfe_number"] or ""
-        date_pec = r["data_emissao_pecas"] or r["nfe_date"] or ""
+        num_serv = r["nfse_number"] or ""
+        date_serv = ""
+        num_pec = r["nfe_number"] or ""
+        date_pec = ""
 
         is_pending_serv = (st_serv == "pendente")
         is_pending_pec = (st_pec == "pendente")
@@ -1441,7 +1424,7 @@ def get_pending_nf_list(db_path=None):
     """
     Atalho para listar todas as notas fiscais pendentes (NFS-e de Serviços ou NF-e de Peças).
     """
-    return get_nf_queue(filter_type='pending', db_path=db_path).get("queue", [])
+    return list_nf_control(pending_only=True, db_path=db_path)
 
 set_nf_control = update_nf_control
 

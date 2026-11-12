@@ -430,85 +430,101 @@ def os_save_endpoint():
 # ==========================================
 # COPILOTO FISCAL (CP-07)
 # ==========================================
+import nf_copilot
 
+@app.route("/api/nf/data", methods=["GET"])
 @app.route("/api/nf/data/<plate>", methods=["GET"])
-def nf_data_endpoint(plate):
+def nf_data_endpoint(plate=None):
     db_path = cache.get_db_path(BASE_DIR)
-    history = cache.get_car_history(plate, db_path)
-    if not history:
-        return jsonify({"success": False, "error": "Histórico do veículo não encontrado"}), 404
-        
-    last = history[0]
-    det = last.get("details") or {}
-    
-    # Extrai peças e serviços da última visita
-    pecas = det.get("pecas_items") or []
-    servicos = det.get("servicos_items") or []
-    
-    tot_pecas = sum(float(p.get("total", 0) or 0) for p in pecas)
-    tot_servicos = sum(float(s.get("total", 0) or 0) for s in servicos)
-    
-    # Formata texto da discriminação para NFS-e Santos (Item 14.01)
-    servicos_nomes = ", ".join([str(s.get("desc", "")).strip() for s in servicos if s.get("desc")])
-    if not servicos_nomes:
-        servicos_nomes = "REVISÃO GERAL / MANUTENÇÃO PREVENTIVA E CORRETIVA"
-        
-    client_name = last.get("client_name") or ""
-    car_model = last.get("car_model") or ""
-    odometer = last.get("odometer") or ""
-    plate_fmt = last.get("plate_display") or last.get("plate")
-    
-    discriminacao_nfse = (
-        f"PRESTAÇÃO DE SERVIÇOS MECÂNICOS AUTOMOTIVOS EM VEÍCULO:\n"
-        f"PLACA: {plate_fmt} | MODELO: {car_model} | KM: {odometer}\n"
-        f"SERVIÇOS EXECUTADOS: {servicos_nomes}.\n"
-        f"LOCAL DA PRESTAÇÃO: SANTOS/SP | ENQUADRAMENTO: SUBITEM 14.01 (SERVIÇOS MECÂNICOS)"
-    )
-    
-    dados_tomador = (
-        f"Nome/Razão Social: {client_name}\n"
-        f"CPF/CNPJ: {det.get('cpf', '')}\n"
-        f"Endereço: {det.get('address', '')}, nº {det.get('address_num', '')} {det.get('address_compl', '')}\n"
-        f"Bairro: {det.get('neighborhood', '')} - {det.get('city', 'Santos')}/SP\n"
-        f"CEP: {det.get('cep', '')}\n"
-        f"Telefone: {det.get('phone', '')}\n"
-        f"Email: {det.get('email', '')}"
-    )
-    
-    pecas_nfe = []
-    for p in pecas:
-        pecas_nfe.append({
-            "desc": p.get("desc", ""),
-            "qty": p.get("qty", 1),
-            "unit_price": p.get("unit_price", 0),
-            "total": p.get("total", 0),
-            "cfop": "5405",
-            "ncm_sugerido": "8708.29.99",
-            "cst_icms": "060"
-        })
-        
-    nf_rec = cache.get_nf_by_plate(plate, db_path)
-    
+    file_path = request.args.get("file_path", "").strip()
+    target_plate = plate or request.args.get("plate", "").strip()
+    visit_num = request.args.get("visit_num", "").strip()
+
+    det = {}
+    fpath = file_path
+    last_visit = {}
+
+    if fpath and os.path.exists(fpath):
+        try:
+            import parser
+            det = parser.parse_file(fpath)
+            last_visit = det
+            target_plate = target_plate or det.get("plate", "")
+            visit_num = visit_num or det.get("visit_num", "")
+        except Exception as e:
+            print("Erro lendo planilha para copiloto fiscal:", e)
+
+    if not det and target_plate:
+        history = cache.get_car_history(target_plate, db_path)
+        if history:
+            if visit_num:
+                matched = [v for v in history if str(v.get("visit_num", "")).strip() == str(visit_num)]
+                last_visit = matched[0] if matched else history[0]
+            else:
+                last_visit = history[0]
+            det = last_visit.get("details") or {}
+            fpath = fpath or last_visit.get("file_path", "")
+
+    if not det and not last_visit:
+        return jsonify({"success": False, "error": "Visita ou veículo não encontrado"}), 404
+
+    nf_rec = cache.get_nf_control(file_path=fpath, plate_clean=target_plate, visit_num=visit_num, db_path=db_path)
+    copilot_payload = nf_copilot.build_copilot_payload(fpath, det or last_visit, nf_rec)
+
+    # Campos compatíveis com versões legadas
+    tot_servicos = copilot_payload.get("total_servicos", "R$ 0,00")
+    tot_pecas = copilot_payload.get("total_pecas", "R$ 0,00")
+
     return jsonify({
         "success": True,
-        "plate": plate_fmt,
-        "client_name": client_name,
-        "car_model": car_model,
-        "visit_num": last.get("visit_num"),
-        "discriminacao_nfse": discriminacao_nfse,
-        "dados_tomador": dados_tomador,
+        "plate": copilot_payload.get("plate_display") or copilot_payload.get("plate"),
+        "client_name": copilot_payload.get("client_name"),
+        "car_model": copilot_payload.get("car_model"),
+        "visit_num": copilot_payload.get("visit_num"),
+        "discriminacao_nfse": copilot_payload["copilot_texts"]["nfse_discriminacao"],
+        "dados_tomador": copilot_payload["copilot_texts"]["tomador_resumo"],
         "valor_servicos": tot_servicos,
-        "pecas_nfe": pecas_nfe,
         "valor_pecas": tot_pecas,
-        "valor_total": tot_servicos + tot_pecas,
+        "valor_total": copilot_payload.get("total_geral"),
+        "pecas_nfe": [
+            {
+                "description": p.get("description"),
+                "quantity": p.get("quantity"),
+                "unit_price": p.get("unit_price"),
+                "total_price": p.get("total_price"),
+                "ncm": p.get("suggested_ncm"),
+                "cfop": str(p.get("suggested_cfop", "5405")).replace(".", ""),
+                "csosn": p.get("suggested_csosn")
+            }
+            for p in copilot_payload.get("pecas_items", [])
+        ],
+        "copilot": copilot_payload,
         "nf_control": nf_rec
+    })
+
+@app.route("/api/nf/queue", methods=["GET"])
+def nf_queue_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    filter_type = request.args.get("filter", "pending").strip()
+    query = request.args.get("q", "").strip()
+    res = cache.get_nf_queue(filter_type=filter_type, query=query, db_path=db_path)
+    return jsonify({
+        "success": True,
+        "queue": res.get("queue", []),
+        "stats": res.get("stats", {})
     })
 
 @app.route("/api/nf/pending", methods=["GET"])
 def nf_pending_endpoint():
     db_path = cache.get_db_path(BASE_DIR)
-    pending = cache.get_pending_nfs(db_path)
-    return jsonify({"success": True, "pending": pending, "total": len(pending)})
+    res = cache.get_nf_queue(filter_type="pending", db_path=db_path)
+    pending = res.get("queue", [])
+    return jsonify({
+        "success": True,
+        "pending": pending,
+        "total": len(pending),
+        "stats": res.get("stats", {})
+    })
 
 @app.route("/api/nf/status", methods=["POST"])
 def nf_update_status_endpoint():
@@ -516,9 +532,119 @@ def nf_update_status_endpoint():
     db_path = cache.get_db_path(BASE_DIR)
     try:
         saved = cache.save_nf_control(data, db_path)
-        return jsonify({"success": True, "nf": saved})
+        stats = cache.get_nf_queue(filter_type="pending", db_path=db_path).get("stats", {})
+        return jsonify({
+            "success": True,
+            "nf": saved,
+            "stats": stats
+        })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/nf/copilot_text", methods=["GET"])
+def nf_copilot_text_endpoint():
+    file_path = request.args.get("file_path", "").strip()
+    text_type = request.args.get("type", "nfse_discriminacao").strip()
+    plate = request.args.get("plate", "").strip()
+
+    if not file_path and plate:
+        db_path = cache.get_db_path(BASE_DIR)
+        hist = cache.get_car_history(plate, db_path)
+        if hist:
+            file_path = hist[0].get("file_path", "")
+
+    if not file_path or not os.path.exists(file_path):
+        return jsonify({"success": False, "error": "Planilha não encontrada"}), 404
+
+    try:
+        import parser
+        det = parser.parse_file(file_path)
+        db_path = cache.get_db_path(BASE_DIR)
+        nf_rec = cache.get_nf_control(file_path=file_path, db_path=db_path)
+        payload = nf_copilot.build_copilot_payload(file_path, det, nf_rec)
+
+        texts = payload.get("copilot_texts", {})
+        tomador = payload.get("tomador", {})
+
+        if text_type == "nfse_discriminacao":
+            return texts.get("nfse_discriminacao", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        elif text_type == "tomador_resumo":
+            return texts.get("tomador_resumo", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        elif text_type == "nfe_pecas_resumo":
+            return texts.get("nfe_pecas_resumo", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        elif text_type == "nfe_pecas_tsv":
+            return texts.get("nfe_pecas_tsv", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        elif text_type == "cpf_only":
+            return tomador.get("cpf", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        elif text_type == "cep_only":
+            return tomador.get("cep", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        elif text_type == "endereco_only":
+            return tomador.get("address_single_line", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        else:
+            return jsonify({"success": True, "texts": texts, "tomador": tomador})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/nf/export_batch", methods=["GET"])
+def nf_export_batch_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    filter_type = request.args.get("filter", "pending").strip()
+    fmt = request.args.get("format", "csv").strip().lower()
+
+    res = cache.get_nf_queue(filter_type=filter_type, db_path=db_path)
+    items = res.get("queue", [])
+
+    if fmt == "csv":
+        import csv
+        import io
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+        writer.writerow([
+            "Placa", "Cliente", "CPF", "Telefone", "Modelo", "Data Visita",
+            "Mão de Obra (R$)", "Status NFS-e", "Nº NFS-e",
+            "Peças (R$)", "Status NF-e", "Nº NF-e", "Total Geral (R$)"
+        ])
+        for it in items:
+            writer.writerow([
+                it.get("plate_display") or it.get("plate"),
+                it.get("client_name"),
+                it.get("cpf"),
+                it.get("phone"),
+                it.get("car_model"),
+                it.get("entry_date"),
+                f"{it.get('valor_servico', 0.0):.2f}".replace(".", ","),
+                it.get("status_servico"),
+                it.get("nf_servico_num"),
+                f"{it.get('valor_pecas', 0.0):.2f}".replace(".", ","),
+                it.get("status_pecas"),
+                it.get("nf_pecas_num"),
+                f"{it.get('valor_total', 0.0):.2f}".replace(".", ",")
+            ])
+        content = output.getvalue()
+        filename = f"MecatroniCar_Notas_{filter_type}.csv"
+        return content, 200, {
+            "Content-Type": "text/csv; charset=utf-8-sig",
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    else:
+        # Formato TXT
+        lines = [
+            f"MECATRONICAR - FILA DE NOTAS FISCAIS ({filter_type.upper()})",
+            f"Gerado em: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}",
+            "=" * 70
+        ]
+        for idx, it in enumerate(items, start=1):
+            lines.append(f"{idx}. {it.get('plate_display') or it.get('plate')} | {it.get('client_name')} | {it.get('car_model')}")
+            lines.append(f"   Data: {it.get('entry_date')} | Visita #{it.get('visit_num')}")
+            lines.append(f"   NFS-e Santos (Serviços): R$ {it.get('valor_servico', 0.0):.2f} - Status: {it.get('status_servico')} (Nº {it.get('nf_servico_num') or '-'})")
+            lines.append(f"   NF-e 55 (Peças): R$ {it.get('valor_pecas', 0.0):.2f} - Status: {it.get('status_pecas')} (Nº {it.get('nf_pecas_num') or '-'})")
+            lines.append("-" * 70)
+        content = "\n".join(lines)
+        filename = f"MecatroniCar_Notas_{filter_type}.txt"
+        return content, 200, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
 
 
 def start_server(port=5000):

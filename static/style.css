@@ -1949,15 +1949,45 @@ body {
     font-size: 15px;
 }
 
-/* Copiloto Fiscal */
+/* Copiloto Fiscal (CP-07) */
+.modal-dialog-xl {
+    max-width: 980px !important;
+    max-height: 90vh !important;
+}
+
+.badge-nf-counter {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 12px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    box-shadow: 0 1px 3px rgba(239, 68, 68, 0.4);
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.badge-pending-mini {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 10px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    display: inline-block;
+}
+
 .fiscal-tabs {
     display: flex;
     border-bottom: 2px solid #e2e8f0;
     margin-bottom: 14px;
-    gap: 8px;
+    gap: 4px;
+    overflow-x: auto;
 }
 .fiscal-tab {
-    padding: 10px 16px;
+    padding: 10px 14px;
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
@@ -1965,11 +1995,19 @@ body {
     font-weight: 700;
     color: #64748b;
     cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.fiscal-tab:hover {
+    color: #0f172a;
+    background: #f8fafc;
 }
 .fiscal-tab.active {
     color: #0f172a;
     border-bottom-color: #f9cc01;
+    background: #ffffff;
 }
+
 .fiscal-alert-box {
     padding: 10px 14px;
     border-radius: 6px;
@@ -1986,6 +2024,7 @@ body {
     border: 1px solid #fde68a;
     color: #92400e;
 }
+
 .fiscal-section {
     margin-bottom: 14px;
 }
@@ -1994,6 +2033,8 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 6px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 .fiscal-field-header label {
     font-size: 13px;
@@ -2002,77 +2043,486 @@ body {
 }
 .fiscal-textarea {
     width: 100%;
-    height: 100px;
+    height: 120px;
     background: #f8fafc;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 8px;
-    font-family: monospace;
+    padding: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 12px;
+    line-height: 1.45;
     resize: vertical;
     box-sizing: border-box;
+    color: #0f172a;
 }
-.fiscal-textarea-sm {
-    width: 100%;
-    height: 70px;
+.fiscal-textarea:focus {
+    outline: none;
+    border-color: #0284c7;
+    background: #ffffff;
+}
+
+/* Quick Pills */
+.fiscal-quick-pills {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 12px 0;
+    padding: 8px 12px;
     background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.quick-pills-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.pill-copy-btn {
+    background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 8px;
-    font-family: monospace;
+    color: #334155;
     font-size: 12px;
-    resize: vertical;
-    box-sizing: border-box;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
-.fiscal-status-row {
-    background: #f8fafc;
+.pill-copy-btn:hover {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.fiscal-actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Services and Parts list breakdown */
+.fiscal-items-container {
+    max-height: 180px;
+    overflow-y: auto;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 10px 14px;
+    background: #f8fafc;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.fiscal-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.fiscal-item-desc {
+    color: #0f172a;
+    font-weight: 500;
+    flex: 1;
+}
+.fiscal-item-val {
+    font-weight: 700;
+    color: #1e293b;
+    margin-left: 12px;
+}
+
+/* Fiscal table */
+.fiscal-table-wrapper {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+.fiscal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.fiscal-table th {
+    background: #f1f5f9;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 1px solid #cbd5e1;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.fiscal-table td {
+    padding: 7px 10px;
+    font-size: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.fiscal-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* Status row */
+.fiscal-status-row {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-top: 14px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.fiscal-val-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 .fiscal-val-box span {
     font-size: 13px;
     color: #64748b;
 }
 .fiscal-val-box strong {
-    font-size: 16px;
+    font-size: 18px;
     color: #0f172a;
-    margin-left: 6px;
 }
 .fiscal-action-inputs {
     display: flex;
     gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
 }
-.fiscal-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 12px;
+
+/* Status Pills */
+.badge-status-pill {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
-.fiscal-table th {
+.badge-status-pill.pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.badge-status-pill.emitted {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.badge-status-pill.na {
     background: #f1f5f9;
-    padding: 6px 10px;
-    font-size: 12px;
-    text-align: left;
+    color: #64748b;
     border: 1px solid #e2e8f0;
 }
-.fiscal-table td {
-    padding: 6px 10px;
-    font-size: 13px;
-    border: 1px solid #e2e8f0;
+
+/* Tomador Cards Grid */
+.tomador-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
 }
-.fiscal-pending-item {
+.tomador-field-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.tomador-field-card.full-width {
+    grid-column: 1 / -1;
+}
+.field-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.field-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
 }
+.field-value {
+    font-size: 14px;
+    color: #0f172a;
+    word-break: break-word;
+}
+.btn-copy-inline {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.btn-copy-inline:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+/* Queue KPI Grid */
+.fiscal-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+@media (max-width: 768px) {
+    .fiscal-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.fiscal-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.kpi-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.kpi-value {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.text-amber { color: #d97706; }
+.text-blue { color: #0284c7; }
+.text-green { color: #10b981; }
+
+/* Queue Toolbar */
+.fiscal-queue-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    background: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.fiscal-queue-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.queue-filter-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.queue-filter-btn:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+.queue-filter-btn.active {
+    background: #111827;
+    border-color: #111827;
+    color: #f9cc01;
+    font-weight: 800;
+}
+.fiscal-queue-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.queue-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.queue-search-box input {
+    padding: 6px 28px 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 220px;
+}
+.queue-search-box input:focus {
+    outline: none;
+    border-color: #0284c7;
+}
+.queue-search-box button {
+    position: absolute;
+    right: 6px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* Queue List and Cards */
+.fiscal-pending-list {
+    max-height: 440px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.fiscal-queue-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.15s ease;
+}
+.fiscal-queue-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.fiscal-card-info {
+    flex: 1;
+}
+.fiscal-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.fiscal-card-plate {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.fiscal-card-model {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 600;
+}
+.fiscal-card-client {
+    font-size: 12px;
+    color: #64748b;
+}
+.fiscal-card-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.fiscal-card-status-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+.fiscal-status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.fiscal-card-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.btn-action-mini {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-action-mini:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.btn-action-mini.primary {
+    background: #f9cc01;
+    border-color: #e5b800;
+    color: #111827;
+    font-weight: 700;
+}
+.btn-action-mini.primary:hover {
+    background: #e5b800;
+}
+
+/* Badge in car history timeline visits */
+.badge-visit-nf {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.badge-visit-nf.emitted {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.badge-visit-nf.partial {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.badge-visit-nf.pending {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+.badge-visit-nf.none {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
 
 

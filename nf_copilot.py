@@ -217,7 +217,7 @@ SERVIÇOS EXECUTADOS / MÃO DE OBRA:
 VALOR TOTAL DA MÃO DE OBRA: {total_servicos}
 ----------------------------------------------------------------------
 TOMADOR: {client_name}{f' - CPF/CNPJ: {cpf}' if cpf else ''}
-EMISSOR: {COMPANY_INFO['razao_social']} | CNPJ: {COMPANY_INFO['cnpj']} | SANTOS-SP
+EMISSOR: {COMPANY_INFO['razao_social']} | CNPJ: {COMPANY_INFO['cnpj']} | SANTOS/SP
 """.strip()
 
     # Limpa linhas vazias duplas
@@ -263,7 +263,7 @@ ITENS / AUTOPEÇAS:
 VALOR TOTAL DAS PEÇAS: {total_pecas}
 ----------------------------------------------------------------------
 DESTINATÁRIO: {client_name}{f' | CPF/CNPJ: {cpf}' if cpf else ''}
-EMITENTE: {COMPANY_INFO['razao_social']} | CNPJ: {COMPANY_INFO['cnpj']} | SANTOS-SP
+EMITENTE: {COMPANY_INFO['razao_social']} | CNPJ: {COMPANY_INFO['cnpj']} | SANTOS/SP
 """.strip()
 
     return text
