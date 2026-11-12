@@ -418,9 +418,9 @@ def os_save_endpoint():
     import excel_writer
     data = request.json or {}
     existing_fpath = data.get("existing_file_path") or data.get("existing_filepath") or None
-    db_path = cache.get_db_path(BASE_DIR)
+    db_path = data.get("db_path") or cache.get_db_path(BASE_DIR)
     cfg = config.load_config(BASE_DIR)
-    target_folder = cfg.get("spreadsheet_folder") or os.path.join(BASE_DIR, "planilhas_exemplo")
+    target_folder = data.get("folder") or data.get("target_folder") or cfg.get("spreadsheet_folder") or os.path.join(BASE_DIR, "planilhas_exemplo")
     try:
         res = excel_writer.save_new_or_updated_os(data, target_folder=target_folder, db_path=db_path, existing_filepath=existing_fpath)
         return jsonify(res)

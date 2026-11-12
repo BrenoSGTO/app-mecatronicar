@@ -1035,13 +1035,14 @@ def save_os_spreadsheet(data, filepath=None, folder_path=None, auto_index=True, 
         "data": data
     }
 
-def save_new_or_updated_os(payload, filepath=None, target_folder=None, folder_path=None, auto_index=True, db_path=None):
+def save_new_or_updated_os(payload, filepath=None, existing_filepath=None, target_folder=None, folder_path=None, auto_index=True, db_path=None):
     """
     Função facilitadora que aceita payloads em formato aninhado
     {'client': {...}, 'car': {...}, 'os': {...}, 'pecas': [...], 'servicos': [...], 'patio_status': '...'}
     ou formato plano, normalizando para save_os_spreadsheet.
     """
     dest_dir = target_folder or folder_path
+    target_fpath = filepath or existing_filepath
     data = {}
     
     if "client" in payload or "car" in payload or "os" in payload:
@@ -1107,7 +1108,7 @@ def save_new_or_updated_os(payload, filepath=None, target_folder=None, folder_pa
         
     res = save_os_spreadsheet(
         data=data,
-        filepath=filepath,
+        filepath=target_fpath,
         folder_path=dest_dir,
         auto_index=auto_index,
         db_path=db_path

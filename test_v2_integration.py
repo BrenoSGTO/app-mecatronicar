@@ -17,6 +17,7 @@ import unittest
 import tempfile
 import shutil
 import openpyxl
+import sqlite3
 
 import parser
 import cache
@@ -226,7 +227,9 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
             "car": {"plate": "TST9999", "model": "Gol G6", "year": "2016", "color": "Branco"},
             "os": {"visit_num": "1", "odometer": "50000", "complaint": "Troca de óleo de motor"},
             "pecas": [{"desc": "Óleo 5W40 Sintético 4L", "qty": 1, "unit_price": 180.0}],
-            "servicos": [{"desc": "Mão de obra troca de óleo e filtro", "qty": 1, "unit_price": 60.0}]
+            "servicos": [{"desc": "Mão de obra troca de óleo e filtro", "qty": 1, "unit_price": 60.0}],
+            "folder": self.test_dir,
+            "db_path": self.db_path
         }
         resp_save = self.client.post("/api/os/save", json=os_payload)
         self.assertEqual(resp_save.status_code, 200)
@@ -234,22 +237,8 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         self.assertTrue(res_json["success"])
         self.assertEqual(res_json["plate"], "TST9999")
 
-        # Cleanup do arquivo e dos registros no banco oficial gerados pelo teste
-        created_path = res_json.get("file_path")
-        if created_path and os.path.exists(created_path):
-            try:
-                os.remove(created_path)
-            except Exception:
-                pass
-        official_db = cache.get_db_path()
-        if os.path.exists(official_db):
-            conn = sqlite3.connect(official_db)
-            cur = conn.cursor()
-            cur.execute("DELETE FROM files WHERE plate_clean = 'TST9999'")
-            cur.execute("DELETE FROM patio_status WHERE plate_clean = 'TST9999'")
-            cur.execute("DELETE FROM nf_control WHERE plate_clean = 'TST9999'")
-            conn.commit()
-            conn.close()
+        # Arquivo é salvo de forma isolada dentro de test_dir
+        self.assertTrue(os.path.exists(res_json.get("file_path", "")))
 
     def test_06_copiloto_fiscal_nfs_and_nfe(self):
         """Valida separação de serviços (NFS-e Santos) vs peças (NF-e 55) e controle de pendências."""

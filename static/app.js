@@ -2336,27 +2336,113 @@ document.addEventListener('DOMContentLoaded', () => {
     // MECATRONICAR v2.0 - COPILOTO FISCAL (CP-07)
     // =========================================================================
     const btnOpenFiscalHub = document.getElementById('btn-open-fiscal-hub');
+    const headerNfBadge = document.getElementById('header-nf-badge');
+    const modalPendingCounter = document.getElementById('modal-pending-counter');
+    const footerNfSummary = document.getElementById('footer-nf-summary');
     const btnVehicleFiscal = document.getElementById('btn-vehicle-fiscal');
+
     const fiscalModal = document.getElementById('fiscal-modal');
     const fiscalModalCloseBtn = document.getElementById('fiscal-modal-close-btn');
     const fiscalModalDismiss = document.getElementById('fiscal-modal-dismiss');
+    const fiscalModalTitle = document.getElementById('fiscal-modal-title');
+    const fiscalModalSubtitle = document.getElementById('fiscal-modal-subtitle');
+
+    // Tabs
     const tabBtnNfse = document.getElementById('tab-btn-nfse');
     const tabBtnNfe = document.getElementById('tab-btn-nfe');
+    const tabBtnTomador = document.getElementById('tab-btn-tomador');
     const tabBtnPending = document.getElementById('tab-btn-pending');
     const panelNfse = document.getElementById('panel-nfse');
     const panelNfe = document.getElementById('panel-nfe');
+    const panelTomador = document.getElementById('panel-tomador');
     const panelPending = document.getElementById('panel-pending');
 
+    // Tab 1 Elements - NFS-e
     const btnCopyNfseDesc = document.getElementById('btn-copy-nfse-desc');
-    const btnCopyClientData = document.getElementById('btn-copy-client-data');
+    const nfseDescText = document.getElementById('nfse-desc-text');
+    const pillCopyTomadorNfse = document.getElementById('pill-copy-tomador-nfse');
+    const pillCopyCpfNfse = document.getElementById('pill-copy-cpf-nfse');
+    const pillCopyCepNfse = document.getElementById('pill-copy-cep-nfse');
+    const pillCopyAddrNfse = document.getElementById('pill-copy-addr-nfse');
+    const pillCopyServVal = document.getElementById('pill-copy-serv-val');
+    const nfseServicesList = document.getElementById('nfse-services-list');
+    const nfseTotalVal = document.getElementById('nfse-total-val');
+    const nfseCurrentStatusTag = document.getElementById('nfse-current-status-tag');
+    const nfseNumberInput = document.getElementById('nfse-number-input');
+    const nfseDateInput = document.getElementById('nfse-date-input');
     const btnMarkNfseDone = document.getElementById('btn-mark-nfse-done');
+
+    // Tab 2 Elements - NF-e 55
+    const btnCopyNfeSummary = document.getElementById('btn-copy-nfe-summary');
+    const btnCopyNfeTsv = document.getElementById('btn-copy-nfe-tsv');
+    const pillCopyPartsVal = document.getElementById('pill-copy-parts-val');
+    const pillCopyTomadorNfe = document.getElementById('pill-copy-tomador-nfe');
+    const nfeItemsTbody = document.getElementById('nfe-items-tbody');
+    const nfeTotalVal = document.getElementById('nfe-total-val');
+    const nfeCurrentStatusTag = document.getElementById('nfe-current-status-tag');
+    const nfeNumberInput = document.getElementById('nfe-number-input');
+    const nfeDateInput = document.getElementById('nfe-date-input');
     const btnMarkNfeDone = document.getElementById('btn-mark-nfe-done');
 
+    // Tab 3 Elements - Tomador
+    const btnCopyFullTomador = document.getElementById('btn-copy-full-tomador');
+    const tomadorName = document.getElementById('tomador-name');
+    const tomadorCpf = document.getElementById('tomador-cpf');
+    const btnCopyCpfRaw = document.getElementById('btn-copy-cpf-raw');
+    const tomadorPhone = document.getElementById('tomador-phone');
+    const tomadorEmail = document.getElementById('tomador-email');
+    const tomadorSingleLine = document.getElementById('tomador-single-line');
+    const tomadorStreet = document.getElementById('tomador-street');
+    const tomadorNeighborhood = document.getElementById('tomador-neighborhood');
+    const tomadorCity = document.getElementById('tomador-city');
+    const tomadorCep = document.getElementById('tomador-cep');
+    const btnCopyCepRaw = document.getElementById('btn-copy-cep-raw');
+
+    // Tab 4 Elements - Queue
+    const kpiPendingVisits = document.getElementById('kpi-pending-visits');
+    const kpiPendingServices = document.getElementById('kpi-pending-services');
+    const kpiPendingServicesSub = document.getElementById('kpi-pending-services-sub');
+    const kpiPendingParts = document.getElementById('kpi-pending-parts');
+    const kpiPendingPartsSub = document.getElementById('kpi-pending-parts-sub');
+    const kpiEmittedCount = document.getElementById('kpi-emitted-count');
+    const queueSearchInput = document.getElementById('queue-search-input');
+    const btnClearQueueSearch = document.getElementById('btn-clear-queue-search');
+    const btnExportQueueCsv = document.getElementById('btn-export-queue-csv');
+    const btnExportQueueTxt = document.getElementById('btn-export-queue-txt');
+    const btnRefreshQueue = document.getElementById('btn-refresh-queue');
+    const fiscalPendingList = document.getElementById('fiscal-pending-list');
+
+    // State variables
+    let currentFiscalFilePath = '';
     let currentFiscalPlate = '';
+    let currentFiscalVisitNum = null;
+    let currentFiscalData = null;
+    let activeQueueFilter = 'pending';
+    let queueSearchDebounceTimer = null;
+
+    function copyToClipboard(text, successToastMsg) {
+        if (!text) {
+            showToast('⚠️ Nada para copiar.');
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            showToast(successToastMsg || '📋 Copiado com sucesso!');
+        }).catch(err => {
+            console.error('Falha ao copiar:', err);
+            // Fallback para input temporário
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(successToastMsg || '📋 Copiado com sucesso!');
+        });
+    }
 
     function switchFiscalTab(tab) {
-        [tabBtnNfse, tabBtnNfe, tabBtnPending].forEach(b => b?.classList.remove('active'));
-        [panelNfse, panelNfe, panelPending].forEach(p => { if (p) p.style.display = 'none'; });
+        [tabBtnNfse, tabBtnNfe, tabBtnTomador, tabBtnPending].forEach(b => b?.classList.remove('active'));
+        [panelNfse, panelNfe, panelTomador, panelPending].forEach(p => { if (p) p.style.display = 'none'; });
 
         if (tab === 'nfse') {
             tabBtnNfse?.classList.add('active');
@@ -2364,6 +2450,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (tab === 'nfe') {
             tabBtnNfe?.classList.add('active');
             if (panelNfe) panelNfe.style.display = 'block';
+        } else if (tab === 'tomador') {
+            tabBtnTomador?.classList.add('active');
+            if (panelTomador) panelTomador.style.display = 'block';
         } else if (tab === 'pending') {
             tabBtnPending?.classList.add('active');
             if (panelPending) panelPending.style.display = 'block';
@@ -2373,159 +2462,631 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tabBtnNfse) tabBtnNfse.addEventListener('click', () => switchFiscalTab('nfse'));
     if (tabBtnNfe) tabBtnNfe.addEventListener('click', () => switchFiscalTab('nfe'));
+    if (tabBtnTomador) tabBtnTomador.addEventListener('click', () => switchFiscalTab('tomador'));
     if (tabBtnPending) tabBtnPending.addEventListener('click', () => switchFiscalTab('pending'));
 
-    async function openFiscalModal(plate = null) {
-        currentFiscalPlate = plate || currentVehiclePlate;
-        if (!currentFiscalPlate) {
-            // Se nenhuma placa selecionada, abre direto na fila de pendentes
+    async function updateHeaderFiscalBadge() {
+        try {
+            const res = await fetch('/api/nf/pending');
+            const data = await res.json();
+            if (data.success && data.stats) {
+                const s = data.stats;
+                const pendingCount = s.pending_visits_count || 0;
+
+                if (headerNfBadge) {
+                    headerNfBadge.textContent = pendingCount;
+                    headerNfBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+                }
+                if (modalPendingCounter) {
+                    modalPendingCounter.textContent = pendingCount;
+                }
+                if (footerNfSummary) {
+                    footerNfSummary.textContent = `${pendingCount} visita(s) com emissão pendente`;
+                }
+
+                if (kpiPendingVisits) kpiPendingVisits.textContent = pendingCount;
+                if (kpiPendingServices) kpiPendingServices.textContent = formatMoeda(s.total_pending_services_val || 0);
+                if (kpiPendingServicesSub) kpiPendingServicesSub.textContent = `${s.pending_servicos_count || 0} visitas`;
+                if (kpiPendingParts) kpiPendingParts.textContent = formatMoeda(s.total_pending_pecas_val || 0);
+                if (kpiPendingPartsSub) kpiPendingPartsSub.textContent = `${s.pending_pecas_count || 0} visitas`;
+                if (kpiEmittedCount) kpiEmittedCount.textContent = s.emitted_count || 0;
+            }
+        } catch (e) {
+            console.warn('Erro ao atualizar badge fiscal:', e);
+        }
+    }
+
+    async function openFiscalModal(filePath = null, plate = null, visitNum = null, initialTab = 'nfse') {
+        currentFiscalFilePath = filePath || '';
+        currentFiscalPlate = plate || (currentCarHistory?.vehicle?.plate) || '';
+        currentFiscalVisitNum = visitNum || null;
+
+        // Se não temos nem arquivo nem placa especificada, abre direto na fila de pendentes
+        if (!currentFiscalFilePath && !currentFiscalPlate) {
             switchFiscalTab('pending');
             fiscalModal.style.display = 'flex';
             return;
         }
 
-        switchFiscalTab('nfse');
+        switchFiscalTab(initialTab || 'nfse');
         fiscalModal.style.display = 'flex';
 
+        // Feedback inicial de carregamento
+        if (fiscalModalTitle) fiscalModalTitle.textContent = `Carregando Copiloto Fiscal...`;
+        if (fiscalModalSubtitle) fiscalModalSubtitle.textContent = `Buscando dados da OS e cliente...`;
+        if (nfseDescText) nfseDescText.value = 'Carregando discriminação formatada dos serviços...';
+        if (nfseServicesList) nfseServicesList.innerHTML = '<div style="padding: 10px; color: #64748b; font-size: 12px;">Carregando serviços...</div>';
+        if (nfeItemsTbody) nfeItemsTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 16px;">Carregando autopeças...</td></tr>';
+
         try {
-            const res = await fetch(`/api/nf/data/${encodeURIComponent(currentFiscalPlate)}`);
+            const queryParams = new URLSearchParams();
+            if (currentFiscalFilePath) queryParams.set('file_path', currentFiscalFilePath);
+            if (currentFiscalPlate) queryParams.set('plate', currentFiscalPlate);
+            if (currentFiscalVisitNum) queryParams.set('visit_num', currentFiscalVisitNum);
+
+            const res = await fetch(`/api/nf/data?${queryParams.toString()}`);
             const data = await res.json();
-            if (data.success) {
-                document.getElementById('fiscal-modal-title').textContent = `Copiloto Fiscal • ${data.plate} (${data.car_model})`;
-                document.getElementById('nfse-desc-text').value = data.discriminacao_nfse || '';
-                document.getElementById('nfse-client-data').value = data.dados_tomador || '';
-                document.getElementById('nfse-total-val').textContent = formatMoeda(data.valor_servicos || 0);
 
-                const nfRec = data.nf_control || {};
-                document.getElementById('nfse-number-input').value = nfRec.nf_servico_num || '';
-                document.getElementById('nfe-number-input').value = nfRec.nf_pecas_num || '';
-
-                // Preenche tabela de peças NF-e 55
-                const tbody = document.getElementById('nfe-items-tbody');
-                tbody.innerHTML = '';
-                (data.pecas_nfe || []).forEach(p => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${escapeHtml(p.desc)}</strong></td>
-                        <td>${p.qty}</td>
-                        <td>${formatMoeda(p.unit_price)}</td>
-                        <td><strong>${formatMoeda(p.total)}</strong></td>
-                        <td><span class="badge" style="background: #fef3c7; color: #92400e;">${p.cfop}</span></td>
-                        <td><small>${p.ncm_sugerido}</small></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-                document.getElementById('nfe-total-val').textContent = formatMoeda(data.valor_pecas || 0);
+            if (!data.success) {
+                alert('Erro ao carregar dados fiscais: ' + (data.error || 'Erro desconhecido'));
+                return;
             }
-        } catch (err) {
-            console.error('Erro carregando copiloto fiscal:', err);
-        }
-    }
 
-    async function loadFiscalPendingList() {
-        const container = document.getElementById('fiscal-pending-list');
-        if (!container) return;
-        container.innerHTML = '<div style="padding: 10px; color: #64748b;">Carregando notas pendentes...</div>';
-        try {
-            const res = await fetch('/api/nf/pending');
-            const data = await res.json();
-            if (data.success && data.pending && data.pending.length > 0) {
-                container.innerHTML = '';
-                data.pending.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'fiscal-pending-item';
-                    div.innerHTML = `
-                        <div>
-                            <strong>${escapeHtml(item.plate)}</strong> • ${escapeHtml(item.car_model || '')} (${escapeHtml(item.client_name || '')})
-                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                                Serviço: <strong style="color: ${item.status_servico === 'emitida' ? '#166534' : '#b45309'};">${item.status_servico}</strong> (${formatMoeda(item.valor_servico)}) | 
-                                Peças: <strong style="color: ${item.status_pecas === 'emitida' ? '#166534' : '#b45309'};">${item.status_pecas}</strong> (${formatMoeda(item.valor_pecas)})
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();">Abrir Ficha</button>
-                    `;
-                    div.querySelector('button').addEventListener('click', () => {
-                        openFiscalModal(item.plate);
+            currentFiscalData = data;
+            currentFiscalPlate = data.plate || currentFiscalPlate;
+            currentFiscalFilePath = data.file_path || currentFiscalFilePath;
+            currentFiscalVisitNum = data.visit_num || currentFiscalVisitNum;
+
+            // 1. Header do Modal
+            const plateDisp = data.plate_display || data.plate || 'OFICINA';
+            const modelDisp = data.car_model || 'Veículo';
+            if (fiscalModalTitle) {
+                fiscalModalTitle.textContent = `Copiloto Fiscal • ${plateDisp} (${modelDisp})`;
+            }
+            if (fiscalModalSubtitle) {
+                const clientDisp = data.tomador?.nome || data.client_name || 'Cliente';
+                const dateDisp = data.entry_date || '-';
+                const vNum = data.visit_num ? `Visita #${data.visit_num}` : 'OS';
+                fiscalModalSubtitle.textContent = `${vNum} • Data: ${dateDisp} • Tomador: ${clientDisp}`;
+            }
+
+            // 2. Aba 1 - NFS-e Santos (Serviços)
+            const nfse = data.nfse || {};
+            if (nfseDescText) {
+                nfseDescText.value = nfse.discriminacao_completa || data.discriminacao_nfse || '';
+            }
+            if (nfseTotalVal) {
+                nfseTotalVal.textContent = formatMoeda(nfse.valor_servicos || data.valor_servicos || 0);
+            }
+
+            const nfseStatus = nfse.status || (data.nf_control && data.nf_control.status_servico) || 'pendente';
+            const nfseNum = nfse.numero_nfse || (data.nf_control && data.nf_control.nf_servico_num) || '';
+            const nfseDate = nfse.data_emissao || (data.nf_control && data.nf_control.data_emissao_servico) || new Date().toISOString().split('T')[0];
+
+            if (nfseNumberInput) nfseNumberInput.value = nfseNum;
+            if (nfseDateInput) nfseDateInput.value = nfseDate;
+
+            if (nfseCurrentStatusTag) {
+                if (nfseStatus === 'emitida') {
+                    nfseCurrentStatusTag.className = 'badge-status-pill emitted';
+                    nfseCurrentStatusTag.textContent = `✅ Emitida (NFS-e #${nfseNum || 'S/N'})`;
+                } else if (nfse.valor_servicos === 0 && (nfse.itens_servico || []).length === 0) {
+                    nfseCurrentStatusTag.className = 'badge-status-pill na';
+                    nfseCurrentStatusTag.textContent = 'Não Aplicável (Sem Serviços)';
+                } else {
+                    nfseCurrentStatusTag.className = 'badge-status-pill pending';
+                    nfseCurrentStatusTag.textContent = '⏳ Pendente';
+                }
+            }
+
+            // Lista de Serviços
+            if (nfseServicesList) {
+                const sItems = nfse.itens_servico || [];
+                if (sItems.length === 0) {
+                    nfseServicesList.innerHTML = '<div style="padding: 10px; color: #64748b; font-size: 12px; font-style: italic;">Nenhum item discriminado como Mão de Obra / Serviço nesta OS.</div>';
+                } else {
+                    nfseServicesList.innerHTML = '';
+                    sItems.forEach(s => {
+                        const row = document.createElement('div');
+                        row.className = 'fiscal-item-row';
+                        row.innerHTML = `
+                            <span class="fiscal-item-desc">🔧 ${escapeHtml(s.desc)} ${s.qty > 1 ? `(${s.qty}x)` : ''}</span>
+                            <span class="fiscal-item-val">${formatMoeda(s.total || s.unit_price || 0)}</span>
+                        `;
+                        nfseServicesList.appendChild(row);
                     });
-                    container.appendChild(div);
-                });
-            } else {
-                container.innerHTML = '<div style="padding: 16px; text-align: center; color: #166534; font-weight: 700;">✅ Parabéns! Não há nenhuma nota fiscal pendente no momento.</div>';
+                }
             }
-        } catch (e) {
-            container.innerHTML = '<div style="padding: 10px; color: #ef4444;">Erro ao buscar notas pendentes.</div>';
+
+            // 3. Aba 2 - NF-e Modelo 55 (Peças)
+            const nfe = data.nfe || {};
+            if (nfeTotalVal) {
+                nfeTotalVal.textContent = formatMoeda(nfe.valor_pecas || data.valor_pecas || 0);
+            }
+
+            const nfeStatus = nfe.status || (data.nf_control && data.nf_control.status_pecas) || 'pendente';
+            const nfeNum = nfe.numero_nfe || (data.nf_control && data.nf_control.nf_pecas_num) || '';
+            const nfeDate = nfe.data_emissao || (data.nf_control && data.nf_control.data_emissao_pecas) || new Date().toISOString().split('T')[0];
+
+            if (nfeNumberInput) nfeNumberInput.value = nfeNum;
+            if (nfeDateInput) nfeDateInput.value = nfeDate;
+
+            if (nfeCurrentStatusTag) {
+                if (nfeStatus === 'emitida') {
+                    nfeCurrentStatusTag.className = 'badge-status-pill emitted';
+                    nfeCurrentStatusTag.textContent = `✅ Emitida (NF-e #${nfeNum || 'S/N'})`;
+                } else if (nfe.valor_pecas === 0 && (nfe.itens_pecas || []).length === 0) {
+                    nfeCurrentStatusTag.className = 'badge-status-pill na';
+                    nfeCurrentStatusTag.textContent = 'Não Aplicável (Sem Peças)';
+                } else {
+                    nfeCurrentStatusTag.className = 'badge-status-pill pending';
+                    nfeCurrentStatusTag.textContent = '⏳ Pendente';
+                }
+            }
+
+            // Tabela de Peças
+            if (nfeItemsTbody) {
+                const pItems = nfe.itens_pecas || data.pecas_nfe || [];
+                if (pItems.length === 0) {
+                    nfeItemsTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 18px; font-style: italic;">Nenhuma peça faturável nesta OS.</td></tr>';
+                } else {
+                    nfeItemsTbody.innerHTML = '';
+                    pItems.forEach((p, idx) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="color: #94a3b8; font-weight: 700;">${idx + 1}</td>
+                            <td><strong>${escapeHtml(p.desc)}</strong></td>
+                            <td style="text-align: right;">${p.qty || 1}</td>
+                            <td style="text-align: right;">${formatMoeda(p.unit_price || 0)}</td>
+                            <td style="text-align: right;"><strong>${formatMoeda(p.total || 0)}</strong></td>
+                            <td style="text-align: center;"><span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">${p.cfop || '5.405'}</span></td>
+                            <td><span class="badge" style="background: #f1f5f9; color: #0f172a; font-family: monospace; font-size: 11px;">${p.ncm_sugerido || '8708.29.99'}</span></td>
+                        `;
+                        nfeItemsTbody.appendChild(tr);
+                    });
+                }
+            }
+
+            // 4. Aba 3 - Dados do Tomador
+            const t = data.tomador || {};
+            if (tomadorName) tomadorName.textContent = t.nome || '-';
+            if (tomadorCpf) tomadorCpf.textContent = t.cpf_formatado || t.cpf_cnpj || '-';
+            if (tomadorPhone) tomadorPhone.textContent = t.telefone || '-';
+            if (tomadorEmail) tomadorEmail.textContent = t.email || '-';
+            if (tomadorSingleLine) tomadorSingleLine.textContent = t.endereco_linha_unica || '-';
+            if (tomadorStreet) tomadorStreet.textContent = t.logradouro_numero || '-';
+            if (tomadorNeighborhood) tomadorNeighborhood.textContent = t.bairro || '-';
+            if (tomadorCity) tomadorCity.textContent = `${t.municipio || 'Santos'} / ${t.uf || 'SP'}`;
+            if (tomadorCep) tomadorCep.textContent = t.cep || '-';
+
+            // Atualiza resumo no rodapé
+            updateHeaderFiscalBadge();
+
+        } catch (err) {
+            console.error('Erro carregando Copiloto Fiscal:', err);
+            alert('Falha ao conectar com o servidor para abrir o Copiloto Fiscal.');
         }
     }
 
-    if (btnOpenFiscalHub) btnOpenFiscalHub.addEventListener('click', () => openFiscalModal());
-    if (btnVehicleFiscal) btnVehicleFiscal.addEventListener('click', () => openFiscalModal(currentVehiclePlate));
-    if (fiscalModalCloseBtn) fiscalModalCloseBtn.addEventListener('click', () => { fiscalModal.style.display = 'none'; });
-    if (fiscalModalDismiss) fiscalModalDismiss.addEventListener('click', () => { fiscalModal.style.display = 'none'; });
-
+    // Ações de cópia em 1 clique
     if (btnCopyNfseDesc) {
         btnCopyNfseDesc.addEventListener('click', () => {
-            const text = document.getElementById('nfse-desc-text').value;
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('📋 Discriminação da NFS-e copiada com sucesso!');
-            });
+            copyToClipboard(nfseDescText?.value, '📋 Discriminação NFS-e copiada com sucesso!');
         });
     }
 
-    if (btnCopyClientData) {
-        btnCopyClientData.addEventListener('click', () => {
-            const text = document.getElementById('nfse-client-data').value;
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('📋 Dados do tomador copiados com sucesso!');
-            });
+    if (pillCopyTomadorNfse) {
+        pillCopyTomadorNfse.addEventListener('click', () => {
+            copyToClipboard(currentFiscalData?.tomador?.resumo, '👤 Dados do Tomador copiados!');
         });
     }
 
+    if (pillCopyCpfNfse) {
+        pillCopyCpfNfse.addEventListener('click', () => {
+            const rawCpf = (currentFiscalData?.tomador?.cpf_cnpj || '').replace(/\D/g, '');
+            copyToClipboard(rawCpf, `🔢 CPF sem pontuação copiado: ${rawCpf}`);
+        });
+    }
+
+    if (pillCopyCepNfse) {
+        pillCopyCepNfse.addEventListener('click', () => {
+            const rawCep = (currentFiscalData?.tomador?.cep || '').replace(/\D/g, '');
+            copyToClipboard(rawCep, `📍 CEP copiado: ${rawCep}`);
+        });
+    }
+
+    if (pillCopyAddrNfse) {
+        pillCopyAddrNfse.addEventListener('click', () => {
+            copyToClipboard(currentFiscalData?.tomador?.endereco_linha_unica, '🗺️ Endereço em 1 linha copiado!');
+        });
+    }
+
+    if (pillCopyServVal) {
+        pillCopyServVal.addEventListener('click', () => {
+            const v = (currentFiscalData?.nfse?.valor_servicos || 0).toFixed(2).replace('.', ',');
+            copyToClipboard(v, `💰 Valor de Mão de Obra copiado: R$ ${v}`);
+        });
+    }
+
+    // Aba 2 - Cópia NF-e 55
+    if (btnCopyNfeSummary) {
+        btnCopyNfeSummary.addEventListener('click', () => {
+            copyToClipboard(currentFiscalData?.nfe?.resumo_texto, '📋 Lista de Peças e Valores copiada!');
+        });
+    }
+
+    if (btnCopyNfeTsv) {
+        btnCopyNfeTsv.addEventListener('click', () => {
+            copyToClipboard(currentFiscalData?.nfe?.tabela_tsv, '📊 Tabela TSV copiada! Pronta para colar no Excel ou Emissor Fiscal.');
+        });
+    }
+
+    if (pillCopyPartsVal) {
+        pillCopyPartsVal.addEventListener('click', () => {
+            const v = (currentFiscalData?.nfe?.valor_pecas || 0).toFixed(2).replace('.', ',');
+            copyToClipboard(v, `💰 Valor de Peças copiado: R$ ${v}`);
+        });
+    }
+
+    if (pillCopyTomadorNfe) {
+        pillCopyTomadorNfe.addEventListener('click', () => {
+            copyToClipboard(currentFiscalData?.tomador?.resumo, '👤 Dados do Destinatário copiados!');
+        });
+    }
+
+    // Aba 3 - Cópia Tomador
+    if (btnCopyFullTomador) {
+        btnCopyFullTomador.addEventListener('click', () => {
+            copyToClipboard(currentFiscalData?.tomador?.resumo, '👤 Ficha cadastral do tomador copiada!');
+        });
+    }
+
+    if (btnCopyCpfRaw) {
+        btnCopyCpfRaw.addEventListener('click', () => {
+            const rawCpf = (currentFiscalData?.tomador?.cpf_cnpj || '').replace(/\D/g, '');
+            copyToClipboard(rawCpf, `🔢 CPF sem pontuação copiado: ${rawCpf}`);
+        });
+    }
+
+    if (btnCopyCepRaw) {
+        btnCopyCepRaw.addEventListener('click', () => {
+            const rawCep = (currentFiscalData?.tomador?.cep || '').replace(/\D/g, '');
+            copyToClipboard(rawCep, `📍 CEP sem traço copiado: ${rawCep}`);
+        });
+    }
+
+    // Botões inline para copiar campos do tomador
+    document.querySelectorAll('.btn-copy-inline[data-target]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) {
+                const val = targetEl.textContent.trim();
+                if (val && val !== '-') {
+                    copyToClipboard(val, `📋 Copiado: ${val}`);
+                }
+            }
+        });
+    });
+
+    // Gravação de Status: NFS-e de Mão de Obra
     if (btnMarkNfseDone) {
         btnMarkNfseDone.addEventListener('click', async () => {
-            const num = document.getElementById('nfse-number-input').value.trim();
-            if (!currentFiscalPlate) return;
+            const num = (nfseNumberInput?.value || '').trim();
+            const date = (nfseDateInput?.value || '').trim();
+            if (!currentFiscalPlate && !currentFiscalFilePath) {
+                alert('Nenhuma visita selecionada.');
+                return;
+            }
+
             try {
+                btnMarkNfseDone.disabled = true;
+                btnMarkNfseDone.textContent = 'Salvando...';
+
                 const res = await fetch('/api/nf/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        file_path: currentFiscalFilePath,
                         plate: currentFiscalPlate,
+                        visit_num: currentFiscalVisitNum,
                         status_servico: 'emitida',
-                        nf_servico_num: num
+                        nf_servico_num: num,
+                        data_emissao_servico: date
                     })
                 });
+
                 const data = await res.json();
                 if (data.success) {
-                    showToast('✅ NFS-e de Serviços marcada como EMITIDA!');
+                    showToast(`✅ NFS-e #${num || 'S/N'} marcada como EMITIDA!`);
+                    if (nfseCurrentStatusTag) {
+                        nfseCurrentStatusTag.className = 'badge-status-pill emitted';
+                        nfseCurrentStatusTag.textContent = `✅ Emitida (NFS-e #${num || 'S/N'})`;
+                    }
+                    updateHeaderFiscalBadge();
+                    if (currentCarHistory && currentCarHistory.vehicle && currentCarHistory.vehicle.plate === currentFiscalPlate) {
+                        selectVehicleByPlate(currentFiscalPlate);
+                    }
+                } else {
+                    alert('Erro ao salvar status: ' + (data.error || 'Erro desconhecido'));
                 }
             } catch (e) {
-                alert('Erro ao atualizar status: ' + e.message);
+                alert('Erro de conexão ao salvar status: ' + e.message);
+            } finally {
+                btnMarkNfseDone.disabled = false;
+                btnMarkNfseDone.textContent = '✅ Marcar NFS-e Emitida';
             }
         });
     }
 
+    // Gravação de Status: NF-e de Peças
     if (btnMarkNfeDone) {
         btnMarkNfeDone.addEventListener('click', async () => {
-            const num = document.getElementById('nfe-number-input').value.trim();
-            if (!currentFiscalPlate) return;
+            const num = (nfeNumberInput?.value || '').trim();
+            const date = (nfeDateInput?.value || '').trim();
+            if (!currentFiscalPlate && !currentFiscalFilePath) {
+                alert('Nenhuma visita selecionada.');
+                return;
+            }
+
             try {
+                btnMarkNfeDone.disabled = true;
+                btnMarkNfeDone.textContent = 'Salvando...';
+
                 const res = await fetch('/api/nf/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        file_path: currentFiscalFilePath,
                         plate: currentFiscalPlate,
+                        visit_num: currentFiscalVisitNum,
                         status_pecas: 'emitida',
-                        nf_pecas_num: num
+                        nf_pecas_num: num,
+                        data_emissao_pecas: date
                     })
                 });
+
                 const data = await res.json();
                 if (data.success) {
-                    showToast('✅ NF-e de Peças marcada como EMITIDA!');
+                    showToast(`✅ NF-e #${num || 'S/N'} marcada como EMITIDA!`);
+                    if (nfeCurrentStatusTag) {
+                        nfeCurrentStatusTag.className = 'badge-status-pill emitted';
+                        nfeCurrentStatusTag.textContent = `✅ Emitida (NF-e #${num || 'S/N'})`;
+                    }
+                    updateHeaderFiscalBadge();
+                    if (currentCarHistory && currentCarHistory.vehicle && currentCarHistory.vehicle.plate === currentFiscalPlate) {
+                        selectVehicleByPlate(currentFiscalPlate);
+                    }
+                } else {
+                    alert('Erro ao salvar status: ' + (data.error || 'Erro desconhecido'));
                 }
             } catch (e) {
-                alert('Erro ao atualizar status: ' + e.message);
+                alert('Erro de conexão ao salvar status: ' + e.message);
+            } finally {
+                btnMarkNfeDone.disabled = false;
+                btnMarkNfeDone.textContent = '✅ Marcar NF-e Emitida';
             }
         });
     }
+
+    // Aba 4: Fila de Notas Fiscais Pendentes
+    async function loadFiscalPendingList() {
+        if (!fiscalPendingList) return;
+        fiscalPendingList.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">Carregando fila fiscal...</div>';
+
+        const q = (queueSearchInput?.value || '').trim();
+        try {
+            const params = new URLSearchParams();
+            params.set('filter', activeQueueFilter);
+            if (q) params.set('q', q);
+
+            const res = await fetch(`/api/nf/queue?${params.toString()}`);
+            const data = await res.json();
+
+            if (!data.success) {
+                fiscalPendingList.innerHTML = `<div style="padding: 16px; color: #ef4444;">Erro ao carregar fila: ${escapeHtml(data.error || 'Falha')}</div>`;
+                return;
+            }
+
+            const items = data.items || [];
+            const stats = data.stats || {};
+
+            // Atualiza KPI cards
+            if (kpiPendingVisits) kpiPendingVisits.textContent = stats.pending_visits_count || 0;
+            if (kpiPendingServices) kpiPendingServices.textContent = formatMoeda(stats.total_pending_services_val || 0);
+            if (kpiPendingServicesSub) kpiPendingServicesSub.textContent = `${stats.pending_servicos_count || 0} visitas`;
+            if (kpiPendingParts) kpiPendingParts.textContent = formatMoeda(stats.total_pending_pecas_val || 0);
+            if (kpiPendingPartsSub) kpiPendingPartsSub.textContent = `${stats.pending_pecas_count || 0} visitas`;
+            if (kpiEmittedCount) kpiEmittedCount.textContent = stats.emitted_count || 0;
+
+            if (items.length === 0) {
+                fiscalPendingList.innerHTML = `
+                    <div style="padding: 32px; text-align: center; color: #166534; font-weight: 700; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px;">
+                        🎉 Parabéns! Nenhuma nota fiscal pendente encontrada neste filtro.
+                    </div>
+                `;
+                return;
+            }
+
+            fiscalPendingList.innerHTML = '';
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'fiscal-queue-card';
+
+                const isServDone = item.status_servico === 'emitida';
+                const isPecasDone = item.status_pecas === 'emitida';
+
+                const servBadgeHtml = isServDone
+                    ? `<span class="badge-status-pill emitted">✅ NFS-e #${escapeHtml(item.nf_servico_num || 'S/N')} (${formatMoeda(item.valor_servico)})</span>`
+                    : `<span class="badge-status-pill pending">⏳ NFS-e Santos: ${formatMoeda(item.valor_servico)}</span>`;
+
+                const pecasBadgeHtml = isPecasDone
+                    ? `<span class="badge-status-pill emitted">✅ NF-e #${escapeHtml(item.nf_pecas_num || 'S/N')} (${formatMoeda(item.valor_pecas)})</span>`
+                    : `<span class="badge-status-pill pending">⏳ NF-e 55: ${formatMoeda(item.valor_pecas)}</span>`;
+
+                const plateDisp = item.plate_display || item.plate;
+                const vNumStr = item.visit_num ? `Visita #${item.visit_num}` : '';
+
+                card.innerHTML = `
+                    <div class="fiscal-card-info">
+                        <div class="fiscal-card-title-row">
+                            <span class="fiscal-card-plate">${escapeHtml(plateDisp)}</span>
+                            <span class="fiscal-card-model">${escapeHtml(item.car_model || 'Veículo')}</span>
+                            <span class="fiscal-card-client">• 👤 ${escapeHtml(item.client_name || 'Cliente')}</span>
+                            <span class="fiscal-card-date">📅 ${escapeHtml(item.entry_date || '-')}</span>
+                            ${vNumStr ? `<span class="badge" style="background: #e2e8f0; color: #334155; font-size: 11px;">${vNumStr}</span>` : ''}
+                        </div>
+                        <div class="fiscal-card-status-row">
+                            <div class="fiscal-status-item">
+                                <small style="color: #64748b; font-weight: 700;">Mão de Obra:</small>
+                                ${servBadgeHtml}
+                            </div>
+                            <div class="fiscal-status-item">
+                                <small style="color: #64748b; font-weight: 700;">Peças:</small>
+                                ${pecasBadgeHtml}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fiscal-card-actions">
+                        <button type="button" class="btn-action-mini primary btn-queue-open" title="Abrir esta OS no Copiloto Fiscal para emissão">
+                            ⚡ Abrir no Copiloto
+                        </button>
+                        <button type="button" class="btn-action-mini btn-queue-copy-nfse" title="Copiar discriminação formatada para a NFS-e Santos">
+                            📋 Copiar NFS-e
+                        </button>
+                        <button type="button" class="btn-action-mini btn-queue-copy-nfe" title="Copiar resumo de peças para a NF-e 55">
+                            🔩 Copiar Peças
+                        </button>
+                    </div>
+                `;
+
+                // Eventos dos botões do card
+                card.querySelector('.btn-queue-open').addEventListener('click', () => {
+                    openFiscalModal(item.file_path, item.plate, item.visit_num, isServDone && !isPecasDone ? 'nfe' : 'nfse');
+                });
+
+                card.querySelector('.btn-queue-copy-nfse').addEventListener('click', async () => {
+                    try {
+                        const r = await fetch(`/api/nf/copilot_text?type=nfse_discriminacao&file_path=${encodeURIComponent(item.file_path || '')}&plate=${encodeURIComponent(item.plate || '')}&visit_num=${encodeURIComponent(item.visit_num || '')}`);
+                        const d = await r.json();
+                        if (d.success && d.text) {
+                            copyToClipboard(d.text, `📋 Discriminação NFS-e de ${plateDisp} copiada!`);
+                        } else {
+                            showToast('Erro ao gerar discriminação.');
+                        }
+                    } catch (e) {
+                        showToast('Erro ao buscar texto da NFS-e.');
+                    }
+                });
+
+                card.querySelector('.btn-queue-copy-nfe').addEventListener('click', async () => {
+                    try {
+                        const r = await fetch(`/api/nf/copilot_text?type=nfe_pecas_tsv&file_path=${encodeURIComponent(item.file_path || '')}&plate=${encodeURIComponent(item.plate || '')}&visit_num=${encodeURIComponent(item.visit_num || '')}`);
+                        const d = await r.json();
+                        if (d.success && d.text) {
+                            copyToClipboard(d.text, `📊 Tabela TSV de Peças de ${plateDisp} copiada!`);
+                        } else {
+                            showToast('Erro ao gerar dados de peças.');
+                        }
+                    } catch (e) {
+                        showToast('Erro ao buscar dados de peças.');
+                    }
+                });
+
+                fiscalPendingList.appendChild(card);
+            });
+
+        } catch (err) {
+            fiscalPendingList.innerHTML = `<div style="padding: 16px; color: #ef4444;">Erro ao carregar fila fiscal: ${err.message}</div>`;
+        }
+    }
+
+    // Filtros da Fila
+    document.querySelectorAll('.queue-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.queue-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeQueueFilter = btn.getAttribute('data-filter') || 'pending';
+            loadFiscalPendingList();
+        });
+    });
+
+    if (queueSearchInput) {
+        queueSearchInput.addEventListener('input', () => {
+            const val = queueSearchInput.value.trim();
+            if (btnClearQueueSearch) {
+                btnClearQueueSearch.style.display = val ? 'block' : 'none';
+            }
+            clearTimeout(queueSearchDebounceTimer);
+            queueSearchDebounceTimer = setTimeout(() => {
+                loadFiscalPendingList();
+            }, 250);
+        });
+    }
+
+    if (btnClearQueueSearch) {
+        btnClearQueueSearch.addEventListener('click', () => {
+            queueSearchInput.value = '';
+            btnClearQueueSearch.style.display = 'none';
+            loadFiscalPendingList();
+        });
+    }
+
+    if (btnRefreshQueue) {
+        btnRefreshQueue.addEventListener('click', () => {
+            loadFiscalPendingList();
+            updateHeaderFiscalBadge();
+        });
+    }
+
+    if (btnExportQueueCsv) {
+        btnExportQueueCsv.addEventListener('click', () => {
+            const q = (queueSearchInput?.value || '').trim();
+            window.open(`/api/nf/export_batch?format=csv&filter=${encodeURIComponent(activeQueueFilter)}&q=${encodeURIComponent(q)}`, '_blank');
+        });
+    }
+
+    if (btnExportQueueTxt) {
+        btnExportQueueTxt.addEventListener('click', () => {
+            const q = (queueSearchInput?.value || '').trim();
+            window.open(`/api/nf/export_batch?format=txt&filter=${encodeURIComponent(activeQueueFilter)}&q=${encodeURIComponent(q)}`, '_blank');
+        });
+    }
+
+    // Handlers do Modal
+    if (btnOpenFiscalHub) {
+        btnOpenFiscalHub.addEventListener('click', () => {
+            if (currentCarHistory && currentCarHistory.vehicle && currentCarHistory.vehicle.plate) {
+                openFiscalModal(null, currentCarHistory.vehicle.plate, null, 'nfse');
+            } else {
+                openFiscalModal(null, null, null, 'pending');
+            }
+        });
+    }
+
+    if (btnVehicleFiscal) {
+        btnVehicleFiscal.addEventListener('click', () => {
+            if (currentCarHistory && currentCarHistory.vehicle && currentCarHistory.vehicle.plate) {
+                openFiscalModal(null, currentCarHistory.vehicle.plate, null, 'nfse');
+            } else {
+                openFiscalModal(null, currentVehiclePlate || null, null, 'nfse');
+            }
+        });
+    }
+
+    if (fiscalModalCloseBtn) {
+        fiscalModalCloseBtn.addEventListener('click', () => {
+            fiscalModal.style.display = 'none';
+        });
+    }
+
+    if (fiscalModalDismiss) {
+        fiscalModalDismiss.addEventListener('click', () => {
+            fiscalModal.style.display = 'none';
+        });
+    }
+
+    // Inicialização da contagem no carregamento da tela
+    updateHeaderFiscalBadge();
 });
 
