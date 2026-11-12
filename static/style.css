@@ -642,14 +642,36 @@ body {
 .visit-meta-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-checklist {
+    background: #047857 !important;
+    color: #ffffff !important;
+    border: 1px solid #065f46 !important;
+}
+
+.btn-checklist:hover {
+    background: #065f46 !important;
+}
+
+.btn-checklist-top {
+    background: #059669 !important;
+    color: #ffffff !important;
+    border: 1px solid #047857 !important;
+    font-weight: 700;
+}
+
+.btn-checklist-top:hover {
+    background: #047857 !important;
 }
 
 .visit-filename {
     font-size: 12px;
     color: var(--text-muted);
     font-family: monospace;
-    max-width: 320px;
+    max-width: 240px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1462,3 +1484,1500 @@ body {
         display: none !important;
     }
 }
+
+/* ==========================================
+   Botões e Modal do Pátio / TV (CP-06)
+   ========================================== */
+.btn-tv {
+    background: #111827 !important;
+    color: #f9cc01 !important;
+    border: 1.5px solid #f9cc01 !important;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.btn-tv:hover {
+    background: #f9cc01 !important;
+    color: #111827 !important;
+    transform: translateY(-1px);
+}
+
+.btn-patio {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border: 1px solid #475569 !important;
+    font-weight: 600;
+}
+.btn-patio:hover {
+    background: #1e293b !important;
+    border-color: #f9cc01 !important;
+}
+
+.btn-patio-action {
+    background: #1e293b;
+    color: #f9cc01;
+    border: 1.5px solid #f9cc01;
+    font-weight: 700;
+}
+.btn-patio-action:hover {
+    background: #f9cc01;
+    color: #111827;
+}
+
+/* Modal do Pátio no Desktop */
+.patio-cars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 4px;
+}
+
+.patio-item-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: background 0.15s;
+}
+.patio-item-row:hover {
+    background: #f1f5f9;
+}
+
+.patio-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.patio-item-plate {
+    font-size: 14px;
+    font-weight: 800;
+    font-family: monospace;
+    background: #111827;
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 5px;
+}
+
+.patio-item-details {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.patio-item-model {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.patio-item-sub {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.patio-status-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.patio-status-terceiro {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #f87171;
+}
+
+.patio-status-execucao {
+    background: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #facc15;
+}
+
+.patio-status-pronto {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.patio-status-default {
+    background: #e0f2fe;
+    color: #075985;
+    border: 1px solid #7dd3fc;
+}
+
+/* ==========================================================================
+   ESTILOS V2.0 - NOVA OS E COPILOTO FISCAL
+   ========================================================================== */
+.btn-tv {
+    background: #1e293b;
+    color: #f9cc01;
+    border: 1px solid #334155;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+.btn-tv:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.btn-fiscal, .btn-fiscal-action {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+    font-weight: 700;
+}
+.btn-fiscal:hover, .btn-fiscal-action:hover {
+    background: #bae6fd;
+}
+
+.modal-dialog-xl {
+    max-width: 900px;
+    width: 95%;
+}
+.modal-dialog-lg {
+    max-width: 760px;
+    width: 95%;
+}
+
+.os-autocomplete-box {
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    position: relative;
+}
+.os-autocomplete-box label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #854d0e;
+    margin-bottom: 6px;
+    display: block;
+}
+.os-autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    right: 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1050;
+}
+.os-autocomplete-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+}
+.os-autocomplete-item:hover {
+    background: #fef9c3;
+}
+
+.os-form-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+.os-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+}
+.os-grid-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.os-grid-row:last-child {
+    margin-bottom: 0;
+}
+.os-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.os-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+.os-input {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: #0f172a;
+    outline: none;
+}
+.os-input:focus {
+    border-color: #f9cc01;
+    background: #ffffff;
+}
+.os-input.uppercase {
+    text-transform: uppercase;
+}
+.os-input-sm {
+    padding: 5px 8px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    outline: none;
+}
+
+.os-table-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.os-items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.os-items-table th {
+    background: #f1f5f9;
+    padding: 6px 8px;
+    font-size: 12px;
+    text-align: left;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+.os-items-table td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+}
+.os-items-table input.os-table-input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+}
+.os-items-table input.os-table-input:focus {
+    border-color: #f9cc01;
+    box-shadow: 0 0 0 2px rgba(249, 204, 1, 0.2);
+}
+.os-items-table input.os-table-input[readonly] {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-color: #e2e8f0;
+    cursor: default;
+}
+.btn-remove-row {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+.btn-remove-row:hover {
+    background: #fecaca;
+}
+
+/* Quick Suggestion Chips (CP-03) */
+.os-quick-suggestions-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    flex-wrap: wrap;
+}
+.os-quick-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+}
+.os-chips-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.os-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    user-select: none;
+    background: #ffffff;
+}
+.os-chip-peca {
+    background: #fefce8;
+    color: #854d0e;
+    border-color: #fef08a;
+}
+.os-chip-peca:hover {
+    background: #fef08a;
+    border-color: #fde047;
+    transform: translateY(-1px);
+}
+.os-chip-servico {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+.os-chip-servico:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    transform: translateY(-1px);
+}
+
+.os-plate-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.os-plate-badge.found {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.os-plate-badge.new {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.os-spinner-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    animation: spin 1s infinite linear;
+}
+
+.btn-edit-os {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-edit-os:hover {
+    background: #f9cc01;
+    color: #111827;
+    border-color: #e5b800;
+}
+
+.os-totals-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+.os-total-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #334155;
+}
+.os-total-final {
+    background: #111827;
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 6px;
+}
+.os-total-final strong {
+    color: #f9cc01;
+    font-size: 15px;
+}
+
+/* Copiloto Fiscal (CP-07) */
+.modal-dialog-xl {
+    max-width: 980px !important;
+    max-height: 90vh !important;
+}
+
+.badge-nf-counter {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 12px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    box-shadow: 0 1px 3px rgba(239, 68, 68, 0.4);
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.badge-pending-mini {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 10px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    display: inline-block;
+}
+
+.fiscal-tabs {
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 14px;
+    gap: 4px;
+    overflow-x: auto;
+}
+.fiscal-tab {
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.fiscal-tab:hover {
+    color: #0f172a;
+    background: #f8fafc;
+}
+.fiscal-tab.active {
+    color: #0f172a;
+    border-bottom-color: #f9cc01;
+    background: #ffffff;
+}
+
+.fiscal-alert-box {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+.nfse-alert {
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+}
+.nfe-alert {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.fiscal-section {
+    margin-bottom: 14px;
+}
+.fiscal-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.fiscal-field-header label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+.fiscal-textarea {
+    width: 100%;
+    height: 120px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    resize: vertical;
+    box-sizing: border-box;
+    color: #0f172a;
+}
+.fiscal-textarea:focus {
+    outline: none;
+    border-color: #0284c7;
+    background: #ffffff;
+}
+
+/* Quick Pills */
+.fiscal-quick-pills {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 12px 0;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.quick-pills-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.pill-copy-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.pill-copy-btn:hover {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.fiscal-actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Services and Parts list breakdown */
+.fiscal-items-container {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.fiscal-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.fiscal-item-desc {
+    color: #0f172a;
+    font-weight: 500;
+    flex: 1;
+}
+.fiscal-item-val {
+    font-weight: 700;
+    color: #1e293b;
+    margin-left: 12px;
+}
+
+/* Fiscal table */
+.fiscal-table-wrapper {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+.fiscal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.fiscal-table th {
+    background: #f1f5f9;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 1px solid #cbd5e1;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.fiscal-table td {
+    padding: 7px 10px;
+    font-size: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.fiscal-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* Status row */
+.fiscal-status-row {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.fiscal-val-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.fiscal-val-box span {
+    font-size: 13px;
+    color: #64748b;
+}
+.fiscal-val-box strong {
+    font-size: 18px;
+    color: #0f172a;
+}
+.fiscal-action-inputs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Status Pills */
+.badge-status-pill {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.badge-status-pill.pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.badge-status-pill.emitted {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.badge-status-pill.na {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* Tomador Cards Grid */
+.tomador-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+.tomador-field-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.tomador-field-card.full-width {
+    grid-column: 1 / -1;
+}
+.field-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.field-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.field-value {
+    font-size: 14px;
+    color: #0f172a;
+    word-break: break-word;
+}
+.btn-copy-inline {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.btn-copy-inline:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+/* Queue KPI Grid */
+.fiscal-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+@media (max-width: 768px) {
+    .fiscal-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.fiscal-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.kpi-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.kpi-value {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.text-amber { color: #d97706; }
+.text-blue { color: #0284c7; }
+.text-green { color: #10b981; }
+
+/* Queue Toolbar */
+.fiscal-queue-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    background: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.fiscal-queue-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.queue-filter-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.queue-filter-btn:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+.queue-filter-btn.active {
+    background: #111827;
+    border-color: #111827;
+    color: #f9cc01;
+    font-weight: 800;
+}
+.fiscal-queue-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.queue-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.queue-search-box input {
+    padding: 6px 28px 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 220px;
+}
+.queue-search-box input:focus {
+    outline: none;
+    border-color: #0284c7;
+}
+.queue-search-box button {
+    position: absolute;
+    right: 6px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* Queue List and Cards */
+.fiscal-pending-list {
+    max-height: 440px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.fiscal-queue-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.15s ease;
+}
+.fiscal-queue-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.fiscal-card-info {
+    flex: 1;
+}
+.fiscal-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.fiscal-card-plate {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.fiscal-card-model {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 600;
+}
+.fiscal-card-client {
+    font-size: 12px;
+    color: #64748b;
+}
+.fiscal-card-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.fiscal-card-status-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+.fiscal-status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.fiscal-card-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.btn-action-mini {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-action-mini:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.btn-action-mini.primary {
+    background: #f9cc01;
+    border-color: #e5b800;
+    color: #111827;
+    font-weight: 700;
+}
+.btn-action-mini.primary:hover {
+    background: #e5b800;
+}
+
+/* Badge in car history timeline visits */
+.badge-visit-nf {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.badge-visit-nf.emitted {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.badge-visit-nf.partial {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.badge-visit-nf.pending {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+.badge-visit-nf.none {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* ==========================================================================
+   SIDEBAR DE AGENDAMENTOS & WORKSPACE LAYOUT (Issue #15)
+   ========================================================================== */
+.btn-agenda {
+    background: #1f2937;
+    color: var(--primary);
+    border: 1px solid #374151;
+    font-weight: 700;
+    transition: all 0.15s ease;
+}
+.btn-agenda:hover {
+    background: #374151;
+    color: #ffffff;
+    border-color: var(--primary);
+}
+.btn-agenda.active {
+    background: var(--primary);
+    color: #111827;
+    border-color: var(--primary-hover);
+}
+
+.badge-agenda-counter {
+    background: var(--accent-red);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+}
+
+/* Layout Workspace */
+.app-workspace-layout {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    min-height: calc(100vh - 72px);
+    position: relative;
+}
+
+.app-workspace-content {
+    flex: 1;
+    min-width: 0;
+    transition: margin-right 0.25s ease;
+}
+
+/* Sidebar Estilizada */
+.agenda-sidebar {
+    width: 370px;
+    flex-shrink: 0;
+    background: #ffffff;
+    border-left: 2px solid var(--border-color);
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.04);
+    position: sticky;
+    top: 72px;
+    height: calc(100vh - 72px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    transition: all 0.25s ease;
+    z-index: 90;
+}
+
+.agenda-sidebar.collapsed {
+    display: none;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
+}
+
+.sidebar-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-icon {
+    font-size: 20px;
+}
+
+.sidebar-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.3px;
+}
+
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-sidebar-icon {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-sidebar-icon:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.btn-sidebar-add {
+    background: var(--primary);
+    border-color: var(--primary-hover);
+    color: #111827;
+    font-weight: 700;
+}
+
+.btn-sidebar-add:hover {
+    background: var(--primary-hover);
+}
+
+/* Filtros da Sidebar */
+.sidebar-filters {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+    border: 1px solid var(--border-color);
+}
+
+.sidebar-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 6px 4px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+
+.sidebar-tab-btn:hover {
+    color: var(--text-main);
+}
+
+.sidebar-tab-btn.active {
+    background: #ffffff;
+    color: var(--text-main);
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.sidebar-tab-count {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 8px;
+}
+
+.sidebar-tab-btn.active .sidebar-tab-count {
+    background: #fef08a;
+    color: #854d0e;
+}
+
+/* Busca rápida na sidebar */
+.sidebar-search-box {
+    position: relative;
+}
+
+.sidebar-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    background: #f8fafc;
+    transition: border-color 0.15s ease;
+}
+
+.sidebar-search-input:focus {
+    border-color: var(--primary);
+    background: #ffffff;
+}
+
+/* Lista de agendamentos */
+.sidebar-agenda-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+/* Card de Agendamento na Sidebar */
+.sidebar-agenda-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease;
+}
+
+.sidebar-agenda-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+}
+
+.sidebar-agenda-card.status-confirmado {
+    border-left-color: var(--accent-blue);
+}
+
+.sidebar-agenda-card.status-concluido {
+    border-left-color: var(--accent-green);
+    background: #f0fdf4;
+    opacity: 0.9;
+}
+
+.sidebar-agenda-card.status-cancelado {
+    border-left-color: var(--accent-red);
+    opacity: 0.6;
+}
+
+.sidebar-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-card-time-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-card-time {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.sidebar-card-date {
+    font-size: 11px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.sidebar-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-status-agendado {
+    background: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #fde047;
+}
+
+.badge-status-confirmado {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.badge-status-concluido {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.badge-status-cancelado {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.sidebar-card-vehicle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-card-plate {
+    background: #111827;
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-card-model {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.sidebar-card-client {
+    font-size: 12px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-card-client-name {
+    font-weight: 600;
+}
+
+.sidebar-card-client-phone {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.sidebar-card-issue-box {
+    background: #f8fafc;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #f1f5f9;
+}
+
+.sidebar-card-issue-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.sidebar-card-issue-desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+.sidebar-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-dar-entrada {
+    flex: 1;
+    background: var(--primary);
+    color: #111827;
+    border: 1px solid var(--primary-hover);
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-dar-entrada:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-dar-entrada.concluido {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+    cursor: default;
+}
+
+.btn-action-mini {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-action-mini:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Empty State da Sidebar */
+.sidebar-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    text-align: center;
+    color: #64748b;
+}
+
+.sidebar-empty-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.sidebar-empty-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.sidebar-empty-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+
+
+

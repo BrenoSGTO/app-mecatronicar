@@ -163,7 +163,7 @@ def get_contrast_text_color(hex_color):
     except Exception:
         return '#1e293b'
 
-PARSER_VERSION = 3
+PARSER_VERSION = 4
 
 def is_pecas_header(val_clean):
     s = val_clean.rstrip(':').strip()
@@ -177,6 +177,21 @@ def is_servico_header(val_clean):
         'servicos realizados', 'servico realizado',
         'mao de obra', 'm.o', 'm.o.'
     )
+
+def format_time_val(val, datemode=0):
+    if val is None or val == "":
+        return ""
+    if isinstance(val, datetime.time):
+        return val.strftime("%H:%M")
+    if isinstance(val, datetime.datetime):
+        return val.strftime("%H:%M")
+    if isinstance(val, (float, int)):
+        if 0 < float(val) < 1:
+            total_minutes = int(round(float(val) * 24 * 60))
+            hh = (total_minutes // 60) % 24
+            mm = total_minutes % 60
+            return f"{hh:02d}:{mm:02d}"
+    return str(val).strip()
 
 def parse_currency_float(val):
     if val is None or val == "":
@@ -214,6 +229,18 @@ def parse_xlsx(filepath):
     
     client_name = ""
     phone = ""
+    tel_res = ""
+    tel_com = ""
+    cpf = ""
+    rg = ""
+    email = ""
+    address = ""
+    address_num = ""
+    address_compl = ""
+    neighborhood = ""
+    city = ""
+    cep = ""
+
     car_brand = ""
     car_model = ""
     car_year = ""
@@ -223,9 +250,12 @@ def parse_xlsx(filepath):
     car_chassis = ""
     
     entry_date = ""
+    entry_time = ""
     exit_date = ""
+    exit_time = ""
     odometer = ""
     complaint = ""
+    payment_method = ""
     
     complaint_comment = ""
     model_comment = ""
@@ -256,10 +286,54 @@ def parse_xlsx(filepath):
                 c_val = ws.cell(r, c + 1).value
                 if c_val:
                     client_name = str(c_val).strip()
+            elif val_clean.startswith('end.:') or val_clean.startswith('endereco:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val:
+                    address = str(c_val).strip()
+            elif val_clean in ('nº:', 'no:', 'n°:', 'num:', 'numero:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val is not None and str(c_val).strip() != '':
+                    address_num = format_number_val(c_val)
+            elif val_clean.startswith('compl.:') or val_clean.startswith('complemento:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val is not None and str(c_val).strip() != '':
+                    address_compl = format_number_val(c_val)
+            elif val_clean.startswith('bairro:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val:
+                    neighborhood = str(c_val).strip()
+            elif val_clean.startswith('cidade:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val:
+                    city = str(c_val).strip()
+            elif val_clean.startswith('cep:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val is not None and str(c_val).strip() != '':
+                    cep = str(c_val).strip()
+            elif 'tel. res' in val_clean:
+                c_val = ws.cell(r, c + 1).value
+                if c_val:
+                    tel_res = str(c_val).strip()
+            elif 'tel. com' in val_clean:
+                c_val = ws.cell(r, c + 1).value
+                if c_val:
+                    tel_com = str(c_val).strip()
             elif 'celular:' in val_clean:
                 c_val = ws.cell(r, c + 1).value
                 if c_val:
                     phone = str(c_val).strip()
+            elif val_clean.startswith('cpf:') or val_clean.startswith('cnpj:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val is not None and str(c_val).strip() != '':
+                    cpf = str(c_val).strip()
+            elif val_clean.startswith('rg:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val is not None and str(c_val).strip() != '':
+                    rg = str(c_val).strip()
+            elif val_clean.startswith('email:') or val_clean.startswith('e-mail:'):
+                c_val = ws.cell(r, c + 1).value
+                if c_val:
+                    email = str(c_val).strip()
             elif val_clean.startswith('marca:'):
                 c_val = ws.cell(r, c + 1).value
                 if c_val:
@@ -298,18 +372,41 @@ def parse_xlsx(filepath):
                     if target.value:
                         entry_date = format_date_val(target.value)
                         break
+                for offset_h in range(2, 6):
+                    if c + offset_h <= max_c:
+                        h_lbl = remove_accents(str(ws.cell(r, c + offset_h).value or '')).lower().strip()
+                        if h_lbl.startswith('hora:'):
+                            h_val = ws.cell(r, c + offset_h + 1).value
+                            if h_val:
+                                entry_time = format_time_val(h_val)
+                            break
             elif 'data de saida:' in val_clean or 'data de saida :' in val_clean:
                 for offset in (1, 2):
                     target = ws.cell(r, c + offset)
                     if target.value:
                         exit_date = format_date_val(target.value)
                         break
+                for offset_h in range(2, 6):
+                    if c + offset_h <= max_c:
+                        h_lbl = remove_accents(str(ws.cell(r, c + offset_h).value or '')).lower().strip()
+                        if h_lbl.startswith('hora:'):
+                            h_val = ws.cell(r, c + offset_h + 1).value
+                            if h_val:
+                                exit_time = format_time_val(h_val)
+                            break
             elif 'hodometro:' in val_clean or 'odometro:' in val_clean:
                 for offset in range(1, 4):
                     target = ws.cell(r, c + offset)
-                    if target.value is not None and str(target.value).strip() != '':
+                    if target.value is not None and str(target.value).strip() != '' and not odometer:
                         odometer = format_number_val(target.value)
                         break
+            elif 'forma de pagamento:' in val_clean:
+                for offset in range(1, 5):
+                    if c + offset <= max_c:
+                        p_val = ws.cell(r, c + offset).value
+                        if p_val is not None and str(p_val).strip() != '':
+                            payment_method = str(p_val).strip()
+                            break
             elif is_pecas_header(val_clean) and pecas_row_idx == -1 and r > 18:
                 pecas_row_idx = r
             elif is_servico_header(val_clean) and servico_row_idx == -1 and r > 18:
@@ -397,6 +494,16 @@ def parse_xlsx(filepath):
                 t_raw = parse_currency_float(cell.value)
                 t_val = format_currency_val(cell.value)
 
+        if (not t_val or t_raw == 0.0) and q_val and u_val and desc_val:
+            try:
+                q_num = parse_currency_float(q_val)
+                u_num = parse_currency_float(u_val)
+                if q_num > 0 and u_num > 0:
+                    t_raw = q_num * u_num
+                    t_val = format_currency_val(t_raw)
+            except Exception:
+                pass
+
         if not desc_val and not row_comment:
             if servico_row_idx != -1 and r == servico_row_idx - 1 and t_raw > 0 and not total_pecas:
                 total_pecas = t_val
@@ -422,14 +529,17 @@ def parse_xlsx(filepath):
     pecas_items = [i for i in rows_data if i.get("section") != "Serviço"]
     servicos_items = [i for i in rows_data if i.get("section") == "Serviço"]
 
-    if not total_pecas:
-        s_pecas = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
-        if s_pecas > 0:
-            total_pecas = format_currency_val(s_pecas)
-    if not total_servicos:
-        s_serv = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
-        if s_serv > 0:
-            total_servicos = format_currency_val(s_serv)
+    s_pecas = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
+    s_serv = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
+    if not total_pecas and s_pecas > 0:
+        total_pecas = format_currency_val(s_pecas)
+    if not total_servicos and s_serv > 0:
+        total_servicos = format_currency_val(s_serv)
+    if not subtotal and (s_pecas + s_serv) > 0:
+        subtotal = format_currency_val(s_pecas + s_serv)
+    if not total and (s_pecas + s_serv) > 0:
+        disc_f = parse_currency_float(discount)
+        total = format_currency_val(max(0.0, s_pecas + s_serv - disc_f))
 
     extra_sheets_data = []
     for sec_name in all_sheet_names[1:]:
@@ -457,10 +567,22 @@ def parse_xlsx(filepath):
         "active_sheet": sheet_name,
         "extra_sheets_data": extra_sheets_data,
         "plate": final_plate,
+        "plate_clean": clean_plate(final_plate),
         "plate_display": format_plate_display(final_plate),
         "plate_comment": plate_comment,
         "client_name": final_owner,
-        "phone": phone,
+        "phone": phone or tel_res or tel_com,
+        "tel_res": tel_res,
+        "tel_com": tel_com,
+        "cpf": cpf,
+        "rg": rg,
+        "email": email,
+        "address": address,
+        "address_num": address_num,
+        "address_compl": address_compl,
+        "neighborhood": neighborhood,
+        "city": city,
+        "cep": cep,
         "car_brand": car_brand,
         "car_model": final_model,
         "model_comment": model_comment,
@@ -470,10 +592,13 @@ def parse_xlsx(filepath):
         "car_chassis": car_chassis,
         "visit_num": final_visit,
         "entry_date": entry_date,
+        "entry_time": entry_time,
         "exit_date": exit_date,
+        "exit_time": exit_time,
         "odometer": odometer,
         "complaint": complaint,
         "complaint_comment": complaint_comment,
+        "payment_method": payment_method,
         "items": rows_data,
         "pecas_items": pecas_items,
         "servicos_items": servicos_items,
@@ -843,6 +968,18 @@ def parse_xls(filepath):
     
     client_name = ""
     phone = ""
+    tel_res = ""
+    tel_com = ""
+    cpf = ""
+    rg = ""
+    email = ""
+    address = ""
+    address_num = ""
+    address_compl = ""
+    neighborhood = ""
+    city = ""
+    cep = ""
+
     car_brand = ""
     car_model = ""
     car_year = ""
@@ -852,9 +989,12 @@ def parse_xls(filepath):
     car_chassis = ""
     
     entry_date = ""
+    entry_time = ""
     exit_date = ""
+    exit_time = ""
     odometer = ""
     complaint = ""
+    payment_method = ""
     
     complaint_comment = ""
     model_comment = ""
@@ -886,9 +1026,42 @@ def parse_xls(filepath):
             if val_clean.startswith('nome:'):
                 if c + 1 < ncols and ws.cell_value(r, c + 1):
                     client_name = str(ws.cell_value(r, c + 1)).strip()
+            elif val_clean.startswith('end.:') or val_clean.startswith('endereco:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1):
+                    address = str(ws.cell_value(r, c + 1)).strip()
+            elif val_clean in ('nº:', 'no:', 'n°:', 'num:', 'numero:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1) != '':
+                    address_num = format_number_val(ws.cell_value(r, c + 1))
+            elif val_clean.startswith('compl.:') or val_clean.startswith('complemento:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1) != '':
+                    address_compl = format_number_val(ws.cell_value(r, c + 1))
+            elif val_clean.startswith('bairro:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1):
+                    neighborhood = str(ws.cell_value(r, c + 1)).strip()
+            elif val_clean.startswith('cidade:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1):
+                    city = str(ws.cell_value(r, c + 1)).strip()
+            elif val_clean.startswith('cep:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1) != '':
+                    cep = format_number_val(ws.cell_value(r, c + 1))
+            elif 'tel. res' in val_clean:
+                if c + 1 < ncols and ws.cell_value(r, c + 1):
+                    tel_res = format_number_val(ws.cell_value(r, c + 1))
+            elif 'tel. com' in val_clean:
+                if c + 1 < ncols and ws.cell_value(r, c + 1):
+                    tel_com = format_number_val(ws.cell_value(r, c + 1))
             elif 'celular:' in val_clean:
                 if c + 1 < ncols and ws.cell_value(r, c + 1):
-                    phone = str(ws.cell_value(r, c + 1)).strip()
+                    phone = format_number_val(ws.cell_value(r, c + 1))
+            elif val_clean.startswith('cpf:') or val_clean.startswith('cnpj:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1) != '':
+                    cpf = format_number_val(ws.cell_value(r, c + 1))
+            elif val_clean.startswith('rg:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1) != '':
+                    rg = format_number_val(ws.cell_value(r, c + 1))
+            elif val_clean.startswith('email:') or val_clean.startswith('e-mail:'):
+                if c + 1 < ncols and ws.cell_value(r, c + 1):
+                    email = str(ws.cell_value(r, c + 1)).strip()
             elif val_clean.startswith('marca:'):
                 if c + 1 < ncols and ws.cell_value(r, c + 1):
                     car_brand = str(ws.cell_value(r, c + 1)).strip()
@@ -923,15 +1096,36 @@ def parse_xls(filepath):
                     if c + offset < ncols and ws.cell_value(r, c + offset) != '':
                         entry_date = format_date_val(ws.cell_value(r, c + offset), wb.datemode)
                         break
+                for offset_h in range(2, 6):
+                    if c + offset_h + 1 < ncols:
+                        h_lbl = remove_accents(str(ws.cell_value(r, c + offset_h) or '')).lower().strip()
+                        if h_lbl.startswith('hora:'):
+                            h_val = ws.cell_value(r, c + offset_h + 1)
+                            if h_val != '':
+                                entry_time = format_time_val(h_val, wb.datemode)
+                            break
             elif 'data de saida:' in val_clean or 'data de saida' in val_clean:
                 for offset in (1, 2):
                     if c + offset < ncols and ws.cell_value(r, c + offset) != '':
                         exit_date = format_date_val(ws.cell_value(r, c + offset), wb.datemode)
                         break
+                for offset_h in range(2, 6):
+                    if c + offset_h + 1 < ncols:
+                        h_lbl = remove_accents(str(ws.cell_value(r, c + offset_h) or '')).lower().strip()
+                        if h_lbl.startswith('hora:'):
+                            h_val = ws.cell_value(r, c + offset_h + 1)
+                            if h_val != '':
+                                exit_time = format_time_val(h_val, wb.datemode)
+                            break
             elif 'hodometro:' in val_clean or 'odometro:' in val_clean:
                 for offset in range(1, 4):
-                    if c + offset < ncols and ws.cell_value(r, c + offset) != '':
+                    if c + offset < ncols and ws.cell_value(r, c + offset) != '' and not odometer:
                         odometer = format_number_val(ws.cell_value(r, c + offset))
+                        break
+            elif 'forma de pagamento:' in val_clean:
+                for offset in range(1, 5):
+                    if c + offset < ncols and ws.cell_value(r, c + offset) != '':
+                        payment_method = str(ws.cell_value(r, c + offset)).strip()
                         break
             elif is_pecas_header(val_clean) and pecas_row_idx == -1 and r > 18:
                 pecas_row_idx = r
@@ -1048,14 +1242,17 @@ def parse_xls(filepath):
     pecas_items = [i for i in rows_data if i.get("section") != "Serviço"]
     servicos_items = [i for i in rows_data if i.get("section") == "Serviço"]
 
-    if not total_pecas:
-        s_pecas = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
-        if s_pecas > 0:
-            total_pecas = format_currency_val(s_pecas)
-    if not total_servicos:
-        s_serv = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
-        if s_serv > 0:
-            total_servicos = format_currency_val(s_serv)
+    s_pecas = sum(parse_currency_float(i.get("total_price")) for i in pecas_items)
+    s_serv = sum(parse_currency_float(i.get("total_price")) for i in servicos_items)
+    if not total_pecas and s_pecas > 0:
+        total_pecas = format_currency_val(s_pecas)
+    if not total_servicos and s_serv > 0:
+        total_servicos = format_currency_val(s_serv)
+    if not subtotal and (s_pecas + s_serv) > 0:
+        subtotal = format_currency_val(s_pecas + s_serv)
+    if not total and (s_pecas + s_serv) > 0:
+        disc_f = parse_currency_float(discount)
+        total = format_currency_val(max(0.0, s_pecas + s_serv - disc_f))
 
     extra_sheets_data = []
     for sec_idx in range(1, len(all_sheet_names)):
@@ -1084,10 +1281,22 @@ def parse_xls(filepath):
         "active_sheet": sheet_name,
         "extra_sheets_data": extra_sheets_data,
         "plate": final_plate,
+        "plate_clean": clean_plate(final_plate),
         "plate_display": format_plate_display(final_plate),
         "plate_comment": plate_comment,
         "client_name": final_owner,
-        "phone": phone,
+        "phone": phone or tel_res or tel_com,
+        "tel_res": tel_res,
+        "tel_com": tel_com,
+        "cpf": cpf,
+        "rg": rg,
+        "email": email,
+        "address": address,
+        "address_num": address_num,
+        "address_compl": address_compl,
+        "neighborhood": neighborhood,
+        "city": city,
+        "cep": cep,
         "car_brand": car_brand,
         "car_model": final_model,
         "model_comment": model_comment,
@@ -1097,10 +1306,13 @@ def parse_xls(filepath):
         "car_chassis": car_chassis,
         "visit_num": final_visit,
         "entry_date": entry_date,
+        "entry_time": entry_time,
         "exit_date": exit_date,
+        "exit_time": exit_time,
         "odometer": odometer,
         "complaint": complaint,
         "complaint_comment": complaint_comment,
+        "payment_method": payment_method,
         "items": rows_data,
         "pecas_items": pecas_items,
         "servicos_items": servicos_items,

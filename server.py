@@ -5,12 +5,31 @@ import threading
 import tkinter as tk
 from tkinter import filedialog
 from flask import Flask, jsonify, request, send_from_directory
+import socket
+import datetime
 import cache
 import config
 import updater
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+def get_local_ip():
+    """
+    Descobre o IP local da máquina na rede da oficina (LAN/Wi-Fi).
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.2)
+        s.connect(('10.254.254.254', 1))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except Exception:
+            return "127.0.0.1"
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
@@ -26,15 +45,22 @@ def add_no_cache_headers(response):
 def index():
     return send_from_directory(STATIC_DIR, "index.html")
 
+@app.route("/tv")
+def tv_route():
+    return send_from_directory(STATIC_DIR, "tv.html")
+
 @app.route("/api/config", methods=["GET"])
 def get_config_endpoint():
     cfg = config.load_config(BASE_DIR)
     db_path = cache.get_db_path(BASE_DIR)
     stats = cache.get_stats(db_path)
+    local_ip = get_local_ip()
     return jsonify({
         "config": cfg,
         "stats": stats,
-        "version": updater.CURRENT_VERSION
+        "version": updater.CURRENT_VERSION,
+        "local_ip": local_ip,
+        "tv_url": f"http://{local_ip}:54321/tv"
     })
 
 @app.route("/api/config", methods=["POST"])
@@ -158,6 +184,52 @@ def car_history_endpoint(plate):
         "visits": history
     })
 
+@app.route("/api/car_lookup/<plate>", methods=["GET"])
+def car_lookup_endpoint(plate):
+    db_path = cache.get_db_path(BASE_DIR)
+    info = cache.get_car_lookup(plate, db_path)
+    return jsonify(info)
+
+@app.route("/api/quick_suggestions", methods=["GET"])
+def quick_suggestions_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    suggestions = cache.get_quick_suggestions(db_path)
+    return jsonify(suggestions)
+
+@app.route("/api/save_order", methods=["POST"])
+def save_order_endpoint():
+    import excel_writer
+    data = request.json or {}
+    order_data = data.get("order_data") or data
+    existing_file_path = data.get("existing_file_path") or None
+    
+    cfg = config.load_config(BASE_DIR)
+    folder = cfg.get("spreadsheet_folder", "")
+    if not folder or not os.path.isdir(folder):
+        sample_dir = os.path.join(BASE_DIR, "planilhas_exemplo")
+        folder = sample_dir if os.path.isdir(sample_dir) else BASE_DIR
+        
+    try:
+        res = excel_writer.save_order_to_excel(order_data, folder, existing_filepath=existing_file_path)
+        db_path = cache.get_db_path(BASE_DIR)
+        parsed = cache.index_single_file(res["file_path"], db_path, old_fpath=existing_file_path)
+        stats = cache.get_stats(db_path)
+        
+        return jsonify({
+            "success": True,
+            "message": "Ordem de serviço salva com sucesso!",
+            "file_path": res["file_path"],
+            "file_name": res["file_name"],
+            "plate": parsed.get("plate", "") if parsed else order_data.get("car_plate", ""),
+            "visit_num": parsed.get("visit_num", "") if parsed else order_data.get("visit_num", ""),
+            "details": parsed,
+            "stats": stats
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/open_file", methods=["POST"])
 def open_file_endpoint():
     data = request.json or {}
@@ -170,6 +242,53 @@ def open_file_endpoint():
         return jsonify({"success": True, "message": "Arquivo aberto no Excel com sucesso!"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+# Documentos PDF Profissionais (CP-04 e CP-05)
+@app.route("/api/orcamento_pdf", methods=["GET"])
+def orcamento_pdf_endpoint():
+    import pdf_generator
+    fpath = request.args.get("file_path", "")
+    auto_print = request.args.get("print", "0") in ("1", "true", "True")
+    
+    if not fpath or not os.path.exists(fpath):
+        plate = request.args.get("plate", "")
+        if plate:
+            db_path = cache.get_db_path(BASE_DIR)
+            history = cache.get_car_history(plate, db_path)
+            if history:
+                fpath = history[0].get("file_path", "")
+                
+    if not fpath or not os.path.exists(fpath):
+        return "Arquivo de planilha não encontrado.", 404
+        
+    try:
+        html_content = pdf_generator.generate_orcamento_from_file(fpath, auto_print=auto_print)
+        return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception as e:
+        return f"Erro gerando orçamento: {str(e)}", 500
+
+@app.route("/api/checklist_pdf", methods=["GET"])
+def checklist_pdf_endpoint():
+    import pdf_generator
+    fpath = request.args.get("file_path", "")
+    auto_print = request.args.get("print", "0") in ("1", "true", "True")
+    
+    if not fpath or not os.path.exists(fpath):
+        plate = request.args.get("plate", "")
+        if plate:
+            db_path = cache.get_db_path(BASE_DIR)
+            history = cache.get_car_history(plate, db_path)
+            if history:
+                fpath = history[0].get("file_path", "")
+                
+    if not fpath or not os.path.exists(fpath):
+        return "Arquivo de planilha não encontrado.", 404
+        
+    try:
+        html_content = pdf_generator.generate_checklist_from_file(fpath, auto_print=auto_print)
+        return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception as e:
+        return f"Erro gerando checklist: {str(e)}", 500
 
 # Updater API endpoints
 @app.route("/api/check_update", methods=["GET"])
@@ -195,6 +314,551 @@ def apply_update_endpoint():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ==========================================
+# ROTAS DO PÁTIO / TV DA OFICINA (CP-06)
+# ==========================================
+@app.route("/api/patio", methods=["GET"])
+def get_patio_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    summary = cache.get_patio_summary(db_path)
+    local_ip = get_local_ip()
+    return jsonify({
+        "success": True,
+        "total": summary["total"],
+        "by_status": summary["by_status"],
+        "cars": summary["cars"],
+        "statuses": cache.PATIO_STATUSES,
+        "local_ip": local_ip,
+        "tv_url": f"http://{local_ip}:54321/tv",
+        "server_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+@app.route("/api/patio", methods=["POST"])
+def save_patio_endpoint():
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        saved = cache.save_patio_car(data, db_path)
+        return jsonify({"success": True, "car": saved})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/patio/status", methods=["POST"])
+def update_patio_status_endpoint():
+    data = request.json or {}
+    car_id = data.get("car_id") or data.get("id")
+    status = data.get("status")
+    if not car_id or not status:
+        return jsonify({"success": False, "error": "ID e status são obrigatórios"}), 400
+    
+    auth_name = data.get("authorized_name")
+    auth_doc = data.get("authorized_doc")
+    auth_phone = data.get("authorized_phone")
+    
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        updated = cache.update_patio_car_status(
+            car_id, status,
+            authorized_name=auth_name,
+            authorized_doc=auth_doc,
+            authorized_phone=auth_phone,
+            db_path=db_path
+        )
+        if not updated:
+            return jsonify({"success": False, "error": "Veículo não encontrado no pátio"}), 404
+        return jsonify({"success": True, "car": updated})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/patio/<int:car_id>", methods=["DELETE"])
+def delete_patio_car_endpoint(car_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    success = cache.delete_patio_car(car_id, db_path)
+    if success:
+        return jsonify({"success": True, "message": "Veículo removido do pátio com sucesso."})
+    return jsonify({"success": False, "error": "Veículo não encontrado no pátio"}), 404
+
+@app.route("/api/patio/remove", methods=["POST"])
+def remove_patio_car_post_endpoint():
+    data = request.json or {}
+    car_id = data.get("car_id") or data.get("id")
+    if not car_id:
+        return jsonify({"success": False, "error": "ID do veículo ausente"}), 400
+    db_path = cache.get_db_path(BASE_DIR)
+    success = cache.delete_patio_car(car_id, db_path)
+    return jsonify({"success": success})
+
+# ==============================================================================
+# ROTAS DE AGENDAMENTOS E CALENDÁRIO (Issue #15)
+# ==============================================================================
+
+@app.route("/api/agendamentos", methods=["GET"])
+def list_agendamentos_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    date = request.args.get("date")
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
+    status = request.args.get("status")
+    query = request.args.get("query")
+    
+    try:
+        limit = int(request.args.get("limit", 200))
+    except Exception:
+        limit = 200
+
+    items = cache.list_agendamentos(
+        date_from=date_from,
+        date_to=date_to,
+        date=date,
+        status=status,
+        query=query,
+        limit=limit,
+        db_path=db_path
+    )
+    
+    today_iso = datetime.date.today().isoformat()
+    today_items = [it for it in items if it.get("scheduled_date") == today_iso]
+    today_count = len(today_items)
+    
+    return jsonify({
+        "success": True,
+        "agendamentos": items,
+        "count": len(items),
+        "today_count": today_count,
+        "today_iso": today_iso,
+        "server_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+@app.route("/api/agendamentos", methods=["POST"])
+def create_agendamento_endpoint():
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        agendamento = cache.create_agendamento(data, db_path=db_path)
+        
+        # Engatilha sincronização com Google Calendar
+        import calendar_sync
+        gcal_result = calendar_sync.sync_agendamento_to_gcal(agendamento)
+        if gcal_result.get("synced") and gcal_result.get("google_calendar_id"):
+            agendamento = cache.update_agendamento(
+                agendamento["id"],
+                {
+                    "google_calendar_id": gcal_result["google_calendar_id"],
+                    "google_calendar_sync_status": "synced"
+                },
+                db_path=db_path
+            )
+
+        return jsonify({
+            "success": True,
+            "agendamento": agendamento,
+            "gcal": gcal_result,
+            "message": "Agendamento cadastrado com sucesso!"
+        }), 201
+    except ValueError as ve:
+        return jsonify({"success": False, "error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Erro interno ao criar agendamento: {str(e)}"}), 500
+
+@app.route("/api/agendamentos/<int:agendamento_id>", methods=["GET"])
+def get_agendamento_endpoint(agendamento_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    agendamento = cache.get_agendamento(agendamento_id, db_path=db_path)
+    if not agendamento:
+        return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+    return jsonify({"success": True, "agendamento": agendamento})
+
+@app.route("/api/agendamentos/<int:agendamento_id>", methods=["PUT", "POST"])
+def update_agendamento_endpoint(agendamento_id):
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        updated = cache.update_agendamento(agendamento_id, data, db_path=db_path)
+        if not updated:
+            return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+            
+        import calendar_sync
+        gcal_result = calendar_sync.sync_agendamento_to_gcal(updated)
+        
+        return jsonify({
+            "success": True,
+            "agendamento": updated,
+            "gcal": gcal_result,
+            "message": "Agendamento atualizado com sucesso!"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/agendamentos/<int:agendamento_id>", methods=["DELETE"])
+def delete_agendamento_endpoint(agendamento_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    success = cache.delete_agendamento(agendamento_id, db_path=db_path)
+    if not success:
+        return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+    return jsonify({"success": True, "message": "Agendamento removido com sucesso."})
+
+@app.route("/api/agendamentos/<int:agendamento_id>/status", methods=["POST"])
+def update_agendamento_status_endpoint(agendamento_id):
+    data = request.json or {}
+    status = data.get("status")
+    if not status:
+        return jsonify({"success": False, "error": "Status é obrigatório."}), 400
+    db_path = cache.get_db_path(BASE_DIR)
+    updated = cache.update_agendamento_status(agendamento_id, status, db_path=db_path)
+    if not updated:
+        return jsonify({"success": False, "error": "Agendamento não encontrado."}), 404
+    return jsonify({"success": True, "agendamento": updated})
+
+@app.route("/api/agendamentos/gcal/status", methods=["GET"])
+def gcal_status_endpoint():
+    import calendar_sync
+    return jsonify(calendar_sync.get_gcal_status())
+
+@app.route("/api/agendamentos/gcal/sync", methods=["POST"])
+def gcal_sync_endpoint():
+    data = request.json or {}
+    import calendar_sync
+    result = calendar_sync.sync_agendamento_to_gcal(data)
+    return jsonify(result)
+
+# ==========================================
+# CRIAÇÃO E EDIÇÃO DE OS / MOTOR EXCEL (CP-02 / CP-03)
+# ==========================================
+
+@app.route("/api/os/autocomplete", methods=["GET"])
+def os_autocomplete_endpoint():
+    import excel_writer
+    q = request.args.get("q", "").strip()
+    db_path = cache.get_db_path(BASE_DIR)
+    suggestions = excel_writer.get_client_vehicle_autocomplete(q, db_path)
+    return jsonify({"success": True, "suggestions": suggestions})
+
+@app.route("/api/os/next_visit/<plate>", methods=["GET"])
+def os_next_visit_endpoint(plate):
+    import excel_writer
+    db_path = cache.get_db_path(BASE_DIR)
+    next_v = excel_writer.get_next_visit_num(plate, db_path)
+    history = cache.get_car_history(plate, db_path)
+    last_visit = history[0] if history else None
+    return jsonify({
+        "success": True,
+        "next_visit_num": next_v,
+        "last_visit": last_visit
+    })
+
+@app.route("/api/os/save", methods=["POST"])
+def os_save_endpoint():
+    import excel_writer
+    data = request.json or {}
+    existing_fpath = data.get("existing_file_path") or data.get("existing_filepath") or None
+    db_path = data.get("db_path") or cache.get_db_path(BASE_DIR)
+    cfg = config.load_config(BASE_DIR)
+    target_folder = data.get("folder") or data.get("target_folder") or cfg.get("spreadsheet_folder") or os.path.join(BASE_DIR, "planilhas_exemplo")
+    try:
+        res = excel_writer.save_new_or_updated_os(data, target_folder=target_folder, db_path=db_path, existing_filepath=existing_fpath)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+# ==========================================
+# COPILOTO FISCAL (CP-07)
+# ==========================================
+import nf_copilot
+
+@app.route("/api/nf/data", methods=["GET"])
+@app.route("/api/nf/data/<plate>", methods=["GET"])
+def nf_data_endpoint(plate=None):
+    db_path = cache.get_db_path(BASE_DIR)
+    file_path = request.args.get("file_path", "").strip()
+    target_plate = plate or request.args.get("plate", "").strip()
+    visit_num = request.args.get("visit_num", "").strip()
+
+    det = {}
+    fpath = file_path
+    last_visit = {}
+
+    if fpath and os.path.exists(fpath):
+        try:
+            import parser
+            det = parser.parse_file(fpath)
+            last_visit = det
+            target_plate = target_plate or det.get("plate", "")
+            visit_num = visit_num or det.get("visit_num", "")
+        except Exception as e:
+            print("Erro lendo planilha para copiloto fiscal:", e)
+
+    if not det and target_plate:
+        history = cache.get_car_history(target_plate, db_path)
+        if history:
+            if visit_num:
+                matched = [v for v in history if str(v.get("visit_num", "")).strip() == str(visit_num)]
+                last_visit = matched[0] if matched else history[0]
+            else:
+                last_visit = history[0]
+            det = last_visit.get("details") or {}
+            fpath = fpath or last_visit.get("file_path", "")
+
+    if not det and not last_visit:
+        nf_rec = cache.get_nf_control(file_path=fpath, plate_clean=target_plate, visit_num=visit_num, db_path=db_path)
+        if nf_rec:
+            val_s = float(nf_rec.get("valor_servico", 0.0) or 0.0)
+            val_p = float(nf_rec.get("valor_pecas", 0.0) or 0.0)
+            last_visit = {
+                "plate": nf_rec.get("plate"),
+                "plate_display": nf_rec.get("plate_display") or nf_rec.get("plate"),
+                "car_model": nf_rec.get("car_model"),
+                "client_name": nf_rec.get("client_name"),
+                "entry_date": nf_rec.get("entry_date"),
+                "visit_num": nf_rec.get("visit_num"),
+                "total_servicos": f"R$ {val_s:.2f}".replace(".", ","),
+                "total_pecas": f"R$ {val_p:.2f}".replace(".", ","),
+                "total": f"R$ {(val_s + val_p):.2f}".replace(".", ","),
+            }
+            det = last_visit
+            fpath = fpath or nf_rec.get("file_path", "")
+        else:
+            return jsonify({"success": False, "error": "Visita ou veículo não encontrado"}), 404
+
+    nf_rec = cache.get_nf_control(file_path=fpath, plate_clean=target_plate, visit_num=visit_num, db_path=db_path)
+    copilot_payload = nf_copilot.build_copilot_payload(fpath, det or last_visit, nf_rec)
+
+    val_servicos_num = cache.parse_currency_float(copilot_payload.get("total_servicos", "0"))
+    val_pecas_num = cache.parse_currency_float(copilot_payload.get("total_pecas", "0"))
+
+    # Estrutura completa de nfse e nfe
+    nfse_obj = {
+        "status": (nf_rec.get("status_servico") if nf_rec else None) or copilot_payload["nf_status"]["nfse_status"],
+        "numero_nfse": (nf_rec.get("nf_servico_num") if nf_rec else "") or copilot_payload["nf_status"]["nfse_number"],
+        "data_emissao": (nf_rec.get("data_emissao_servico") if nf_rec else "") or copilot_payload["nf_status"]["nfse_date"],
+        "valor_servicos": val_servicos_num,
+        "discriminacao_completa": copilot_payload["copilot_texts"]["nfse_discriminacao"],
+        "itens_servico": [
+            {
+                "desc": s.get("description", ""),
+                "qty": s.get("quantity", "1"),
+                "unit_price": cache.parse_currency_float(s.get("unit_price", 0)),
+                "total": cache.parse_currency_float(s.get("total_price", 0))
+            }
+            for s in copilot_payload.get("servicos_items", [])
+        ]
+    }
+
+    nfe_obj = {
+        "status": (nf_rec.get("status_pecas") if nf_rec else None) or copilot_payload["nf_status"]["nfe_status"],
+        "numero_nfe": (nf_rec.get("nf_pecas_num") if nf_rec else "") or copilot_payload["nf_status"]["nfe_number"],
+        "data_emissao": (nf_rec.get("data_emissao_pecas") if nf_rec else "") or copilot_payload["nf_status"]["nfe_date"],
+        "valor_pecas": val_pecas_num,
+        "resumo_texto": copilot_payload["copilot_texts"]["nfe_pecas_resumo"],
+        "tabela_tsv": copilot_payload["copilot_texts"]["nfe_pecas_tsv"],
+        "itens_pecas": [
+            {
+                "desc": p.get("description", ""),
+                "qty": p.get("quantity", "1"),
+                "unit_price": cache.parse_currency_float(p.get("unit_price", 0)),
+                "total": cache.parse_currency_float(p.get("total_price", 0)),
+                "cfop": str(p.get("suggested_cfop", "5405")).replace(".", ""),
+                "cfop_display": p.get("suggested_cfop", "5.405"),
+                "ncm_sugerido": p.get("suggested_ncm", "8708.29.99"),
+                "ncm_desc": p.get("suggested_ncm_desc", "")
+            }
+            for p in copilot_payload.get("pecas_items", [])
+        ]
+    }
+
+    return jsonify({
+        "success": True,
+        "plate": copilot_payload.get("plate_display") or copilot_payload.get("plate"),
+        "plate_display": copilot_payload.get("plate_display") or copilot_payload.get("plate"),
+        "client_name": copilot_payload.get("client_name"),
+        "car_model": copilot_payload.get("car_model"),
+        "visit_num": copilot_payload.get("visit_num"),
+        "entry_date": copilot_payload.get("entry_date"),
+        "discriminacao_nfse": copilot_payload["copilot_texts"]["nfse_discriminacao"],
+        "dados_tomador": copilot_payload["copilot_texts"]["tomador_resumo"],
+        "valor_servicos": val_servicos_num,
+        "valor_pecas": val_pecas_num,
+        "valor_total": val_servicos_num + val_pecas_num,
+        "nfse": nfse_obj,
+        "nfe": nfe_obj,
+        "tomador": copilot_payload.get("tomador"),
+        "pecas_nfe": nfe_obj["itens_pecas"],
+        "copilot": copilot_payload,
+        "nf_control": nf_rec
+    })
+
+@app.route("/api/nf/queue", methods=["GET"])
+def nf_queue_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    filter_type = request.args.get("filter", "pending").strip()
+    query = request.args.get("q", "").strip()
+    res = cache.get_nf_queue(filter_type=filter_type, query=query, db_path=db_path)
+    return jsonify({
+        "success": True,
+        "queue": res.get("queue", []),
+        "items": res.get("queue", []),
+        "stats": res.get("stats", {})
+    })
+
+@app.route("/api/nf/pending", methods=["GET"])
+def nf_pending_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    res = cache.get_nf_queue(filter_type="pending", db_path=db_path)
+    pending = res.get("queue", [])
+    return jsonify({
+        "success": True,
+        "pending": pending,
+        "total": len(pending),
+        "stats": res.get("stats", {})
+    })
+
+@app.route("/api/nf/status", methods=["POST"])
+def nf_update_status_endpoint():
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        saved = cache.save_nf_control(data, db_path)
+        stats = cache.get_nf_queue(filter_type="pending", db_path=db_path).get("stats", {})
+        return jsonify({
+            "success": True,
+            "nf": saved,
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/nf/copilot_text", methods=["GET"])
+def nf_copilot_text_endpoint():
+    file_path = request.args.get("file_path", "").strip()
+    text_type = request.args.get("type", "nfse_discriminacao").strip()
+    plate = request.args.get("plate", "").strip()
+    db_path = cache.get_db_path(BASE_DIR)
+
+    det = None
+    if file_path and os.path.exists(file_path):
+        try:
+            import parser
+            det = parser.parse_file(file_path)
+        except Exception:
+            det = None
+
+    if not det and plate:
+        hist = cache.get_car_history(plate, db_path)
+        if hist:
+            file_path = file_path or hist[0].get("file_path", "")
+            det = hist[0].get("details") or hist[0]
+
+    nf_rec = cache.get_nf_control(file_path=file_path, plate_clean=plate, db_path=db_path)
+
+    if not det and nf_rec:
+        val_s = float(nf_rec.get("valor_servico", 0.0) or 0.0)
+        val_p = float(nf_rec.get("valor_pecas", 0.0) or 0.0)
+        det = {
+            "plate": nf_rec.get("plate"),
+            "plate_display": nf_rec.get("plate_display") or nf_rec.get("plate"),
+            "car_model": nf_rec.get("car_model"),
+            "client_name": nf_rec.get("client_name"),
+            "entry_date": nf_rec.get("entry_date"),
+            "visit_num": nf_rec.get("visit_num"),
+            "total_servicos": f"R$ {val_s:.2f}".replace(".", ","),
+            "total_pecas": f"R$ {val_p:.2f}".replace(".", ","),
+            "total": f"R$ {(val_s + val_p):.2f}".replace(".", ","),
+        }
+        file_path = file_path or nf_rec.get("file_path", "")
+
+    if not det:
+        return jsonify({"success": False, "error": "Visita ou planilha não encontrada"}), 404
+
+    try:
+        payload = nf_copilot.build_copilot_payload(file_path, det, nf_rec)
+        texts = payload.get("copilot_texts", {})
+        tomador = payload.get("tomador", {})
+
+        target_text = ""
+        if text_type == "nfse_discriminacao":
+            target_text = texts.get("nfse_discriminacao", "")
+        elif text_type == "tomador_resumo":
+            target_text = texts.get("tomador_resumo", "")
+        elif text_type == "nfe_pecas_resumo":
+            target_text = texts.get("nfe_pecas_resumo", "")
+        elif text_type == "nfe_pecas_tsv":
+            target_text = texts.get("nfe_pecas_tsv", "")
+        elif text_type == "cpf_only":
+            target_text = tomador.get("cpf", "")
+        elif text_type == "cep_only":
+            target_text = tomador.get("cep", "")
+        elif text_type == "endereco_only":
+            target_text = tomador.get("address_single_line", "")
+        else:
+            return jsonify({"success": True, "texts": texts, "tomador": tomador})
+
+        if request.args.get("raw") == "1" or request.headers.get("Accept") == "text/plain":
+            return target_text, 200, {"Content-Type": "text/plain; charset=utf-8"}
+        return jsonify({"success": True, "text": target_text, "type": text_type})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/nf/export_batch", methods=["GET"])
+def nf_export_batch_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    filter_type = request.args.get("filter", "pending").strip()
+    fmt = request.args.get("format", "csv").strip().lower()
+
+    res = cache.get_nf_queue(filter_type=filter_type, db_path=db_path)
+    items = res.get("queue", [])
+
+    if fmt == "csv":
+        import csv
+        import io
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+        writer.writerow([
+            "Placa", "Cliente", "CPF", "Telefone", "Modelo", "Data Visita",
+            "Mão de Obra (R$)", "Status NFS-e", "Nº NFS-e",
+            "Peças (R$)", "Status NF-e", "Nº NF-e", "Total Geral (R$)"
+        ])
+        for it in items:
+            writer.writerow([
+                it.get("plate_display") or it.get("plate"),
+                it.get("client_name"),
+                it.get("cpf"),
+                it.get("phone"),
+                it.get("car_model"),
+                it.get("entry_date"),
+                f"{it.get('valor_servico', 0.0):.2f}".replace(".", ","),
+                it.get("status_servico"),
+                it.get("nf_servico_num"),
+                f"{it.get('valor_pecas', 0.0):.2f}".replace(".", ","),
+                it.get("status_pecas"),
+                it.get("nf_pecas_num"),
+                f"{it.get('valor_total', 0.0):.2f}".replace(".", ",")
+            ])
+        content = output.getvalue()
+        filename = f"MecatroniCar_Notas_{filter_type}.csv"
+        return content, 200, {
+            "Content-Type": "text/csv; charset=utf-8-sig",
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    else:
+        # Formato TXT
+        lines = [
+            f"MECATRONICAR - FILA DE NOTAS FISCAIS ({filter_type.upper()})",
+            f"Gerado em: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}",
+            "=" * 70
+        ]
+        for idx, it in enumerate(items, start=1):
+            lines.append(f"{idx}. {it.get('plate_display') or it.get('plate')} | {it.get('client_name')} | {it.get('car_model')}")
+            lines.append(f"   Data: {it.get('entry_date')} | Visita #{it.get('visit_num')}")
+            lines.append(f"   NFS-e Santos (Serviços): R$ {it.get('valor_servico', 0.0):.2f} - Status: {it.get('status_servico')} (Nº {it.get('nf_servico_num') or '-'})")
+            lines.append(f"   NF-e 55 (Peças): R$ {it.get('valor_pecas', 0.0):.2f} - Status: {it.get('status_pecas')} (Nº {it.get('nf_pecas_num') or '-'})")
+            lines.append("-" * 70)
+        content = "\n".join(lines)
+        filename = f"MecatroniCar_Notas_{filter_type}.txt"
+        return content, 200, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+
+
 def start_server(port=5000):
     cfg = config.load_config(BASE_DIR)
     folder = cfg.get("spreadsheet_folder", "")
@@ -203,7 +867,10 @@ def start_server(port=5000):
         print(f"Indexando planilhas em {folder}...")
         cache.scan_and_index_folder(folder, db_path)
         
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+    local_ip = get_local_ip()
+    print(f"Iniciando servidor na rede local (LAN): http://{local_ip}:{port}")
+    print(f"Painel de TV da oficina acessível em: http://{local_ip}:{port}/tv")
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
     start_server()
