@@ -494,6 +494,16 @@ def parse_xlsx(filepath):
                 t_raw = parse_currency_float(cell.value)
                 t_val = format_currency_val(cell.value)
 
+        if (not t_val or t_raw == 0.0) and q_val and u_val and desc_val:
+            try:
+                q_num = parse_currency_float(q_val)
+                u_num = parse_currency_float(u_val)
+                if q_num > 0 and u_num > 0:
+                    t_raw = q_num * u_num
+                    t_val = format_currency_val(t_raw)
+            except Exception:
+                pass
+
         if not desc_val and not row_comment:
             if servico_row_idx != -1 and r == servico_row_idx - 1 and t_raw > 0 and not total_pecas:
                 total_pecas = t_val
@@ -557,6 +567,7 @@ def parse_xlsx(filepath):
         "active_sheet": sheet_name,
         "extra_sheets_data": extra_sheets_data,
         "plate": final_plate,
+        "plate_clean": clean_plate(final_plate),
         "plate_display": format_plate_display(final_plate),
         "plate_comment": plate_comment,
         "client_name": final_owner,
@@ -1270,6 +1281,7 @@ def parse_xls(filepath):
         "active_sheet": sheet_name,
         "extra_sheets_data": extra_sheets_data,
         "plate": final_plate,
+        "plate_clean": clean_plate(final_plate),
         "plate_display": format_plate_display(final_plate),
         "plate_comment": plate_comment,
         "client_name": final_owner,

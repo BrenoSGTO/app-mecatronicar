@@ -1062,6 +1062,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="btn-toggle-services btn-sm" title="Mostrar ou ocultar os serviços executados nesta planilha">
                     🛠️ Serviços (${servicosItems.length})
                 </button>
+                <button type="button" class="btn btn-sm btn-edit-os" title="Editar dados, peças ou serviços desta OS no Excel">
+                    ✏️ Editar OS
+                </button>
                 <button class="btn btn-excel btn-sm" title="Abrir planilha original no Microsoft Excel">
                     📂 Excel
                 </button>
@@ -1076,6 +1079,10 @@ document.addEventListener('DOMContentLoaded', () => {
         header.querySelector('.btn-doc-checklist').addEventListener('click', () => {
             const url = `/api/checklist_pdf?file_path=${encodeURIComponent(visit.file_path)}`;
             window.open(url, '_blank');
+        });
+
+        header.querySelector('.btn-edit-os').addEventListener('click', () => {
+            openOsModalForEdit(visit);
         });
 
         header.querySelector('.btn-excel').addEventListener('click', () => {
@@ -1295,4 +1302,1191 @@ document.addEventListener('DOMContentLoaded', () => {
         div.textContent = str;
         return div.innerHTML;
     }
+
+    // ==========================================
+    // Integração do Pátio da Oficina (CP-06)
+    // ==========================================
+    const btnOpenPatioModal = document.getElementById('btn-open-patio-modal');
+    const btnVehiclePatio = document.getElementById('btn-vehicle-patio');
+    const patioModal = document.getElementById('patio-modal');
+    const patioModalCloseBtn = document.getElementById('patio-modal-close-btn');
+    const patioCarsList = document.getElementById('patio-cars-list');
+    const patioListCount = document.getElementById('patio-list-count');
+    const patioCarForm = document.getElementById('patio-car-form');
+    const desktopPatioCarId = document.getElementById('desktop-patio-car-id');
+    const desktopPatioPlate = document.getElementById('desktop-patio-plate');
+    const desktopPatioClient = document.getElementById('desktop-patio-client');
+    const desktopPatioModel = document.getElementById('desktop-patio-model');
+    const desktopPatioColor = document.getElementById('desktop-patio-color');
+    const desktopPatioStatus = document.getElementById('desktop-patio-status');
+    const desktopPatioBox = document.getElementById('desktop-patio-box');
+    const desktopPatioNotes = document.getElementById('desktop-patio-notes');
+    const desktopThirdPartyBox = document.getElementById('desktop-third-party-box');
+    const desktopPatioAuthName = document.getElementById('desktop-patio-auth-name');
+    const desktopPatioAuthDoc = document.getElementById('desktop-patio-auth-doc');
+    const desktopPatioAuthPhone = document.getElementById('desktop-patio-auth-phone');
+    const btnDesktopPatioDelete = document.getElementById('btn-desktop-patio-delete');
+    const btnDesktopPatioClear = document.getElementById('btn-desktop-patio-clear');
+
+    function toggleDesktopThirdParty() {
+        if (!desktopPatioStatus || !desktopThirdPartyBox) return;
+        if (desktopPatioStatus.value === 'Liberado p/ Retirada por Terceiro') {
+            desktopThirdPartyBox.style.display = 'flex';
+            if (desktopPatioAuthName) desktopPatioAuthName.setAttribute('required', 'true');
+            if (desktopPatioAuthDoc) desktopPatioAuthDoc.setAttribute('required', 'true');
+        } else {
+            desktopThirdPartyBox.style.display = 'none';
+            if (desktopPatioAuthName) desktopPatioAuthName.removeAttribute('required');
+            if (desktopPatioAuthDoc) desktopPatioAuthDoc.removeAttribute('required');
+        }
+    }
+    if (desktopPatioStatus) {
+        desktopPatioStatus.addEventListener('change', toggleDesktopThirdParty);
+    }
+
+    async function refreshDesktopPatioList() {
+        if (!patioCarsList) return;
+        try {
+            const resp = await fetch('/api/patio', { cache: 'no-store' });
+            const data = await resp.json();
+            if (!data.success) return;
+
+            const cars = data.cars || [];
+            if (patioListCount) patioListCount.textContent = cars.length;
+
+            if (cars.length === 0) {
+                patioCarsList.innerHTML = '<div style="font-size: 13px; color: #94a3b8; font-style: italic; padding: 10px 0;">Nenhum veículo no pátio no momento.</div>';
+                return;
+            }
+
+            patioCarsList.innerHTML = '';
+            cars.forEach(car => {
+                const row = document.createElement('div');
+                row.className = 'patio-item-row';
+                
+                let badgeClass = 'patio-status-default';
+                if (car.status === 'Liberado p/ Retirada por Terceiro') badgeClass = 'patio-status-terceiro';
+                else if (car.status === 'Em Execução') badgeClass = 'patio-status-execucao';
+                else if (car.status === 'Esperando Cliente Buscar') badgeClass = 'patio-status-pronto';
+
+                let authInfo = '';
+                if (car.status === 'Liberado p/ Retirada por Terceiro' && car.authorized_name) {
+                    authInfo = `<span style="color: #ef4444; font-weight: 700;"> • 🔑 Autorizado: ${escapeHtml(car.authorized_name)} (Doc: ${escapeHtml(car.authorized_doc || 's/ doc')})</span>`;
+                }
+
+                row.innerHTML = `
+                    <div class="patio-item-info">
+                        <span class="patio-item-plate">${escapeHtml(car.plate_display || car.plate)}</span>
+                        <div class="patio-item-details">
+                            <span class="patio-item-model">${escapeHtml(car.car_model || 'Veículo')} ${car.car_color ? `(${escapeHtml(car.car_color)})` : ''} - 👤 ${escapeHtml(car.client_name || 'Cliente')}</span>
+                            <span class="patio-item-sub">${car.box_mecanico ? `🔧 ${escapeHtml(car.box_mecanico)} ` : ''}${car.notes ? `• ${escapeHtml(car.notes)}` : ''}${authInfo}</span>
+                        </div>
+                    </div>
+                    <span class="patio-status-badge ${badgeClass}">${escapeHtml(car.status)}</span>
+                `;
+
+                row.style.cursor = 'pointer';
+                row.title = 'Clique para editar os dados deste carro';
+                row.addEventListener('click', () => {
+                    populateDesktopPatioForm(car);
+                });
+
+                patioCarsList.appendChild(row);
+            });
+        } catch (e) {
+            console.error('Erro ao carregar lista de pátio:', e);
+        }
+    }
+
+    function populateDesktopPatioForm(car) {
+        if (!desktopPatioCarId) return;
+        desktopPatioCarId.value = car.id || '';
+        desktopPatioPlate.value = car.plate || '';
+        desktopPatioClient.value = car.client_name || '';
+        desktopPatioModel.value = car.car_model || '';
+        desktopPatioColor.value = car.car_color || '';
+        desktopPatioStatus.value = car.status || 'Em Diagnóstico';
+        desktopPatioBox.value = car.box_mecanico || '';
+        desktopPatioNotes.value = car.notes || '';
+        desktopPatioAuthName.value = car.authorized_name || '';
+        desktopPatioAuthDoc.value = car.authorized_doc || '';
+        desktopPatioAuthPhone.value = car.authorized_phone || '';
+
+        if (btnDesktopPatioDelete) btnDesktopPatioDelete.style.display = car.id ? 'inline-block' : 'none';
+        toggleDesktopThirdParty();
+    }
+
+    function clearDesktopPatioForm() {
+        if (!desktopPatioCarId) return;
+        desktopPatioCarId.value = '';
+        desktopPatioPlate.value = '';
+        desktopPatioClient.value = '';
+        desktopPatioModel.value = '';
+        desktopPatioColor.value = '';
+        desktopPatioStatus.value = 'Em Diagnóstico';
+        desktopPatioBox.value = '';
+        desktopPatioNotes.value = '';
+        desktopPatioAuthName.value = '';
+        desktopPatioAuthDoc.value = '';
+        desktopPatioAuthPhone.value = '';
+        if (btnDesktopPatioDelete) btnDesktopPatioDelete.style.display = 'none';
+        toggleDesktopThirdParty();
+    }
+
+    if (btnOpenPatioModal) {
+        btnOpenPatioModal.addEventListener('click', () => {
+            clearDesktopPatioForm();
+            refreshDesktopPatioList();
+            if (patioModal) patioModal.style.display = 'flex';
+        });
+    }
+
+    if (btnVehiclePatio) {
+        btnVehiclePatio.addEventListener('click', async () => {
+            if (!currentCarHistory || currentCarHistory.length === 0) return;
+            const latest = currentCarHistory[0];
+            const plate = latest.plate_display || latest.plate || '';
+
+            clearDesktopPatioForm();
+            desktopPatioPlate.value = plate;
+            desktopPatioClient.value = latest.client_name || '';
+            desktopPatioModel.value = latest.car_model || '';
+            desktopPatioColor.value = latest.car_color || '';
+
+            // Verifica se o carro já está no pátio para preencher id e status
+            try {
+                const resp = await fetch('/api/patio', { cache: 'no-store' });
+                const data = await resp.json();
+                if (data.success && data.cars) {
+                    const found = data.cars.find(c => c.plate_clean === latest.plate_clean);
+                    if (found) {
+                        populateDesktopPatioForm(found);
+                    }
+                }
+            } catch (e) {}
+
+            refreshDesktopPatioList();
+            if (patioModal) patioModal.style.display = 'flex';
+        });
+    }
+
+    if (patioModalCloseBtn) {
+        patioModalCloseBtn.addEventListener('click', () => {
+            if (patioModal) patioModal.style.display = 'none';
+        });
+    }
+
+    if (btnDesktopPatioClear) {
+        btnDesktopPatioClear.addEventListener('click', clearDesktopPatioForm);
+    }
+
+    if (patioModal) {
+        patioModal.addEventListener('click', (e) => {
+            if (e.target === patioModal) patioModal.style.display = 'none';
+        });
+    }
+
+    if (patioCarForm) {
+        patioCarForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                id: desktopPatioCarId.value ? parseInt(desktopPatioCarId.value, 10) : null,
+                plate: desktopPatioPlate.value.trim(),
+                client_name: desktopPatioClient.value.trim(),
+                car_model: desktopPatioModel.value.trim(),
+                car_color: desktopPatioColor.value.trim(),
+                status: desktopPatioStatus.value,
+                box_mecanico: desktopPatioBox.value.trim(),
+                notes: desktopPatioNotes.value.trim(),
+                authorized_name: desktopPatioAuthName.value.trim(),
+                authorized_doc: desktopPatioAuthDoc.value.trim(),
+                authorized_phone: desktopPatioAuthPhone.value.trim()
+            };
+
+            try {
+                const resp = await fetch('/api/patio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`Veículo ${payload.plate} atualizado no pátio da TV!`);
+                    clearDesktopPatioForm();
+                    refreshDesktopPatioList();
+                } else {
+                    alert(`Erro: ${data.error || 'Falha ao salvar'}`);
+                }
+            } catch (err) {
+                alert(`Erro de conexão: ${err.message}`);
+            }
+        });
+    }
+
+    if (btnDesktopPatioDelete) {
+        btnDesktopPatioDelete.addEventListener('click', async () => {
+            const carId = desktopPatioCarId.value;
+            if (!carId) return;
+            const plate = desktopPatioPlate.value.trim();
+            if (!confirm(`Confirma remover o veículo ${plate} do pátio?`)) return;
+
+            try {
+                const resp = await fetch(`/api/patio/${carId}`, { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`Veículo ${plate} removido do pátio.`);
+                    clearDesktopPatioForm();
+                    refreshDesktopPatioList();
+                } else {
+                    alert(`Erro: ${data.error || 'Falha ao remover'}`);
+                }
+            } catch (err) {
+                alert(`Erro ao remover: ${err.message}`);
+            }
+        });
+    }
+
+    // =========================================================================
+    // MECATRONICAR v2.0 - CONTROLADORES DE NOVA OS E MOTOR EXCEL (CP-03)
+    // =========================================================================
+    const btnOpenNewOs = document.getElementById('btn-open-new-os');
+    const btnVehicleNewVisit = document.getElementById('btn-vehicle-new-visit');
+    const osModal = document.getElementById('os-modal');
+    const osModalTitle = document.getElementById('os-modal-title');
+    const osModalCloseBtn = document.getElementById('os-modal-close-btn');
+    const osModalCancel = document.getElementById('os-modal-cancel');
+    const osModalSave = document.getElementById('os-modal-save');
+    const osSearchClient = document.getElementById('os-search-client');
+    const osAutocompleteDropdown = document.getElementById('os-autocomplete-dropdown');
+    const osExistingFilePath = document.getElementById('os-existing-file-path');
+    const osPlateLookupBadge = document.getElementById('os-plate-lookup-badge');
+    const osPlateSpinner = document.getElementById('os-plate-spinner');
+    const osVisitSuggestedHint = document.getElementById('os-visit-suggested-hint');
+    const osLastOdometerHint = document.getElementById('os-last-odometer-hint');
+
+    // Campos do formulário
+    const osCarPlate = document.getElementById('os-car-plate');
+    const osCarModel = document.getElementById('os-car-model');
+    const osCarBrand = document.getElementById('os-car-brand');
+    const osCarYear = document.getElementById('os-car-year');
+    const osCarColor = document.getElementById('os-car-color');
+    const osCarFuel = document.getElementById('os-car-fuel');
+    const osCarChassis = document.getElementById('os-car-chassis');
+    const osVisitNum = document.getElementById('os-visit-num');
+    const osOdometer = document.getElementById('os-odometer');
+    const osEntryDate = document.getElementById('os-entry-date');
+    const osEntryTime = document.getElementById('os-entry-time');
+    const osPatioStatus = document.getElementById('os-patio-status');
+    const osPaymentMethod = document.getElementById('os-payment-method');
+    const osComplaint = document.getElementById('os-complaint');
+
+    const osClientName = document.getElementById('os-client-name');
+    const osClientPhone = document.getElementById('os-client-phone');
+    const osClientCpf = document.getElementById('os-client-cpf');
+    const osClientRg = document.getElementById('os-client-rg');
+    const osClientAddress = document.getElementById('os-client-address');
+    const osClientNum = document.getElementById('os-client-num');
+    const osClientCompl = document.getElementById('os-client-compl');
+    const osClientBairro = document.getElementById('os-client-bairro');
+    const osClientCity = document.getElementById('os-client-city');
+    const osClientCep = document.getElementById('os-client-cep');
+    const osClientTelRes = document.getElementById('os-client-tel-res');
+    const osClientTelCom = document.getElementById('os-client-tel-com');
+    const osClientEmail = document.getElementById('os-client-email');
+
+    // Tabelas e Totais
+    const btnAddPecaRow = document.getElementById('btn-add-peca-row');
+    const btnAddServicoRow = document.getElementById('btn-add-servico-row');
+    const osPecasTbody = document.getElementById('os-pecas-tbody');
+    const osServicosTbody = document.getElementById('os-servicos-tbody');
+    const osPecasChips = document.getElementById('os-pecas-chips');
+    const osServicosChips = document.getElementById('os-servicos-chips');
+    const osDatalistPecas = document.getElementById('os-datalist-pecas');
+    const osDatalistServicos = document.getElementById('os-datalist-servicos');
+    const osDiscountInput = document.getElementById('os-discount');
+
+    let quickSuggestionsCache = null;
+    let plateLookupDebounce = null;
+
+    function cleanPlateStr(plateStr) {
+        if (!plateStr) return '';
+        return String(plateStr).toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    }
+
+    function formatDateBr(dateObj) {
+        const d = dateObj || new Date();
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    }
+
+    function formatTimeBr(dateObj) {
+        const d = dateObj || new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+    }
+
+    function parseVal(v) {
+        if (!v) return 0;
+        const s = String(v).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+        const f = parseFloat(s);
+        return isNaN(f) ? 0 : f;
+    }
+
+    function formatMoeda(val) {
+        const n = typeof val === 'number' ? val : parseVal(val);
+        return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    async function loadQuickSuggestions() {
+        if (quickSuggestionsCache) {
+            renderQuickSuggestions(quickSuggestionsCache);
+            return;
+        }
+        try {
+            const res = await fetch('/api/quick_suggestions');
+            const data = await res.json();
+            quickSuggestionsCache = data;
+            renderQuickSuggestions(data);
+        } catch (e) {
+            console.error('Erro ao carregar sugestões rápidas:', e);
+        }
+    }
+
+    function renderQuickSuggestions(data) {
+        const pecas = (data && data.pecas) || [];
+        const servicos = (data && data.servicos) || [];
+
+        // Preenche datalists para autocompletar ao digitar
+        if (osDatalistPecas) {
+            osDatalistPecas.innerHTML = pecas.map(p => `<option value="${escapeHtml(p)}">`).join('');
+        }
+        if (osDatalistServicos) {
+            osDatalistServicos.innerHTML = servicos.map(s => `<option value="${escapeHtml(s)}">`).join('');
+        }
+
+        // Renderiza Chips Rápidos de Peças
+        if (osPecasChips) {
+            osPecasChips.innerHTML = '';
+            pecas.slice(0, 10).forEach(pText => {
+                const chip = document.createElement('span');
+                chip.className = 'os-chip os-chip-peca';
+                chip.textContent = `+ ${pText}`;
+                chip.title = `Clique para adicionar ${pText} à lista de peças`;
+                chip.addEventListener('click', () => {
+                    addOrFillPeca(pText);
+                });
+                osPecasChips.appendChild(chip);
+            });
+        }
+
+        // Renderiza Chips Rápidos de Serviços
+        if (osServicosChips) {
+            osServicosChips.innerHTML = '';
+            servicos.slice(0, 8).forEach(sText => {
+                const chip = document.createElement('span');
+                chip.className = 'os-chip os-chip-servico';
+                chip.textContent = `+ ${sText}`;
+                chip.title = `Clique para adicionar ${sText} à lista de serviços`;
+                chip.addEventListener('click', () => {
+                    addOrFillServico(sText);
+                });
+                osServicosChips.appendChild(chip);
+            });
+        }
+    }
+
+    function addOrFillPeca(desc) {
+        const rows = osPecasTbody.querySelectorAll('tr');
+        for (const tr of rows) {
+            const descInp = tr.querySelector('.peca-desc');
+            if (descInp && !descInp.value.trim()) {
+                descInp.value = desc;
+                const unitInp = tr.querySelector('.peca-unit');
+                if (unitInp) unitInp.focus();
+                recalcOsTotals();
+                return;
+            }
+        }
+        addPecaRow(desc, 1, '');
+        const newRows = osPecasTbody.querySelectorAll('tr');
+        const lastRow = newRows[newRows.length - 1];
+        if (lastRow) {
+            const unitInp = lastRow.querySelector('.peca-unit');
+            if (unitInp) unitInp.focus();
+        }
+        recalcOsTotals();
+    }
+
+    function addOrFillServico(desc) {
+        const rows = osServicosTbody.querySelectorAll('tr');
+        for (const tr of rows) {
+            const descInp = tr.querySelector('.servico-desc');
+            if (descInp && !descInp.value.trim()) {
+                descInp.value = desc;
+                const unitInp = tr.querySelector('.servico-unit');
+                if (unitInp) unitInp.focus();
+                recalcOsTotals();
+                return;
+            }
+        }
+        addServicoRow(desc, 1, '');
+        const newRows = osServicosTbody.querySelectorAll('tr');
+        const lastRow = newRows[newRows.length - 1];
+        if (lastRow) {
+            const unitInp = lastRow.querySelector('.servico-unit');
+            if (unitInp) unitInp.focus();
+        }
+        recalcOsTotals();
+    }
+
+    function addPecaRow(desc = '', qty = 1, unit = '') {
+        const tr = document.createElement('tr');
+        const totalInit = (parseFloat(qty) || 1) * parseVal(unit);
+        tr.innerHTML = `
+            <td>
+                <input type="text" class="os-table-input peca-desc" list="os-datalist-pecas" placeholder="Ex: Óleo 5W30 Sintético, Filtro de Óleo" value="${escapeHtml(desc)}">
+            </td>
+            <td>
+                <input type="number" step="any" min="0" class="os-table-input peca-qty" value="${qty}" style="text-align: center;">
+            </td>
+            <td>
+                <input type="text" class="os-table-input peca-unit" placeholder="0,00" value="${unit ? (typeof unit === 'number' ? unit.toFixed(2).replace('.', ',') : unit) : ''}" style="text-align: right;">
+            </td>
+            <td>
+                <input type="text" class="os-table-input peca-total" readonly value="${formatMoeda(totalInit)}" style="text-align: right;">
+            </td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-remove-row" title="Remover Peça">🗑️</button>
+            </td>
+        `;
+
+        const qtyInp = tr.querySelector('.peca-qty');
+        const unitInp = tr.querySelector('.peca-unit');
+        const totalInp = tr.querySelector('.peca-total');
+
+        function updateRowTotal() {
+            const q = parseFloat(qtyInp.value) || 0;
+            const u = parseVal(unitInp.value);
+            totalInp.value = formatMoeda(q * u);
+            recalcOsTotals();
+        }
+
+        qtyInp.addEventListener('input', updateRowTotal);
+        unitInp.addEventListener('input', updateRowTotal);
+        tr.querySelector('.peca-desc').addEventListener('input', recalcOsTotals);
+
+        tr.querySelector('.btn-remove-row').addEventListener('click', () => {
+            tr.remove();
+            recalcOsTotals();
+        });
+
+        osPecasTbody.appendChild(tr);
+    }
+
+    function addServicoRow(desc = '', qty = 1, unit = '') {
+        const tr = document.createElement('tr');
+        const totalInit = (parseFloat(qty) || 1) * parseVal(unit);
+        tr.innerHTML = `
+            <td>
+                <input type="text" class="os-table-input servico-desc" list="os-datalist-servicos" placeholder="Ex: Troca de óleo e filtros, Alinhamento 3D" value="${escapeHtml(desc)}">
+            </td>
+            <td>
+                <input type="number" step="any" min="0" class="os-table-input servico-qty" value="${qty}" style="text-align: center;">
+            </td>
+            <td>
+                <input type="text" class="os-table-input servico-unit" placeholder="0,00" value="${unit ? (typeof unit === 'number' ? unit.toFixed(2).replace('.', ',') : unit) : ''}" style="text-align: right;">
+            </td>
+            <td>
+                <input type="text" class="os-table-input servico-total" readonly value="${formatMoeda(totalInit)}" style="text-align: right;">
+            </td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-remove-row" title="Remover Serviço">🗑️</button>
+            </td>
+        `;
+
+        const qtyInp = tr.querySelector('.servico-qty');
+        const unitInp = tr.querySelector('.servico-unit');
+        const totalInp = tr.querySelector('.servico-total');
+
+        function updateRowTotal() {
+            const q = parseFloat(qtyInp.value) || 0;
+            const u = parseVal(unitInp.value);
+            totalInp.value = formatMoeda(q * u);
+            recalcOsTotals();
+        }
+
+        qtyInp.addEventListener('input', updateRowTotal);
+        unitInp.addEventListener('input', updateRowTotal);
+        tr.querySelector('.servico-desc').addEventListener('input', recalcOsTotals);
+
+        tr.querySelector('.btn-remove-row').addEventListener('click', () => {
+            tr.remove();
+            recalcOsTotals();
+        });
+
+        osServicosTbody.appendChild(tr);
+    }
+
+    function recalcOsTotals() {
+        let sumPecas = 0;
+        osPecasTbody.querySelectorAll('tr').forEach(tr => {
+            const q = parseFloat(tr.querySelector('.peca-qty')?.value) || 0;
+            const u = parseVal(tr.querySelector('.peca-unit')?.value);
+            sumPecas += (q * u);
+        });
+
+        let sumServicos = 0;
+        osServicosTbody.querySelectorAll('tr').forEach(tr => {
+            const q = parseFloat(tr.querySelector('.servico-qty')?.value) || 0;
+            const u = parseVal(tr.querySelector('.servico-unit')?.value);
+            sumServicos += (q * u);
+        });
+
+        const disc = parseVal(osDiscountInput?.value);
+        const subtotal = sumPecas + sumServicos;
+        const total = Math.max(0, subtotal - disc);
+
+        const elPecas = document.getElementById('os-sum-pecas');
+        const elServ = document.getElementById('os-sum-servicos');
+        const elTotal = document.getElementById('os-sum-total');
+
+        if (elPecas) elPecas.textContent = formatMoeda(sumPecas);
+        if (elServ) elServ.textContent = formatMoeda(sumServicos);
+        if (elTotal) elTotal.textContent = formatMoeda(total);
+    }
+
+    async function handlePlateLookup(rawPlate) {
+        const clean = cleanPlateStr(rawPlate);
+        if (clean.length < 5) return;
+
+        if (osPlateSpinner) osPlateSpinner.style.display = 'block';
+
+        try {
+            const res = await fetch(`/api/car_lookup/${encodeURIComponent(clean)}`);
+            const data = await res.json();
+
+            if (osPlateSpinner) osPlateSpinner.style.display = 'none';
+
+            if (data && data.found) {
+                // Autocompleta Dados do Cliente
+                const c = data.client || {};
+                if (c.client_name) osClientName.value = c.client_name;
+                if (c.phone) osClientPhone.value = c.phone;
+                if (c.phone_res) osClientTelRes.value = c.phone_res;
+                if (c.phone_com) osClientTelCom.value = c.phone_com;
+                if (c.cpf) osClientCpf.value = c.cpf;
+                if (c.rg) osClientRg.value = c.rg;
+                if (c.email) osClientEmail.value = c.email;
+                if (c.address) osClientAddress.value = c.address;
+                if (c.address_num) osClientNum.value = c.address_num;
+                if (c.address_compl) osClientCompl.value = c.address_compl;
+                if (c.neighborhood) osClientBairro.value = c.neighborhood;
+                if (c.city) osClientCity.value = c.city || 'Santos';
+                if (c.cep) osClientCep.value = c.cep;
+
+                // Autocompleta Dados do Veículo
+                const v = data.car || {};
+                if (v.car_model) osCarModel.value = v.car_model;
+                if (v.car_brand) osCarBrand.value = v.car_brand;
+                if (v.car_year) osCarYear.value = v.car_year;
+                if (v.car_color) osCarColor.value = v.car_color;
+                if (v.car_fuel) osCarFuel.value = v.car_fuel;
+                if (v.car_chassis) osCarChassis.value = v.car_chassis;
+
+                // Sugere automaticamente Visita N + 1
+                if (!osExistingFilePath.value) {
+                    osVisitNum.value = data.suggested_visit_num || '1';
+                }
+
+                if (osVisitSuggestedHint) {
+                    osVisitSuggestedHint.textContent = `✨ Sugerido: Visita ${data.suggested_visit_num} (última: ${data.max_visit_num})`;
+                }
+
+                if (osPlateLookupBadge) {
+                    osPlateLookupBadge.style.display = 'inline-flex';
+                    osPlateLookupBadge.className = 'os-plate-badge found';
+                    osPlateLookupBadge.textContent = `🟢 Veículo Recorrente (${data.visits_count} visitas)`;
+                }
+
+                if (osLastOdometerHint) {
+                    osLastOdometerHint.textContent = data.last_odometer ? `Último KM: ${data.last_odometer} km` : '';
+                }
+            } else {
+                // Veículo novo
+                if (!osExistingFilePath.value && (!osVisitNum.value || osVisitNum.value === '1')) {
+                    osVisitNum.value = '1';
+                }
+                if (osVisitSuggestedHint) {
+                    osVisitSuggestedHint.textContent = '1ª visita na oficina';
+                }
+                if (osPlateLookupBadge) {
+                    osPlateLookupBadge.style.display = 'inline-flex';
+                    osPlateLookupBadge.className = 'os-plate-badge new';
+                    osPlateLookupBadge.textContent = '🆕 Novo Veículo na Oficina';
+                }
+                if (osLastOdometerHint) {
+                    osLastOdometerHint.textContent = '';
+                }
+            }
+        } catch (err) {
+            if (osPlateSpinner) osPlateSpinner.style.display = 'none';
+            console.error('Erro no car_lookup:', err);
+        }
+    }
+
+    function openNewOsModal(prefillPlate = '') {
+        document.getElementById('os-form').reset();
+        osExistingFilePath.value = '';
+
+        if (osModalTitle) osModalTitle.textContent = '🛠️ Nova Visita / Ordem de Serviço';
+        if (osModalSave) osModalSave.textContent = '💾 Salvar Ficha no Excel (.xlsx) e Sistema';
+
+        // Preenche data e hora de hoje
+        const now = new Date();
+        osEntryDate.value = formatDateBr(now);
+        osEntryTime.value = formatTimeBr(now);
+        osPatioStatus.value = 'Em Diagnóstico';
+        osPaymentMethod.value = '';
+
+        osPecasTbody.innerHTML = '';
+        osServicosTbody.innerHTML = '';
+        addPecaRow('', 1, '');
+        addPecaRow('', 1, '');
+        addServicoRow('', 1, '');
+
+        if (osPlateLookupBadge) osPlateLookupBadge.style.display = 'none';
+        if (osVisitSuggestedHint) osVisitSuggestedHint.textContent = '';
+        if (osLastOdometerHint) osLastOdometerHint.textContent = '';
+        if (osAutocompleteDropdown) osAutocompleteDropdown.style.display = 'none';
+
+        loadQuickSuggestions();
+        recalcOsTotals();
+
+        osModal.style.display = 'flex';
+
+        if (prefillPlate) {
+            osCarPlate.value = prefillPlate;
+            handlePlateLookup(prefillPlate);
+            setTimeout(() => osOdometer.focus(), 150);
+        } else {
+            setTimeout(() => osCarPlate.focus(), 150);
+        }
+    }
+
+    function openOsModalForEdit(visit) {
+        if (!visit) return;
+        document.getElementById('os-form').reset();
+
+        const det = visit.details || {};
+        osExistingFilePath.value = visit.file_path || '';
+
+        if (osModalTitle) {
+            osModalTitle.textContent = `✏️ Editar Ordem de Serviço • Visita #${visit.visit_num || '1'} (${visit.plate_display || visit.plate || ''})`;
+        }
+        if (osModalSave) {
+            osModalSave.textContent = '💾 Salvar Alterações na Planilha (.xlsx)';
+        }
+
+        // Dados do Veículo & Entrada
+        osCarPlate.value = visit.plate_display || visit.plate || '';
+        osCarModel.value = det.car_model || visit.car_model || '';
+        osCarBrand.value = det.car_brand || '';
+        osCarYear.value = det.car_year || visit.car_year || '';
+        osCarColor.value = det.car_color || visit.car_color || '';
+        osCarFuel.value = det.car_fuel || '';
+        osCarChassis.value = det.car_chassis || '';
+        osVisitNum.value = visit.visit_num || det.visit_num || '1';
+        osOdometer.value = visit.odometer || det.odometer || '';
+        osEntryDate.value = visit.entry_date || det.entry_date || formatDateBr(new Date());
+        osEntryTime.value = det.entry_time || formatTimeBr(new Date());
+        osPatioStatus.value = 'Em Execução';
+        osPaymentMethod.value = det.payment_method || '';
+        osComplaint.value = visit.complaint || det.complaint || '';
+
+        if (osVisitSuggestedHint) osVisitSuggestedHint.textContent = `Visita atual da planilha: #${visit.visit_num || '1'}`;
+        if (osLastOdometerHint) osLastOdometerHint.textContent = visit.odometer ? `KM atual: ${visit.odometer}` : '';
+        if (osPlateLookupBadge) {
+            osPlateLookupBadge.style.display = 'inline-flex';
+            osPlateLookupBadge.className = 'os-plate-badge found';
+            osPlateLookupBadge.textContent = '✏️ Editando Planilha Existente';
+        }
+
+        // Dados do Cliente
+        osClientName.value = det.client_name || visit.client_name || '';
+        osClientPhone.value = det.phone || '';
+        osClientTelRes.value = det.tel_res || '';
+        osClientTelCom.value = det.tel_com || '';
+        osClientCpf.value = det.cpf || '';
+        osClientRg.value = det.rg || '';
+        osClientEmail.value = det.email || '';
+        osClientAddress.value = det.address || '';
+        osClientNum.value = det.address_num || '';
+        osClientCompl.value = det.address_compl || '';
+        osClientBairro.value = det.neighborhood || '';
+        osClientCity.value = det.city || 'Santos';
+        osClientCep.value = det.cep || '';
+
+        // Peças
+        osPecasTbody.innerHTML = '';
+        const pecas = det.pecas_items || (det.items ? det.items.filter(i => i.section !== 'Serviço') : []);
+        if (pecas && pecas.length > 0) {
+            pecas.forEach(p => {
+                addPecaRow(p.description || '', p.quantity || 1, p.unit_price || '');
+            });
+        } else {
+            addPecaRow('', 1, '');
+        }
+
+        // Serviços
+        osServicosTbody.innerHTML = '';
+        const servicos = det.servicos_items || (det.items ? det.items.filter(i => i.section === 'Serviço') : []);
+        if (servicos && servicos.length > 0) {
+            servicos.forEach(s => {
+                addServicoRow(s.description || '', s.quantity || 1, s.unit_price || '');
+            });
+        } else {
+            addServicoRow('', 1, '');
+        }
+
+        // Desconto
+        if (osDiscountInput) {
+            osDiscountInput.value = det.discount ? (typeof det.discount === 'number' ? det.discount.toFixed(2).replace('.', ',') : det.discount) : '';
+        }
+
+        loadQuickSuggestions();
+        recalcOsTotals();
+
+        osModal.style.display = 'flex';
+    }
+
+    function closeOsModal() {
+        osModal.style.display = 'none';
+        if (osAutocompleteDropdown) osAutocompleteDropdown.style.display = 'none';
+    }
+
+    // Botões de Abertura da Modal
+    if (btnOpenNewOs) {
+        btnOpenNewOs.addEventListener('click', () => openNewOsModal());
+    }
+
+    if (btnVehicleNewVisit) {
+        btnVehicleNewVisit.addEventListener('click', () => {
+            const plate = currentVehiclePlate || (currentCarHistory && currentCarHistory.plate) || (detailPlate ? detailPlate.textContent : '');
+            openNewOsModal(plate);
+        });
+    }
+
+    if (osModalCloseBtn) osModalCloseBtn.addEventListener('click', closeOsModal);
+    if (osModalCancel) osModalCancel.addEventListener('click', closeOsModal);
+
+    // Listener para o input de Placa: formatação maiúscula e Autocomplete ao digitar
+    if (osCarPlate) {
+        osCarPlate.addEventListener('input', (e) => {
+            const raw = e.target.value;
+            const cleaned = cleanPlateStr(raw);
+            if (raw !== cleaned) {
+                e.target.value = cleaned;
+            }
+            clearTimeout(plateLookupDebounce);
+            if (cleaned.length >= 7) {
+                plateLookupDebounce = setTimeout(() => {
+                    handlePlateLookup(cleaned);
+                }, 200);
+            } else {
+                if (osPlateLookupBadge) osPlateLookupBadge.style.display = 'none';
+            }
+        });
+
+        osCarPlate.addEventListener('blur', (e) => {
+            const cleaned = cleanPlateStr(e.target.value);
+            if (cleaned.length >= 5) {
+                handlePlateLookup(cleaned);
+            }
+        });
+    }
+
+    if (btnAddPecaRow) btnAddPecaRow.addEventListener('click', () => addPecaRow());
+    if (btnAddServicoRow) btnAddServicoRow.addEventListener('click', () => addServicoRow());
+    if (osDiscountInput) osDiscountInput.addEventListener('input', recalcOsTotals);
+
+    // Autocomplete no campo "Buscar Cliente ou Carro Já Cadastrado"
+    let autocompleteTimeout = null;
+    if (osSearchClient) {
+        osSearchClient.addEventListener('input', () => {
+            clearTimeout(autocompleteTimeout);
+            const q = osSearchClient.value.trim();
+            if (q.length < 2) {
+                if (osAutocompleteDropdown) osAutocompleteDropdown.style.display = 'none';
+                return;
+            }
+            autocompleteTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+                    const data = await res.json();
+                    const results = data.results || [];
+                    if (results.length > 0) {
+                        osAutocompleteDropdown.innerHTML = '';
+                        const seenPlates = new Set();
+                        results.forEach(r => {
+                            const pClean = r.plate_clean || r.plate;
+                            if (seenPlates.has(pClean)) return;
+                            seenPlates.add(pClean);
+
+                            const item = document.createElement('div');
+                            item.className = 'os-autocomplete-item';
+                            item.innerHTML = `
+                                <div><strong>${escapeHtml(r.plate_display || r.plate)}</strong> • ${escapeHtml(r.car_model || '')} (${escapeHtml(r.car_color || '')})</div>
+                                <div style="color: #64748b; font-size: 11px;">👤 ${escapeHtml(r.client_name || 'Cliente')} • Visitas: ${r.visit_num || '1'}</div>
+                            `;
+                            item.addEventListener('click', () => {
+                                osCarPlate.value = r.plate_display || r.plate;
+                                handlePlateLookup(r.plate_clean || r.plate);
+                                osAutocompleteDropdown.style.display = 'none';
+                                osSearchClient.value = `${r.plate_display || r.plate} - ${r.client_name || ''}`;
+                            });
+                            osAutocompleteDropdown.appendChild(item);
+                        });
+                        osAutocompleteDropdown.style.display = 'block';
+                    } else {
+                        osAutocompleteDropdown.style.display = 'none';
+                    }
+                } catch (e) {
+                    osAutocompleteDropdown.style.display = 'none';
+                }
+            }, 250);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (osAutocompleteDropdown && !osSearchClient.contains(e.target) && !osAutocompleteDropdown.contains(e.target)) {
+                osAutocompleteDropdown.style.display = 'none';
+            }
+        });
+    }
+
+    // Salvar Ficha no Excel (.xlsx) e no Sistema SQLite
+    if (osModalSave) {
+        osModalSave.addEventListener('click', async () => {
+            const plate = osCarPlate.value.trim().toUpperCase();
+            const clientName = osClientName.value.trim();
+            const carModel = osCarModel.value.trim();
+
+            if (!plate) {
+                alert('Por favor, informe a Placa do Veículo.');
+                osCarPlate.focus();
+                return;
+            }
+            if (!clientName) {
+                alert('Por favor, informe o Nome do Cliente.');
+                osClientName.focus();
+                return;
+            }
+            if (!carModel) {
+                alert('Por favor, informe o Modelo do Veículo.');
+                osCarModel.focus();
+                return;
+            }
+
+            const pecasList = [];
+            osPecasTbody.querySelectorAll('tr').forEach(tr => {
+                const desc = tr.querySelector('.peca-desc')?.value.trim();
+                const qty = parseFloat(tr.querySelector('.peca-qty')?.value) || 1;
+                const unit = parseVal(tr.querySelector('.peca-unit')?.value);
+                if (desc) {
+                    pecasList.push({
+                        description: desc,
+                        desc: desc,
+                        quantity: qty,
+                        qty: qty,
+                        unit_price: unit,
+                        price: unit
+                    });
+                }
+            });
+
+            const servicosList = [];
+            osServicosTbody.querySelectorAll('tr').forEach(tr => {
+                const desc = tr.querySelector('.servico-desc')?.value.trim();
+                const qty = parseFloat(tr.querySelector('.servico-qty')?.value) || 1;
+                const unit = parseVal(tr.querySelector('.servico-unit')?.value);
+                if (desc) {
+                    servicosList.push({
+                        description: desc,
+                        desc: desc,
+                        quantity: qty,
+                        qty: qty,
+                        unit_price: unit,
+                        price: unit
+                    });
+                }
+            });
+
+            const payload = {
+                existing_file_path: osExistingFilePath.value || null,
+                client: {
+                    name: clientName,
+                    phone: osClientPhone.value.trim(),
+                    tel_res: osClientTelRes.value.trim(),
+                    tel_com: osClientTelCom.value.trim(),
+                    cpf: osClientCpf.value.trim(),
+                    rg: osClientRg.value.trim(),
+                    email: osClientEmail.value.trim(),
+                    address: osClientAddress.value.trim(),
+                    address_num: osClientNum.value.trim(),
+                    address_compl: osClientCompl.value.trim(),
+                    neighborhood: osClientBairro.value.trim(),
+                    city: osClientCity.value.trim() || 'Santos',
+                    cep: osClientCep.value.trim()
+                },
+                car: {
+                    plate: plate,
+                    model: carModel,
+                    brand: osCarBrand.value.trim(),
+                    year: osCarYear.value.trim(),
+                    color: osCarColor.value.trim(),
+                    fuel: osCarFuel.value.trim(),
+                    chassis: osCarChassis.value.trim()
+                },
+                os: {
+                    visit_num: osVisitNum.value.trim() || '1',
+                    odometer: osOdometer.value.trim(),
+                    entry_date: osEntryDate.value.trim() || formatDateBr(new Date()),
+                    entry_time: osEntryTime.value.trim() || formatTimeBr(new Date()),
+                    payment_method: osPaymentMethod.value.trim(),
+                    complaint: osComplaint.value.trim(),
+                    discount: parseVal(osDiscountInput?.value)
+                },
+                patio_status: osPatioStatus.value || 'Em Diagnóstico',
+                pecas: pecasList,
+                servicos: servicosList
+            };
+
+            try {
+                osModalSave.disabled = true;
+                osModalSave.textContent = '⏳ Salvando no Excel e Sistema...';
+
+                const res = await fetch('/api/save_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(`🎉 Ficha salva com sucesso! Planilha: ${data.file_name || data.filename}`);
+                    closeOsModal();
+
+                    // Atualiza a visualização da tela
+                    const savedPlate = data.plate || plate;
+                    selectVehicleByPlate(savedPlate);
+                } else {
+                    alert('Erro ao salvar no Excel: ' + (data.error || 'Verifique os dados preenchidos.'));
+                }
+            } catch (err) {
+                alert('Erro de conexão ao salvar: ' + err.message);
+            } finally {
+                osModalSave.disabled = false;
+                osModalSave.textContent = '💾 Salvar Ficha no Excel (.xlsx) e Sistema';
+            }
+        });
+    }
+
+    // =========================================================================
+    // MECATRONICAR v2.0 - COPILOTO FISCAL (CP-07)
+    // =========================================================================
+    const btnOpenFiscalHub = document.getElementById('btn-open-fiscal-hub');
+    const btnVehicleFiscal = document.getElementById('btn-vehicle-fiscal');
+    const fiscalModal = document.getElementById('fiscal-modal');
+    const fiscalModalCloseBtn = document.getElementById('fiscal-modal-close-btn');
+    const fiscalModalDismiss = document.getElementById('fiscal-modal-dismiss');
+    const tabBtnNfse = document.getElementById('tab-btn-nfse');
+    const tabBtnNfe = document.getElementById('tab-btn-nfe');
+    const tabBtnPending = document.getElementById('tab-btn-pending');
+    const panelNfse = document.getElementById('panel-nfse');
+    const panelNfe = document.getElementById('panel-nfe');
+    const panelPending = document.getElementById('panel-pending');
+
+    const btnCopyNfseDesc = document.getElementById('btn-copy-nfse-desc');
+    const btnCopyClientData = document.getElementById('btn-copy-client-data');
+    const btnMarkNfseDone = document.getElementById('btn-mark-nfse-done');
+    const btnMarkNfeDone = document.getElementById('btn-mark-nfe-done');
+
+    let currentFiscalPlate = '';
+
+    function switchFiscalTab(tab) {
+        [tabBtnNfse, tabBtnNfe, tabBtnPending].forEach(b => b?.classList.remove('active'));
+        [panelNfse, panelNfe, panelPending].forEach(p => { if (p) p.style.display = 'none'; });
+
+        if (tab === 'nfse') {
+            tabBtnNfse?.classList.add('active');
+            if (panelNfse) panelNfse.style.display = 'block';
+        } else if (tab === 'nfe') {
+            tabBtnNfe?.classList.add('active');
+            if (panelNfe) panelNfe.style.display = 'block';
+        } else if (tab === 'pending') {
+            tabBtnPending?.classList.add('active');
+            if (panelPending) panelPending.style.display = 'block';
+            loadFiscalPendingList();
+        }
+    }
+
+    if (tabBtnNfse) tabBtnNfse.addEventListener('click', () => switchFiscalTab('nfse'));
+    if (tabBtnNfe) tabBtnNfe.addEventListener('click', () => switchFiscalTab('nfe'));
+    if (tabBtnPending) tabBtnPending.addEventListener('click', () => switchFiscalTab('pending'));
+
+    async function openFiscalModal(plate = null) {
+        currentFiscalPlate = plate || currentVehiclePlate;
+        if (!currentFiscalPlate) {
+            // Se nenhuma placa selecionada, abre direto na fila de pendentes
+            switchFiscalTab('pending');
+            fiscalModal.style.display = 'flex';
+            return;
+        }
+
+        switchFiscalTab('nfse');
+        fiscalModal.style.display = 'flex';
+
+        try {
+            const res = await fetch(`/api/nf/data/${encodeURIComponent(currentFiscalPlate)}`);
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('fiscal-modal-title').textContent = `Copiloto Fiscal • ${data.plate} (${data.car_model})`;
+                document.getElementById('nfse-desc-text').value = data.discriminacao_nfse || '';
+                document.getElementById('nfse-client-data').value = data.dados_tomador || '';
+                document.getElementById('nfse-total-val').textContent = formatMoeda(data.valor_servicos || 0);
+
+                const nfRec = data.nf_control || {};
+                document.getElementById('nfse-number-input').value = nfRec.nf_servico_num || '';
+                document.getElementById('nfe-number-input').value = nfRec.nf_pecas_num || '';
+
+                // Preenche tabela de peças NF-e 55
+                const tbody = document.getElementById('nfe-items-tbody');
+                tbody.innerHTML = '';
+                (data.pecas_nfe || []).forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${escapeHtml(p.desc)}</strong></td>
+                        <td>${p.qty}</td>
+                        <td>${formatMoeda(p.unit_price)}</td>
+                        <td><strong>${formatMoeda(p.total)}</strong></td>
+                        <td><span class="badge" style="background: #fef3c7; color: #92400e;">${p.cfop}</span></td>
+                        <td><small>${p.ncm_sugerido}</small></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('nfe-total-val').textContent = formatMoeda(data.valor_pecas || 0);
+            }
+        } catch (err) {
+            console.error('Erro carregando copiloto fiscal:', err);
+        }
+    }
+
+    async function loadFiscalPendingList() {
+        const container = document.getElementById('fiscal-pending-list');
+        if (!container) return;
+        container.innerHTML = '<div style="padding: 10px; color: #64748b;">Carregando notas pendentes...</div>';
+        try {
+            const res = await fetch('/api/nf/pending');
+            const data = await res.json();
+            if (data.success && data.pending && data.pending.length > 0) {
+                container.innerHTML = '';
+                data.pending.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'fiscal-pending-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${escapeHtml(item.plate)}</strong> • ${escapeHtml(item.car_model || '')} (${escapeHtml(item.client_name || '')})
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Serviço: <strong style="color: ${item.status_servico === 'emitida' ? '#166534' : '#b45309'};">${item.status_servico}</strong> (${formatMoeda(item.valor_servico)}) | 
+                                Peças: <strong style="color: ${item.status_pecas === 'emitida' ? '#166534' : '#b45309'};">${item.status_pecas}</strong> (${formatMoeda(item.valor_pecas)})
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();">Abrir Ficha</button>
+                    `;
+                    div.querySelector('button').addEventListener('click', () => {
+                        openFiscalModal(item.plate);
+                    });
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = '<div style="padding: 16px; text-align: center; color: #166534; font-weight: 700;">✅ Parabéns! Não há nenhuma nota fiscal pendente no momento.</div>';
+            }
+        } catch (e) {
+            container.innerHTML = '<div style="padding: 10px; color: #ef4444;">Erro ao buscar notas pendentes.</div>';
+        }
+    }
+
+    if (btnOpenFiscalHub) btnOpenFiscalHub.addEventListener('click', () => openFiscalModal());
+    if (btnVehicleFiscal) btnVehicleFiscal.addEventListener('click', () => openFiscalModal(currentVehiclePlate));
+    if (fiscalModalCloseBtn) fiscalModalCloseBtn.addEventListener('click', () => { fiscalModal.style.display = 'none'; });
+    if (fiscalModalDismiss) fiscalModalDismiss.addEventListener('click', () => { fiscalModal.style.display = 'none'; });
+
+    if (btnCopyNfseDesc) {
+        btnCopyNfseDesc.addEventListener('click', () => {
+            const text = document.getElementById('nfse-desc-text').value;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('📋 Discriminação da NFS-e copiada com sucesso!');
+            });
+        });
+    }
+
+    if (btnCopyClientData) {
+        btnCopyClientData.addEventListener('click', () => {
+            const text = document.getElementById('nfse-client-data').value;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('📋 Dados do tomador copiados com sucesso!');
+            });
+        });
+    }
+
+    if (btnMarkNfseDone) {
+        btnMarkNfseDone.addEventListener('click', async () => {
+            const num = document.getElementById('nfse-number-input').value.trim();
+            if (!currentFiscalPlate) return;
+            try {
+                const res = await fetch('/api/nf/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plate: currentFiscalPlate,
+                        status_servico: 'emitida',
+                        nf_servico_num: num
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ NFS-e de Serviços marcada como EMITIDA!');
+                }
+            } catch (e) {
+                alert('Erro ao atualizar status: ' + e.message);
+            }
+        });
+    }
+
+    if (btnMarkNfeDone) {
+        btnMarkNfeDone.addEventListener('click', async () => {
+            const num = document.getElementById('nfe-number-input').value.trim();
+            if (!currentFiscalPlate) return;
+            try {
+                const res = await fetch('/api/nf/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plate: currentFiscalPlate,
+                        status_pecas: 'emitida',
+                        nf_pecas_num: num
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ NF-e de Peças marcada como EMITIDA!');
+                }
+            } catch (e) {
+                alert('Erro ao atualizar status: ' + e.message);
+            }
+        });
+    }
 });
+

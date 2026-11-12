@@ -12,7 +12,7 @@ from ctypes import wintypes
 import subprocess
 import webbrowser
 import threading
-from server import app, BASE_DIR
+from server import app, BASE_DIR, get_local_ip
 import config
 import cache
 
@@ -264,11 +264,13 @@ def main():
     else:
         print("Nenhuma pasta de planilhas configurada. Você poderá selecioná-la na tela do aplicativo.")
         
+    local_ip = get_local_ip()
     print(f"\nAbrindo aplicativo em {URL}...")
+    print(f"Painel de TV da Oficina (LAN): http://{local_ip}:{PORT}/tv")
     threading.Thread(target=launch_ui, daemon=True).start()
     
-    # Run server
-    app.run(host="127.0.0.1", port=PORT, debug=False, use_reloader=False)
+    # Run server on all interfaces to allow Smart TVs and devices on LAN
+    app.run(host="0.0.0.0", port=PORT, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
     main()

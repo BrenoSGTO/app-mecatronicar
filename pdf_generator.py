@@ -1177,8 +1177,8 @@ def render_checklist_html(parsed_data, auto_print=False):
             <div class="ws-brand-col">
                 <img src="/logo.png" alt="MecatroniCar" class="ws-logo">
                 <div>
-                    <div class="ws-title">CHECKLIST<br>DE OFICINA</div>
-                    <div class="ws-subtitle">MecatroniCar</div>
+                    <div class="ws-title">CHECKLIST DE PARA-BRISA</div>
+                    <div class="ws-subtitle">MecatroniCar • FOLHA DE CHÃO DE OFICINA</div>
                 </div>
             </div>
             <div class="ws-car-col">

@@ -32,9 +32,28 @@
                     <button id="btn-zoom-in" class="btn-zoom" title="Aumentar tamanho dos botões e textos">+</button>
                 </div>
 
+                <!-- TV & Patio Buttons -->
+                <a href="/tv" target="_blank" id="btn-open-tv" class="btn btn-tv btn-sm" title="Abrir Painel de TV / Pátio ao Vivo em tela cheia (LAN)">
+                    📺 Painel TV
+                </a>
+                <button id="btn-open-patio-modal" class="btn btn-patio btn-sm" title="Gerenciar carros no pátio da oficina">
+                    🚗 Pátio
+                </button>
+
+                <!-- Botões de Acesso Rápido v2.0 -->
+                <a href="/tv" target="_blank" class="btn btn-tv btn-sm" title="Abrir Painel de TV do Pátio ao Vivo">
+                    📺 Painel TV
+                </a>
+                <button id="btn-open-new-os" class="btn btn-primary btn-sm" title="Criar Nova Ordem de Serviço ou Visita com Salvamento no Excel">
+                    ➕ Nova Visita / OS
+                </button>
+                <button id="btn-open-fiscal-hub" class="btn btn-fiscal btn-sm" title="Copiloto de Notas Fiscais (NFS-e Santos e NF-e Peças)">
+                    📑 Copiloto Fiscal
+                </button>
+
                 <!-- Update Check Button -->
                 <button id="btn-check-updates" class="btn btn-update btn-sm" title="Verificar se há novas versões do sistema">
-                    ✨ Verificar Atualizações
+                    ✨ Atualizações
                 </button>
 
                 <div class="folder-control-box">
@@ -129,17 +148,26 @@
                 </div>
 
                 <div class="vehicle-actions-block">
-                    <button id="btn-vehicle-orcamento" class="btn btn-primary" title="Gerar Orçamento / Ordem de Serviço em PDF com Logotipo MecatroniCar">
-                        📄 Orçamento / OS (PDF)
+                    <button id="btn-vehicle-new-visit" class="btn btn-primary" title="Abrir uma nova visita para este carro com dados pré-preenchidos">
+                        ➕ Nova Visita
+                    </button>
+                    <button id="btn-vehicle-orcamento" class="btn btn-secondary" title="Gerar Orçamento / Ordem de Serviço em PDF com Logotipo MecatroniCar">
+                        📄 Orçamento (PDF)
                     </button>
                     <button id="btn-vehicle-checklist" class="btn btn-checklist-top" title="Gerar Checklist para o para-brisa do carro (sem valores)">
-                        📋 Checklist Vidro (Sem Valores)
+                        📋 Checklist Vidro
+                    </button>
+                    <button id="btn-vehicle-fiscal" class="btn btn-fiscal-action" title="Abrir Copiloto Fiscal (NFS-e e NF-e) para este veículo">
+                        📑 Copiloto Fiscal
+                    </button>
+                    <button id="btn-vehicle-patio" class="btn btn-patio-action" title="Adicionar este veículo ao Pátio ou alterar seu status na TV">
+                        📍 Status no Pátio
                     </button>
                     <button id="btn-print" class="btn btn-secondary" title="Imprimir histórico completo na tela com valores">
-                        🖨️ Imprimir Histórico
+                        🖨️ Imprimir
                     </button>
                     <button id="btn-print-no-prices" class="btn btn-outline-print" title="Imprimir histórico sem os valores das peças e serviços">
-                        📄 Histórico sem Preços
+                        📄 Sem Preços
                     </button>
                 </div>
             </div>
@@ -276,9 +304,505 @@
         </div>
     </div>
 
+    <!-- Modal de Gestão do Pátio (CP-06) -->
+    <div id="patio-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 650px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge">PÁTIO &amp; TV AO VIVO</span>
+                    <h3 id="patio-modal-title" class="modal-title">🚗 Gerenciar Pátio da Oficina</h3>
+                </div>
+                <button type="button" class="modal-close" id="patio-modal-close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Seção 1: Lista Rápida dos Carros no Pátio -->
+                <div style="margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="font-size: 13px; color: #334155;">Veículos no Pátio Agora (<span id="patio-list-count">0</span>):</strong>
+                        <a href="/tv" target="_blank" style="font-size: 12px; font-weight: 700; color: #0284c7; text-decoration: none;">📺 Abrir Tela de TV</a>
+                    </div>
+                    <div id="patio-cars-list" class="patio-cars-list">
+                        <!-- Linhas dos carros no pátio -->
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 14px 0;">
+
+                <!-- Seção 2: Formulário Adicionar / Editar Carro no Pátio -->
+                <form id="patio-car-form" style="display: flex; flex-direction: column; gap: 12px;">
+                    <input type="hidden" id="desktop-patio-car-id" value="">
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 2;">
+                            <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Placa *</label>
+                            <input type="text" id="desktop-patio-plate" class="search-input" style="height: 38px; font-size: 14px; text-transform: uppercase; font-weight: 700;" placeholder="Ex: FNB-1A77" required>
+                        </div>
+                        <div style="flex: 3;">
+                            <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Cliente</label>
+                            <input type="text" id="desktop-patio-client" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Nome do cliente">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 3;">
+                            <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Modelo do Carro</label>
+                            <input type="text" id="desktop-patio-model" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Ex: Fox 1.0 ou Sentra 2.0">
+                        </div>
+                        <div style="flex: 2;">
+                            <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Cor</label>
+                            <input type="text" id="desktop-patio-color" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Ex: Prata">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 3;">
+                            <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Status no Pátio *</label>
+                            <select id="desktop-patio-status" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0 10px; font-size: 13.5px; font-weight: 700; background: #ffffff;">
+                                <option value="Em Diagnóstico">🔍 Em Diagnóstico</option>
+                                <option value="Esperando Orçamento">📝 Esperando Orçamento</option>
+                                <option value="Esperando Aprovação">⏳ Esperando Aprovação</option>
+                                <option value="Esperando Peças">📦 Esperando Peças</option>
+                                <option value="Em Execução">🔧 Em Execução</option>
+                                <option value="Esperando Cliente Buscar">✅ Esperando Cliente Buscar</option>
+                                <option value="Liberado p/ Retirada por Terceiro">🔑 Liberado p/ Retirada por Terceiro</option>
+                            </select>
+                        </div>
+                        <div style="flex: 2;">
+                            <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Box / Mecânico</label>
+                            <input type="text" id="desktop-patio-box" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Ex: Elevador 1">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Observações / Queixa Principal</label>
+                        <input type="text" id="desktop-patio-notes" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Ex: Troca de óleo e correia">
+                    </div>
+
+                    <!-- Campos Especiais de Terceiro Autorizado -->
+                    <div id="desktop-third-party-box" style="display: none; background: #fff1f2; border: 1.5px solid #f43f5e; border-radius: 8px; padding: 12px; flex-direction: column; gap: 8px;">
+                        <strong style="font-size: 12.5px; color: #9f1239; display: flex; align-items: center; gap: 6px;">
+                            🔑 Dados de Quem Está Autorizado a Buscar o Carro:
+                        </strong>
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 3;">
+                                <label style="font-size: 11.5px; font-weight: 700; color: #9f1239; display: block; margin-bottom: 3px;">Nome do Autorizado *</label>
+                                <input type="text" id="desktop-patio-auth-name" class="search-input" style="height: 34px; font-size: 13px;" placeholder="Nome completo">
+                            </div>
+                            <div style="flex: 2;">
+                                <label style="font-size: 11.5px; font-weight: 700; color: #9f1239; display: block; margin-bottom: 3px;">RG ou CPF *</label>
+                                <input type="text" id="desktop-patio-auth-doc" class="search-input" style="height: 34px; font-size: 13px; text-transform: uppercase;" placeholder="Doc para conferir">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 700; color: #9f1239; display: block; margin-bottom: 3px;">Telefone de Contato</label>
+                            <input type="text" id="desktop-patio-auth-phone" class="search-input" style="height: 34px; font-size: 13px;" placeholder="(13) 99999-9999">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                        <button type="button" id="btn-desktop-patio-delete" class="btn btn-secondary" style="color: #ef4444; display: none;">
+                            🗑️ Remover do Pátio
+                        </button>
+                        <div style="display: flex; gap: 8px; margin-left: auto;">
+                            <button type="button" id="btn-desktop-patio-clear" class="btn btn-secondary">Limpar</button>
+                            <button type="submit" class="btn btn-primary">💾 Salvar no Pátio</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Nova OS / Visita com Motor Excel Bidirecional (CP-03) -->
+    <div id="os-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog modal-dialog-xl">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">🛠️</span>
+                    <h3 id="os-modal-title">Nova Ficha / Ordem de Serviço</h3>
+                </div>
+                <button id="os-modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
+            </div>
+            <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <form id="os-form">
+                    <!-- Busca Rápida de Cliente Cadastrado -->
+                    <div class="os-autocomplete-box">
+                        <label>🔍 Buscar Cliente ou Carro Já Cadastrado (Preenchimento Automático):</label>
+                        <input type="text" id="os-search-client" class="os-input" placeholder="Digite placa ou nome para buscar..." autocomplete="off">
+                        <div id="os-autocomplete-dropdown" class="os-autocomplete-dropdown" style="display: none;"></div>
+                    </div>
+
+                    <input type="hidden" id="os-existing-file-path" value="">
+
+                    <!-- Seção 1: Dados do Veículo & Ordem de Serviço -->
+                    <div class="os-form-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 class="os-section-title" style="margin-bottom: 0;">🚗 Dados do Veículo &amp; Entrada na Oficina</h4>
+                            <span id="os-plate-lookup-badge" class="os-plate-badge" style="display: none;"></span>
+                        </div>
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-2">
+                                <label>Placa do Veículo *</label>
+                                <div style="position: relative;">
+                                    <input type="text" id="os-car-plate" class="os-input uppercase font-bold" required placeholder="Ex: BRA2E19" style="letter-spacing: 1px;">
+                                    <span id="os-plate-spinner" class="os-spinner-icon" style="display: none;">🔄</span>
+                                </div>
+                            </div>
+                            <div class="os-form-group flex-3">
+                                <label>Modelo do Veículo *</label>
+                                <input type="text" id="os-car-model" class="os-input" required placeholder="Ex: VW Fox 1.0 8V / Onix 1.0 Turbo">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Marca</label>
+                                <input type="text" id="os-car-brand" class="os-input" placeholder="Ex: VW, GM">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Ano</label>
+                                <input type="text" id="os-car-year" class="os-input" placeholder="2018">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Cor</label>
+                                <input type="text" id="os-car-color" class="os-input" placeholder="Prata">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Combustível</label>
+                                <input type="text" id="os-car-fuel" class="os-input" placeholder="Flex">
+                            </div>
+                        </div>
+
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-2">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <label>Nº da Visita *</label>
+                                    <span id="os-visit-suggested-hint" class="os-field-hint" style="font-size: 11px; color: #0284c7; font-weight: 600;"></span>
+                                </div>
+                                <input type="text" id="os-visit-num" class="os-input font-bold" required placeholder="1" style="background: #fefce8; border-color: #fde047;">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <label>Hodômetro (KM)</label>
+                                    <span id="os-last-odometer-hint" class="os-field-hint" style="font-size: 11px; color: #64748b;"></span>
+                                </div>
+                                <input type="text" id="os-odometer" class="os-input" placeholder="Ex: 109622">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Data de Entrada</label>
+                                <input type="text" id="os-entry-date" class="os-input" placeholder="DD/MM/AAAA">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Hora Entrada</label>
+                                <input type="text" id="os-entry-time" class="os-input" placeholder="08:00">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Status no Pátio</label>
+                                <select id="os-patio-status" class="os-input">
+                                    <option value="Em Diagnóstico">🔍 Em Diagnóstico</option>
+                                    <option value="Esperando Orçamento">📝 Esperando Orçamento</option>
+                                    <option value="Esperando Aprovação">⏳ Esperando Aprovação</option>
+                                    <option value="Esperando Peças">📦 Esperando Peças</option>
+                                    <option value="Em Execução">🔧 Em Execução</option>
+                                    <option value="Pronto / Esperando Cliente">✅ Pronto / Esperando Cliente</option>
+                                    <option value="Liberado p/ Retirada por Terceiro">🔑 Liberado p/ Terceiro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-1">
+                                <label>Chassi (opcional)</label>
+                                <input type="text" id="os-car-chassis" class="os-input" placeholder="Ex: 9BWAA45ZX F4009621">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Forma de Pagamento</label>
+                                <input type="text" id="os-payment-method" class="os-input" list="os-datalist-payment" placeholder="Ex: Pix, Dinheiro, Cartão 3x, Cartão Débito">
+                                <datalist id="os-datalist-payment">
+                                    <option value="Pix">
+                                    <option value="Dinheiro">
+                                    <option value="Cartão de Débito">
+                                    <option value="Cartão de Crédito 1x">
+                                    <option value="Cartão de Crédito 2x">
+                                    <option value="Cartão de Crédito 3x">
+                                    <option value="Faturado">
+                                    <option value="Boleto">
+                                </datalist>
+                            </div>
+                        </div>
+
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-1">
+                                <label>Reclamação do Cliente / Defeito Relatado / Queixa Principal</label>
+                                <input type="text" id="os-complaint" class="os-input" placeholder="Ex: Vazamento de óleo e luz do ABS acesa / Barulho na suspensão">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 2: Dados do Cliente -->
+                    <div class="os-form-section">
+                        <h4 class="os-section-title">👤 Dados Cadastrais do Cliente (Ficha Legacy)</h4>
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-3">
+                                <label>Nome do Cliente *</label>
+                                <input type="text" id="os-client-name" class="os-input" required placeholder="Ex: Danilo Pereira Da Silva">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Celular / WhatsApp *</label>
+                                <input type="text" id="os-client-phone" class="os-input" placeholder="Ex: (13) 99752-9463">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>CPF / CNPJ</label>
+                                <input type="text" id="os-client-cpf" class="os-input" placeholder="Ex: 335.893.158-73">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>RG</label>
+                                <input type="text" id="os-client-rg" class="os-input" placeholder="Ex: 45.884.519-X">
+                            </div>
+                        </div>
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-3">
+                                <label>Endereço</label>
+                                <input type="text" id="os-client-address" class="os-input" placeholder="Ex: R. Dr. Cunha Moreira">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Nº</label>
+                                <input type="text" id="os-client-num" class="os-input" placeholder="197">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>Compl.</label>
+                                <input type="text" id="os-client-compl" class="os-input" placeholder="Ap 3">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Bairro</label>
+                                <input type="text" id="os-client-bairro" class="os-input" placeholder="Encruzilhada">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Cidade</label>
+                                <input type="text" id="os-client-city" class="os-input" placeholder="Santos">
+                            </div>
+                            <div class="os-form-group flex-1">
+                                <label>CEP</label>
+                                <input type="text" id="os-client-cep" class="os-input" placeholder="11050-241">
+                            </div>
+                        </div>
+                        <div class="os-grid-row">
+                            <div class="os-form-group flex-2">
+                                <label>Telefone Residencial</label>
+                                <input type="text" id="os-client-tel-res" class="os-input" placeholder="(13) 3232-0000">
+                            </div>
+                            <div class="os-form-group flex-2">
+                                <label>Telefone Comercial</label>
+                                <input type="text" id="os-client-tel-com" class="os-input" placeholder="(13) 3232-1111">
+                            </div>
+                            <div class="os-form-group flex-3">
+                                <label>E-mail</label>
+                                <input type="email" id="os-client-email" class="os-input" placeholder="cliente@email.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 3: Peças Utilizadas -->
+                    <div class="os-form-section">
+                        <div class="os-table-header-row">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h4 class="os-section-title" style="margin-bottom: 0;">📦 Peças Utilizadas</h4>
+                                <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 11px;">NF-e 55 Autopeças</span>
+                            </div>
+                            <button type="button" id="btn-add-peca-row" class="btn btn-secondary btn-sm">➕ Adicionar Peça</button>
+                        </div>
+
+                        <!-- Barra de Sugestões Rápidas de Peças -->
+                        <div class="os-quick-suggestions-box">
+                            <span class="os-quick-label">⚡ Sugestões Rápidas:</span>
+                            <div id="os-pecas-chips" class="os-chips-container">
+                                <!-- Chips populados via JS -->
+                            </div>
+                        </div>
+
+                        <table class="os-items-table" id="os-pecas-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Descrição da Peça</th>
+                                    <th style="width: 15%;">Quantidade</th>
+                                    <th style="width: 18%;">Valor Unit. (R$)</th>
+                                    <th style="width: 17%;">Total (R$)</th>
+                                    <th style="width: 45px; text-align: center;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="os-pecas-tbody">
+                                <!-- Linhas dinâmicas -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Seção 4: Serviços / Mão de Obra -->
+                    <div class="os-form-section">
+                        <div class="os-table-header-row">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h4 class="os-section-title" style="margin-bottom: 0;">🔧 Serviços / Mão de Obra</h4>
+                                <span class="badge" style="background: #e0f2fe; color: #075985; font-size: 11px;">NFS-e Santos Item 14.01</span>
+                            </div>
+                            <button type="button" id="btn-add-servico-row" class="btn btn-secondary btn-sm">➕ Adicionar Serviço</button>
+                        </div>
+
+                        <!-- Barra de Sugestões Rápidas de Serviços -->
+                        <div class="os-quick-suggestions-box">
+                            <span class="os-quick-label">⚡ Sugestões Rápidas:</span>
+                            <div id="os-servicos-chips" class="os-chips-container">
+                                <!-- Chips populados via JS -->
+                            </div>
+                        </div>
+
+                        <table class="os-items-table" id="os-servicos-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Descrição do Serviço Executado</th>
+                                    <th style="width: 15%;">Quantidade</th>
+                                    <th style="width: 18%;">Valor M.O. (R$)</th>
+                                    <th style="width: 17%;">Total (R$)</th>
+                                    <th style="width: 45px; text-align: center;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="os-servicos-tbody">
+                                <!-- Linhas dinâmicas -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumo Financeiro & Totais -->
+                    <div class="os-totals-box">
+                        <div class="os-total-pill">
+                            <span>Subtotal Peças:</span>
+                            <strong id="os-sum-pecas">R$ 0,00</strong>
+                        </div>
+                        <div class="os-total-pill">
+                            <span>Subtotal Serviços:</span>
+                            <strong id="os-sum-servicos">R$ 0,00</strong>
+                        </div>
+                        <div class="os-total-pill">
+                            <span>Desconto:</span>
+                            <input type="text" id="os-discount" class="os-input-sm" placeholder="R$ 0,00" style="width: 90px;">
+                        </div>
+                        <div class="os-total-pill os-total-final">
+                            <span>Total Geral:</span>
+                            <strong id="os-sum-total">R$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <datalist id="os-datalist-pecas"></datalist>
+                    <datalist id="os-datalist-servicos"></datalist>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="os-modal-cancel" class="btn btn-secondary">Cancelar</button>
+                <button type="button" id="os-modal-save" class="btn btn-primary" style="font-weight: 700;">
+                    💾 Salvar Ficha no Excel (.xlsx) e Sistema
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal do Copiloto Fiscal (CP-07) -->
+    <div id="fiscal-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog modal-dialog-lg">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">📑</span>
+                    <h3 id="fiscal-modal-title">Copiloto Fiscal • MecatroniCar (Santos/SP)</h3>
+                </div>
+                <button id="fiscal-modal-close-btn" class="modal-close" title="Fechar (Esc)">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Abas Fiscais -->
+                <div class="fiscal-tabs">
+                    <button id="tab-btn-nfse" class="fiscal-tab active">🟦 1. NFS-e Santos (Serviços)</button>
+                    <button id="tab-btn-nfe" class="fiscal-tab">🟨 2. NF-e 55 (Peças)</button>
+                    <button id="tab-btn-pending" class="fiscal-tab">📋 3. Fila de Notas Pendentes</button>
+                </div>
+
+                <!-- Painel 1: NFS-e Serviços Santos -->
+                <div id="panel-nfse" class="fiscal-panel">
+                    <div class="fiscal-alert-box nfse-alert">
+                        <strong>Prefeitura de Santos • Item 14.01 (Mão de Obra Mecânica)</strong>
+                        <p>Copie e cole a discriminação e os dados do tomador diretamente no emissor de nota da prefeitura.</p>
+                    </div>
+
+                    <div class="fiscal-section">
+                        <div class="fiscal-field-header">
+                            <label>Discriminação Formatada dos Serviços:</label>
+                            <button id="btn-copy-nfse-desc" class="btn btn-secondary btn-sm">📋 Copiar Discriminação</button>
+                        </div>
+                        <textarea id="nfse-desc-text" class="fiscal-textarea" readonly></textarea>
+                    </div>
+
+                    <div class="fiscal-section">
+                        <div class="fiscal-field-header">
+                            <label>Dados Cadastrais do Tomador (Cliente):</label>
+                            <button id="btn-copy-client-data" class="btn btn-secondary btn-sm">📋 Copiar Dados</button>
+                        </div>
+                        <textarea id="nfse-client-data" class="fiscal-textarea-sm" readonly></textarea>
+                    </div>
+
+                    <div class="fiscal-status-row">
+                        <div class="fiscal-val-box">
+                            <span>Valor Total dos Serviços:</span>
+                            <strong id="nfse-total-val">R$ 0,00</strong>
+                        </div>
+                        <div class="fiscal-action-inputs">
+                            <input type="text" id="nfse-number-input" class="os-input-sm" placeholder="Nº da NFS-e Emitida">
+                            <button id="btn-mark-nfse-done" class="btn btn-primary btn-sm">✅ Marcar como Emitida</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel 2: NF-e Peças -->
+                <div id="panel-nfe" class="fiscal-panel" style="display: none;">
+                    <div class="fiscal-alert-box nfe-alert">
+                        <strong>NF-e Modelo 55 • Comércio Varejista de Autopeças</strong>
+                        <p>Classificação tributária sugerida: CFOP 5405 / CST 060 (Substituição Tributária).</p>
+                    </div>
+
+                    <div class="fiscal-table-wrapper">
+                        <table class="fiscal-table">
+                            <thead>
+                                <tr>
+                                    <th>Peça</th>
+                                    <th>Qtd</th>
+                                    <th>Unitário</th>
+                                    <th>Total</th>
+                                    <th>CFOP</th>
+                                    <th>NCM</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nfe-items-tbody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="fiscal-status-row">
+                        <div class="fiscal-val-box">
+                            <span>Valor Total das Peças:</span>
+                            <strong id="nfe-total-val">R$ 0,00</strong>
+                        </div>
+                        <div class="fiscal-action-inputs">
+                            <input type="text" id="nfe-number-input" class="os-input-sm" placeholder="Nº da NF-e Emitida">
+                            <button id="btn-mark-nfe-done" class="btn btn-primary btn-sm">✅ Marcar como Emitida</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel 3: Fila de Pendentes -->
+                <div id="panel-pending" class="fiscal-panel" style="display: none;">
+                    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Ordens de serviço com notas fiscais pendentes de emissão:</p>
+                    <div id="fiscal-pending-list" class="fiscal-pending-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="fiscal-modal-dismiss" class="btn btn-secondary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast" style="display: none;"></div>
 
-    <script src="app.js?v=1.0.7"></script>
+    <script src="app.js?v=2.0.0"></script>
 </body>
 </html>

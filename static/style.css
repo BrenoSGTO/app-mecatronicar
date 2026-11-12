@@ -1484,3 +1484,595 @@ body {
         display: none !important;
     }
 }
+
+/* ==========================================
+   Botões e Modal do Pátio / TV (CP-06)
+   ========================================== */
+.btn-tv {
+    background: #111827 !important;
+    color: #f9cc01 !important;
+    border: 1.5px solid #f9cc01 !important;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.btn-tv:hover {
+    background: #f9cc01 !important;
+    color: #111827 !important;
+    transform: translateY(-1px);
+}
+
+.btn-patio {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border: 1px solid #475569 !important;
+    font-weight: 600;
+}
+.btn-patio:hover {
+    background: #1e293b !important;
+    border-color: #f9cc01 !important;
+}
+
+.btn-patio-action {
+    background: #1e293b;
+    color: #f9cc01;
+    border: 1.5px solid #f9cc01;
+    font-weight: 700;
+}
+.btn-patio-action:hover {
+    background: #f9cc01;
+    color: #111827;
+}
+
+/* Modal do Pátio no Desktop */
+.patio-cars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 4px;
+}
+
+.patio-item-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: background 0.15s;
+}
+.patio-item-row:hover {
+    background: #f1f5f9;
+}
+
+.patio-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.patio-item-plate {
+    font-size: 14px;
+    font-weight: 800;
+    font-family: monospace;
+    background: #111827;
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 5px;
+}
+
+.patio-item-details {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.patio-item-model {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.patio-item-sub {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.patio-status-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.patio-status-terceiro {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #f87171;
+}
+
+.patio-status-execucao {
+    background: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #facc15;
+}
+
+.patio-status-pronto {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.patio-status-default {
+    background: #e0f2fe;
+    color: #075985;
+    border: 1px solid #7dd3fc;
+}
+
+/* ==========================================================================
+   ESTILOS V2.0 - NOVA OS E COPILOTO FISCAL
+   ========================================================================== */
+.btn-tv {
+    background: #1e293b;
+    color: #f9cc01;
+    border: 1px solid #334155;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+.btn-tv:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.btn-fiscal, .btn-fiscal-action {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+    font-weight: 700;
+}
+.btn-fiscal:hover, .btn-fiscal-action:hover {
+    background: #bae6fd;
+}
+
+.modal-dialog-xl {
+    max-width: 900px;
+    width: 95%;
+}
+.modal-dialog-lg {
+    max-width: 760px;
+    width: 95%;
+}
+
+.os-autocomplete-box {
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    position: relative;
+}
+.os-autocomplete-box label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #854d0e;
+    margin-bottom: 6px;
+    display: block;
+}
+.os-autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    right: 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1050;
+}
+.os-autocomplete-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+}
+.os-autocomplete-item:hover {
+    background: #fef9c3;
+}
+
+.os-form-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+.os-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+}
+.os-grid-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.os-grid-row:last-child {
+    margin-bottom: 0;
+}
+.os-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.os-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+.os-input {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: #0f172a;
+    outline: none;
+}
+.os-input:focus {
+    border-color: #f9cc01;
+    background: #ffffff;
+}
+.os-input.uppercase {
+    text-transform: uppercase;
+}
+.os-input-sm {
+    padding: 5px 8px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    outline: none;
+}
+
+.os-table-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.os-items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.os-items-table th {
+    background: #f1f5f9;
+    padding: 6px 8px;
+    font-size: 12px;
+    text-align: left;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+.os-items-table td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+}
+.os-items-table input.os-table-input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+}
+.os-items-table input.os-table-input:focus {
+    border-color: #f9cc01;
+    box-shadow: 0 0 0 2px rgba(249, 204, 1, 0.2);
+}
+.os-items-table input.os-table-input[readonly] {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-color: #e2e8f0;
+    cursor: default;
+}
+.btn-remove-row {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+.btn-remove-row:hover {
+    background: #fecaca;
+}
+
+/* Quick Suggestion Chips (CP-03) */
+.os-quick-suggestions-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    flex-wrap: wrap;
+}
+.os-quick-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+}
+.os-chips-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.os-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    user-select: none;
+    background: #ffffff;
+}
+.os-chip-peca {
+    background: #fefce8;
+    color: #854d0e;
+    border-color: #fef08a;
+}
+.os-chip-peca:hover {
+    background: #fef08a;
+    border-color: #fde047;
+    transform: translateY(-1px);
+}
+.os-chip-servico {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+.os-chip-servico:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    transform: translateY(-1px);
+}
+
+.os-plate-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.os-plate-badge.found {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.os-plate-badge.new {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.os-spinner-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    animation: spin 1s infinite linear;
+}
+
+.btn-edit-os {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-edit-os:hover {
+    background: #f9cc01;
+    color: #111827;
+    border-color: #e5b800;
+}
+
+.os-totals-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+.os-total-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #334155;
+}
+.os-total-final {
+    background: #111827;
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 6px;
+}
+.os-total-final strong {
+    color: #f9cc01;
+    font-size: 15px;
+}
+
+/* Copiloto Fiscal */
+.fiscal-tabs {
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 14px;
+    gap: 8px;
+}
+.fiscal-tab {
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+}
+.fiscal-tab.active {
+    color: #0f172a;
+    border-bottom-color: #f9cc01;
+}
+.fiscal-alert-box {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+.nfse-alert {
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+}
+.nfe-alert {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+.fiscal-section {
+    margin-bottom: 14px;
+}
+.fiscal-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.fiscal-field-header label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+.fiscal-textarea {
+    width: 100%;
+    height: 100px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.fiscal-textarea-sm {
+    width: 100%;
+    height: 70px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.fiscal-status-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+}
+.fiscal-val-box span {
+    font-size: 13px;
+    color: #64748b;
+}
+.fiscal-val-box strong {
+    font-size: 16px;
+    color: #0f172a;
+    margin-left: 6px;
+}
+.fiscal-action-inputs {
+    display: flex;
+    gap: 8px;
+}
+.fiscal-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
+.fiscal-table th {
+    background: #f1f5f9;
+    padding: 6px 10px;
+    font-size: 12px;
+    text-align: left;
+    border: 1px solid #e2e8f0;
+}
+.fiscal-table td {
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+}
+.fiscal-pending-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+

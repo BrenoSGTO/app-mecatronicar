@@ -104,11 +104,11 @@ Abaixo estão os checkpoints estruturados no repositório para guiar nosso desen
 
 | Checkpoint | Fase / Milestone | Entregáveis Principais | Status |
 | :--- | :--- | :--- | :--- |
-| **CP-01** | **Fundação & Banco de Dados v2** | Criação de tabelas operacionais no SQLite (`patio_status`, `nf_control`, `templates`) preservando 100% do `oficina_cache.db` atual. | ⏳ Planejado |
-| **CP-02** | **Motor Excel Bidirecional (`excel_writer.py`)** | Gerador e editor de planilhas `.xlsx` fiéis ao layout legado (`Plan1`), auto-preenchimento de clientes recorrentes e cálculo automático do nº da visita. | ⏳ Planejado |
-| **CP-03** | **Interface de Criação e Edição de OS no App** | Modal/Tela de "Nova Visita / Editar OS" com autocompletar de clientes, veículos, catálogo rápido de peças/serviços mais usados na oficina e sincronização imediata com o Excel. | ⏳ Planejado |
-| **CP-04** | **Checklist de Para-brisa (PDF sem Valores)** | Botão `📋 Checklist Mecânico` em cada visita gerando documento limpo com placa gigante, sintomas, checkboxes `[ ]` de peças e serviços aprovados e campo de anotações. | ⏳ Planejado |
-| **CP-05** | **Orçamento & OS Profissional em PDF** | Novo gerador de Orçamento/OS com logotipo MecatroniCar, dados fiscais da empresa, tabelas estilizadas de Peças e Serviços, termos de garantia e botão de compartilhamento rápido. | ⏳ Planejado |
-| **CP-06** | **Painel de TV da Oficina (`/tv`)** | Servidor acessível na rede local (LAN), painel Kanban/Grid para TV em tela cheia com os 7 status de pátio, aviso de "Retirada por Terceiro" e controle rápido pela secretária. | ⏳ Planejado |
+| **CP-01** | **Fundação & Banco de Dados v2** | Criação de tabelas operacionais no SQLite (`patio_status`, `nf_control`, `templates`) preservando 100% do `oficina_cache.db` atual. | ✅ Concluído |
+| **CP-02** | **Motor Excel Bidirecional (`excel_writer.py`)** | Gerador e editor de planilhas `.xlsx` fiéis ao layout legado (`Plan1`), auto-preenchimento de clientes recorrentes e cálculo automático do nº da visita. | ✅ Concluído |
+| **CP-03** | **Interface de Criação e Edição de OS no App** | Modal/Tela de "Nova Visita / Editar OS" com autocompletar de clientes, veículos, catálogo rápido de peças/serviços mais usados na oficina e sincronização imediata com o Excel. | ✅ Concluído |
+| **CP-04** | **Checklist de Para-brisa (PDF sem Valores)** | Botão `📋 Checklist Mecânico` em cada visita gerando documento limpo com placa gigante, sintomas, checkboxes `[ ]` de peças e serviços aprovados e campo de anotações. | ✅ Concluído |
+| **CP-05** | **Orçamento & OS Profissional em PDF** | Novo gerador de Orçamento/OS com logotipo MecatroniCar, dados fiscais da empresa, tabelas estilizadas de Peças e Serviços, termos de garantia e botão de compartilhamento rápido. | ✅ Concluído |
+| **CP-06** | **Painel de TV da Oficina (`/tv`)** | Servidor acessível na rede local (LAN), painel Kanban/Grid para TV em tela cheia com os 7 status de pátio, aviso de "Retirada por Terceiro" e controle rápido pela secretária. | ✅ Concluído |
 | **CP-07** | **Copiloto de Notas Fiscais (Peças + Serviços)** | Painel de emissão rápida com separação automática NFS-e (Serviços) vs NF-e (Peças), copiador inteligente em 1 clique, fila de notas pendentes e marcação de NFs emitidas. | ⏳ Planejado |
 | **CP-08** | **Testes, Empacotamento e Release `v2.0.0`** | Validação completa com planilhas reais, geração do novo instalador Windows e merge seguro para a branch `main`. | ⏳ Planejado |
