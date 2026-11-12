@@ -992,6 +992,130 @@
         </div>
     </div>
 
+    <!-- Modal para Configuração Interativa do Checklist de Vidro (Issue #13) -->
+    <div id="modal-checklist-config" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 680px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">📋</span>
+                    <h3>Configurar Checklist da Oficina</h3>
+                </div>
+                <button id="modal-checklist-close" class="modal-close" title="Fechar (Esc)">✕</button>
+            </div>
+            <div class="modal-subtitle" id="checklist-modal-subtitle">Veículo: Carregando...</div>
+            <div class="modal-body" style="max-height: 72vh; overflow-y: auto; padding: 16px 20px;">
+                <!-- Opção Scanner OBD2 -->
+                <div class="checklist-config-card">
+                    <label class="checklist-toggle-label">
+                        <input type="checkbox" id="chk-checklist-scanner" checked>
+                        <div class="checklist-toggle-content">
+                            <div class="checklist-toggle-title">🔎 Incluir Códigos de Falha / Diagnóstico (Scanner OBD2)</div>
+                            <div class="checklist-toggle-desc" id="checklist-scanner-desc">Exibir anotações técnicas e códigos de erro gravados nesta visita</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Lista de Itens da Visita -->
+                <div class="checklist-section-box">
+                    <div class="checklist-section-header">
+                        <div>
+                            <strong>🔩 Peças e 🛠️ Serviços desta Visita</strong>
+                            <span class="badge-counter" id="checklist-items-count">0</span>
+                        </div>
+                        <div class="checklist-quick-actions">
+                            <button type="button" id="btn-checklist-sel-all" class="btn-link-action">Marcar Todos</button>
+                            <span class="sep">•</span>
+                            <button type="button" id="btn-checklist-desel-all" class="btn-link-action">Desmarcar Todos</button>
+                        </div>
+                    </div>
+                    <div id="checklist-items-list" class="checklist-items-container">
+                        <!-- Itens carregados via JS -->
+                    </div>
+                </div>
+
+                <!-- Seção para Adicionar Itens Manualmente -->
+                <div class="checklist-section-box">
+                    <div class="checklist-section-header">
+                        <strong>➕ Adicionar Item Manualmente</strong>
+                        <small style="color: #64748b;">Itens adicionais para conferência no para-brisa</small>
+                    </div>
+                    <div class="checklist-manual-form">
+                        <select id="checklist-manual-type" class="checklist-select">
+                            <option value="peca">🔩 Peça / Componente</option>
+                            <option value="servico">🛠️ Serviço / Mão de Obra</option>
+                        </select>
+                        <input type="text" id="checklist-manual-qty" class="checklist-input-qty" value="1" placeholder="Qtd" title="Quantidade">
+                        <input type="text" id="checklist-manual-desc" class="checklist-input-desc" placeholder="Ex: Higienização de ar-condicionado, Teste de carga de bateria..." autocomplete="off">
+                        <button type="button" id="btn-checklist-add-manual" class="btn btn-primary btn-sm">➕ Adicionar</button>
+                    </div>
+                    <div id="checklist-manual-list" class="checklist-manual-container" style="display: none;">
+                        <!-- Itens adicionados manualmente -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" id="btn-checklist-cancel" class="btn btn-secondary">Cancelar</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="btn-checklist-preview" class="btn btn-secondary" title="Visualizar checklist em nova aba sem abrir diálogo de impressão imediatamente">👁️ Visualizar</button>
+                    <button type="button" id="btn-checklist-generate" class="btn btn-primary" title="Gerar checklist da oficina e abrir impressão">🖨️ Gerar e Imprimir Checklist</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Seleção Prévia de Visitas para Impressão (Issue #13) -->
+    <div id="modal-print-visits-selection" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 660px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">🖨️</span>
+                    <h3>Selecionar Visitas para Impressão</h3>
+                </div>
+                <button id="modal-print-visits-close" class="modal-close" title="Fechar (Esc)">✕</button>
+            </div>
+            <div class="modal-subtitle" id="print-visits-modal-subtitle">Veículo: Carregando...</div>
+            <div class="modal-body" style="max-height: 72vh; overflow-y: auto; padding: 16px 20px;">
+                <!-- Barra de Atalhos -->
+                <div class="print-shortcuts-bar">
+                    <span class="shortcuts-title">Atalhos:</span>
+                    <button type="button" class="btn-shortcut" id="btn-pv-all">Todas</button>
+                    <button type="button" class="btn-shortcut" id="btn-pv-none">Nenhuma</button>
+                    <button type="button" class="btn-shortcut" id="btn-pv-latest">Apenas a Mais Recente</button>
+                    <button type="button" class="btn-shortcut" id="btn-pv-last-3">Últimas 3</button>
+                    <button type="button" class="btn-shortcut" id="btn-pv-last-5">Últimas 5</button>
+                </div>
+
+                <div class="print-visits-counter-row">
+                    <span id="print-visits-counter-text">0 de 0 visitas selecionadas</span>
+                </div>
+
+                <!-- Lista de Visitas com Checkboxes -->
+                <div id="print-visits-scroll-list" class="print-visits-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Opções Adicionais de Impressão -->
+                <div class="print-options-card">
+                    <label class="print-option-item">
+                        <input type="checkbox" id="chk-print-no-prices">
+                        <span>📄 <strong>Ocultar valores financeiros</strong> (Imprimir sem os preços das peças e serviços)</span>
+                    </label>
+                    <label class="print-option-item">
+                        <input type="checkbox" id="chk-print-expand-services" checked>
+                        <span>🛠️ <strong>Expandir serviços executados</strong> em todas as visitas selecionadas</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" id="btn-print-visits-cancel" class="btn btn-secondary">Cancelar</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="btn-print-visits-pdf-tab" class="btn btn-secondary" title="Gerar relatório consolidado em nova aba">📄 Relatório Consolidado</button>
+                    <button type="button" id="btn-print-visits-confirm" class="btn btn-primary" title="Imprimir as visitas selecionadas agora">🖨️ Imprimir Visitas Selecionadas</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast" style="display: none;"></div>
 

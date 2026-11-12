@@ -7,6 +7,8 @@ from tkinter import filedialog
 from flask import Flask, jsonify, request, send_from_directory
 import socket
 import datetime
+import json
+import parser
 import cache
 import config
 import updater
@@ -267,14 +269,43 @@ def orcamento_pdf_endpoint():
     except Exception as e:
         return f"Erro gerando orçamento: {str(e)}", 500
 
-@app.route("/api/checklist_pdf", methods=["GET"])
+@app.route("/api/checklist_pdf", methods=["GET", "POST"])
 def checklist_pdf_endpoint():
     import pdf_generator
-    fpath = request.args.get("file_path", "")
-    auto_print = request.args.get("print", "0") in ("1", "true", "True")
     
+    data = {}
+    if request.method == "POST":
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+        elif "config_json" in request.form:
+            try:
+                data = json.loads(request.form["config_json"])
+            except Exception:
+                data = request.form.to_dict()
+        else:
+            data = request.form.to_dict()
+
+    fpath = data.get("file_path") or request.args.get("file_path", "")
+    
+    # Auto print
+    auto_print_param = data.get("print", data.get("auto_print", request.args.get("print", "0")))
+    auto_print = auto_print_param in ("1", "true", "True", True)
+    
+    # Toggle do Scanner OBD2
+    scanner_param = data.get("include_scanner", request.args.get("include_scanner", "1"))
+    if isinstance(scanner_param, str):
+        include_scanner = scanner_param.lower() not in ("0", "false", "no", "nao", "não")
+    else:
+        include_scanner = bool(scanner_param)
+
+    # Itens customizados / filtrados
+    custom_items = data.get("items")
+    custom_pecas = data.get("pecas")
+    custom_servicos = data.get("servicos")
+    manual_items = data.get("manual_items")
+
     if not fpath or not os.path.exists(fpath):
-        plate = request.args.get("plate", "")
+        plate = data.get("plate") or request.args.get("plate", "")
         if plate:
             db_path = cache.get_db_path(BASE_DIR)
             history = cache.get_car_history(plate, db_path)
@@ -285,10 +316,73 @@ def checklist_pdf_endpoint():
         return "Arquivo de planilha não encontrado.", 404
         
     try:
-        html_content = pdf_generator.generate_checklist_from_file(fpath, auto_print=auto_print)
+        parsed = parser.parse_file(fpath)
+        if manual_items:
+            parsed["manual_items"] = manual_items
+        html_content = pdf_generator.render_checklist_html(
+            parsed,
+            auto_print=auto_print,
+            include_scanner=include_scanner,
+            custom_items=custom_items,
+            pecas=custom_pecas,
+            servicos=custom_servicos
+        )
         return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return f"Erro gerando checklist: {str(e)}", 500
+
+@app.route("/api/history_pdf", methods=["GET", "POST"])
+def history_pdf_endpoint():
+    import pdf_generator
+    data = {}
+    if request.method == "POST":
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+        elif "config_json" in request.form:
+            try:
+                data = json.loads(request.form["config_json"])
+            except Exception:
+                data = request.form.to_dict()
+        else:
+            data = request.form.to_dict()
+
+    plate = data.get("plate") or request.args.get("plate", "")
+    selected_indices = data.get("selected_indices")
+    selected_visit_nums = data.get("selected_visit_nums")
+    
+    without_prices_param = data.get("without_prices", request.args.get("without_prices", "0"))
+    without_prices = without_prices_param in ("1", "true", "True", True)
+    
+    auto_print_param = data.get("auto_print", data.get("print", request.args.get("print", "0")))
+    auto_print = auto_print_param in ("1", "true", "True", True)
+
+    db_path = cache.get_db_path(BASE_DIR)
+    history = cache.get_car_history(plate, db_path)
+    if not history:
+        return "Nenhum histórico encontrado para esta placa.", 404
+
+    # Ordenação decrescente padrão (mais recente primeiro)
+    sorted_history = sorted(history, key=lambda x: (x.get("entry_date_sort") or "", x.get("odometer_int") or 0), reverse=True)
+
+    # Filtra visitas se selecionadas
+    visits_to_render = sorted_history
+    if selected_visit_nums is not None:
+        v_nums_str = [str(x).strip() for x in selected_visit_nums]
+        visits_to_render = [v for v in sorted_history if str(v.get("visit_num", "")).strip() in v_nums_str]
+    elif selected_indices is not None:
+        idx_set = set(int(i) for i in selected_indices if str(i).isdigit())
+        visits_to_render = [v for idx, v in enumerate(sorted_history) if idx in idx_set]
+
+    if not visits_to_render:
+        visits_to_render = sorted_history
+
+    html_content = pdf_generator.render_consolidated_history_html(
+        sorted_history[0],
+        visits_to_render,
+        without_prices=without_prices,
+        auto_print=auto_print
+    )
+    return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 # Updater API endpoints
 @app.route("/api/check_update", methods=["GET"])

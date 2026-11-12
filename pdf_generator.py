@@ -768,10 +768,11 @@ def render_orcamento_html(parsed_data, auto_print=False):
 """
 
 
-def render_checklist_html(parsed_data, auto_print=False):
+def render_checklist_html(parsed_data, auto_print=False, include_scanner=True, custom_items=None, pecas=None, servicos=None):
     """
-    CP-04: Gera o HTML/PDF de Checklist Operacional para deixar no para-brisa do veículo.
+    CP-04 / Issue #13: Gera o HTML/PDF de Checklist Operacional Customizável para deixar no para-brisa do veículo.
     NÃO exibe nenhum valor monetário (apenas descrições, quantidades e checkboxes de execução).
+    Permite escolher quais itens vão aparecer, adicionar itens manualmente e ativar/desativar códigos de scanner.
     """
     d = parsed_data or {}
     plate_disp = d.get("plate_display") or format_plate_display(d.get("plate", "")) or "SEM PLACA"
@@ -792,8 +793,58 @@ def render_checklist_html(parsed_data, auto_print=False):
     complaint = d.get("complaint") or "Revisão / Manutenção"
     complaint_comment = d.get("complaint_comment") or ""
 
-    pecas = d.get("pecas_items") or []
-    servicos = d.get("servicos_items") or []
+    # Determina toggle do Scanner OBD2
+    if include_scanner is None:
+        include_scanner = d.get("include_scanner", True)
+    if isinstance(include_scanner, str):
+        include_scanner = include_scanner.lower() not in ("0", "false", "no", "nao", "não")
+    include_scanner = bool(include_scanner)
+
+    # Resolução de Peças e Serviços (customizados ou originais da visita)
+    if pecas is None:
+        if "pecas" in d and isinstance(d["pecas"], list):
+            pecas = list(d["pecas"])
+        elif custom_items is not None or "items" in d:
+            all_items = custom_items if custom_items is not None else d.get("items", [])
+            pecas = [
+                it for it in all_items
+                if str(it.get("type", "")).lower() in ("peca", "peça", "part")
+                or str(it.get("section", "")).lower() in ("peca", "peça")
+                or (not it.get("type") and str(it.get("section", "")).lower() not in ("serviço", "servico"))
+            ]
+        elif "pecas_items" in d and isinstance(d["pecas_items"], list):
+            pecas = list(d["pecas_items"])
+        else:
+            pecas = []
+    else:
+        pecas = list(pecas)
+
+    if servicos is None:
+        if "servicos" in d and isinstance(d["servicos"], list):
+            servicos = list(d["servicos"])
+        elif custom_items is not None or "items" in d:
+            all_items = custom_items if custom_items is not None else d.get("items", [])
+            servicos = [
+                it for it in all_items
+                if str(it.get("type", "")).lower() in ("servico", "serviço", "service")
+                or str(it.get("section", "")).lower() in ("servico", "serviço")
+            ]
+        elif "servicos_items" in d and isinstance(d["servicos_items"], list):
+            servicos = list(d["servicos_items"])
+        else:
+            servicos = []
+    else:
+        servicos = list(servicos)
+
+    # Suporte a itens manuais adicionados via interface
+    manual_items = d.get("manual_items") or []
+    if manual_items:
+        for m_item in manual_items:
+            m_type = str(m_item.get("type", "")).lower()
+            if m_type in ("servico", "serviço", "service"):
+                servicos.append(m_item)
+            else:
+                pecas.append(m_item)
 
     doc_title = f"Checklist_{plate_disp.replace('-', '')}_Visita_{visit_num}_MecatroniCar"
 
@@ -815,7 +866,7 @@ def render_checklist_html(parsed_data, auto_print=False):
     else:
         pecas_rows_html = """
         <tr>
-            <td colspan="4" class="empty-row">Nenhuma peça registrada até o momento.</td>
+            <td colspan="4" class="empty-row">Nenhuma peça selecionada para este checklist.</td>
         </tr>
         """
 
@@ -837,12 +888,12 @@ def render_checklist_html(parsed_data, auto_print=False):
     else:
         servicos_rows_html = """
         <tr>
-            <td colspan="4" class="empty-row">Ver itens descritos acima ou aguardar definição de serviços.</td>
+            <td colspan="4" class="empty-row">Nenhum serviço selecionado para este checklist.</td>
         </tr>
         """
 
     scanner_block_html = ""
-    if complaint_comment:
+    if include_scanner and complaint_comment:
         scanner_block_html = f"""
         <div class="section-box">
             <div class="section-title-bar">
@@ -1222,36 +1273,6 @@ def render_checklist_html(parsed_data, auto_print=False):
             color: #0f172a;
         }}
 
-        /* Mechanic Handwritten Notes & Final Inspection */
-        .mechanic-notes-box {{
-            border: 2px solid #111827;
-            border-radius: 6px;
-            padding: 10px 12px;
-            margin-bottom: 12px;
-        }}
-        .mechanic-notes-title {{
-            font-size: 11.5px;
-            font-weight: 900;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            color: #0f172a;
-        }}
-        .ruled-line {{
-            border-bottom: 1px dashed #94a3b8;
-            height: 24px;
-        }}
-        .inspection-footer {{
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
-            border: 2px solid #111827;
-            border-radius: 6px;
-            padding: 10px 12px;
-            background: #f8fafc;
-            font-size: 11.5px;
-            font-weight: 700;
-        }}
-
         @media print {{
             body {{
                 background: #ffffff;
@@ -1381,30 +1402,6 @@ def render_checklist_html(parsed_data, auto_print=False):
         </div>
 
         {scanner_block_html}
-
-        <!-- Handwritten Mechanic Observations -->
-        <div class="mechanic-notes-box">
-            <div class="mechanic-notes-title">📝 ANOTAÇÕES DO MECÂNICO / PEÇAS ADICIONAIS IDENTIFICADAS NA DESMONTAGEM:</div>
-            <div class="ruled-line"></div>
-            <div class="ruled-line"></div>
-            <div class="ruled-line"></div>
-        </div>
-
-        <!-- Final Quality Check Footer -->
-        <div class="inspection-footer">
-            <div>🔧 Mecânico Responsável:<br><br>_______________________________</div>
-            <div>
-                ✅ Conferência Final:<br>
-                [ &nbsp; ] Nível de Óleo / Fluidos<br>
-                [ &nbsp; ] Reaperto de Rodas / Torque<br>
-                [ &nbsp; ] Peças Substituídas Guardadas
-            </div>
-            <div>
-                🚗 Teste de Rodagem / Liberação:<br>
-                [ &nbsp; ] Aprovado sem Anomalias<br><br>
-                Data/Hora: ____/____ às ____:____
-            </div>
-        </div>
     </div>
 
     <script>
@@ -1420,6 +1417,441 @@ def generate_orcamento_from_file(filepath, auto_print=False):
     return render_orcamento_html(parsed, auto_print=auto_print)
 
 
-def generate_checklist_from_file(filepath, auto_print=False):
+def generate_checklist_from_file(filepath, auto_print=False, include_scanner=True, custom_items=None, pecas=None, servicos=None):
     parsed = parse_file(filepath)
-    return render_checklist_html(parsed, auto_print=auto_print)
+    return render_checklist_html(
+        parsed,
+        auto_print=auto_print,
+        include_scanner=include_scanner,
+        custom_items=custom_items,
+        pecas=pecas,
+        servicos=servicos
+    )
+
+
+def render_consolidated_history_html(vehicle_info, visits, without_prices=False, auto_print=False):
+    """
+    CP-09 / Issue #13: Gera o HTML/PDF consolidado de histórico com apenas as visitas selecionadas pelo usuário.
+    Suporta modo completo com valores ou modo sem preços.
+    """
+    v_info = vehicle_info or {}
+    plate_disp = v_info.get("plate_display") or format_plate_display(v_info.get("plate", "")) or "SEM PLACA"
+    client_name = v_info.get("client_name") or "Cliente não informado"
+    car_model = v_info.get("car_model") or "Veículo"
+    car_year = v_info.get("car_year") or "—"
+    car_color = v_info.get("car_color") or "—"
+    total_selected = len(visits)
+
+    doc_title = f"Historico_{plate_disp.replace('-', '')}_MecatroniCar"
+    price_mode_title = "SEM VALORES" if without_prices else "HISTÓRICO COMPLETO"
+
+    visits_html = ""
+    for idx, v in enumerate(visits, 1):
+        v_num = v.get("visit_num") or "—"
+        v_date = v.get("entry_date") or "Data não informada"
+        v_km = _format_km(v.get("odometer"))
+        v_complaint = v.get("complaint") or "Manutenção / Revisão"
+
+        details = v.get("details") or {}
+        items = details.get("items") or []
+        pecas = details.get("pecas_items") or [it for it in items if it.get("section") != "Serviço"]
+        servicos = details.get("servicos_items") or [it for it in items if it.get("section") == "Serviço"]
+        total_pecas = details.get("total_pecas") or ""
+        total_servicos = details.get("total_servicos") or ""
+        total_geral = details.get("total_geral") or ""
+
+        # Tabela de Peças
+        pecas_rows = ""
+        if pecas:
+            for p in pecas:
+                price_td = f'<td class="col-price">{_esc(p.get("total_price") or "-")}</td>' if not without_prices else ''
+                pecas_rows += f"""
+                <tr>
+                    <td class="col-qty">{_esc(p.get('quantity') or '1')}</td>
+                    <td class="col-desc">{_esc(p.get('description'))}</td>
+                    {price_td}
+                </tr>
+                """
+        else:
+            colspan = "2" if without_prices else "3"
+            pecas_rows = f'<tr><td colspan="{colspan}" class="empty-row">Nenhuma peça registrada nesta visita.</td></tr>'
+
+        # Tabela de Serviços
+        servicos_rows = ""
+        if servicos:
+            for s in servicos:
+                price_td = f'<td class="col-price">{_esc(s.get("total_price") or "-")}</td>' if not without_prices else ''
+                servicos_rows += f"""
+                <tr>
+                    <td class="col-qty">{_esc(s.get('quantity') or '1')}</td>
+                    <td class="col-desc">{_esc(s.get('description'))}</td>
+                    {price_td}
+                </tr>
+                """
+        else:
+            colspan = "2" if without_prices else "3"
+            servicos_rows = f'<tr><td colspan="{colspan}" class="empty-row">Nenhum serviço registrado nesta visita.</td></tr>'
+
+        price_th = '<th class="col-price">TOTAL</th>' if not without_prices else ''
+        footer_totals = ""
+        if not without_prices and (total_pecas or total_servicos or total_geral):
+            footer_totals = f"""
+            <div class="visit-card-totals">
+                {f'<span>Peças: <strong>{_esc(total_pecas)}</strong></span>' if total_pecas else ''}
+                {f'<span>Mão de Obra: <strong>{_esc(total_servicos)}</strong></span>' if total_servicos else ''}
+                {f'<span class="total-highlight">Total Visita: <strong>{_esc(total_geral)}</strong></span>' if total_geral else ''}
+            </div>
+            """
+
+        visits_html += f"""
+        <div class="history-visit-card">
+            <div class="history-visit-header">
+                <div class="hvh-left">
+                    <span class="badge-visit">VISITA #{_esc(v_num)}</span>
+                    <span class="badge-date">📅 {_esc(v_date)}</span>
+                    <span class="badge-km">⏱️ {_esc(v_km)}</span>
+                </div>
+                <div class="hvh-right">
+                    <span class="badge-file">📄 {_esc(v.get('file_name', ''))}</span>
+                </div>
+            </div>
+
+            <div class="history-complaint">
+                <strong>Defeito / Queixa Relatada:</strong> {_esc(v_complaint)}
+            </div>
+
+            <div class="history-tables-grid">
+                <div class="table-block">
+                    <div class="table-subheading">🔩 Peças e Componentes ({len(pecas)})</div>
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th class="col-qty">QTD</th>
+                                <th>DESCRIÇÃO</th>
+                                {price_th}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pecas_rows}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-block">
+                    <div class="table-subheading">🛠️ Mão de Obra e Serviços ({len(servicos)})</div>
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th class="col-qty">QTD</th>
+                                <th>DESCRIÇÃO</th>
+                                {price_th}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {servicos_rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {footer_totals}
+        </div>
+        """
+
+    auto_print_script = "window.addEventListener('load', () => { setTimeout(() => window.print(), 350); });" if auto_print else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>{_esc(doc_title)}</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        @page {{
+            size: A4 portrait;
+            margin: 12mm 14mm;
+        }}
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.4;
+        }}
+        .print-toolbar {{
+            background: #111827;
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #f9cc01;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }}
+        .toolbar-title {{
+            font-size: 15px;
+            font-weight: 800;
+        }}
+        .toolbar-badge {{
+            background: #f9cc01;
+            color: #111827;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            margin-right: 8px;
+        }}
+        .btn-action {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            transition: all 0.2s;
+        }}
+        .btn-primary {{
+            background: #f9cc01;
+            color: #111827;
+        }}
+        .btn-primary:hover {{
+            background: #e5b800;
+        }}
+        .sheet {{
+            max-width: 900px;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: 24px 28px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border-radius: 8px;
+        }}
+        .history-main-header {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2.5px solid #111827;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }}
+        .brand-block {{
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }}
+        .brand-logo {{
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }}
+        .brand-title {{
+            font-size: 18px;
+            font-weight: 900;
+            color: #111827;
+            letter-spacing: -0.5px;
+        }}
+        .brand-sub {{
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+        }}
+        .car-summary-box {{
+            text-align: right;
+        }}
+        .car-plate-title {{
+            font-size: 20px;
+            font-weight: 900;
+            color: #0f172a;
+            font-family: "Impact", "Arial Black", sans-serif;
+            letter-spacing: 1px;
+        }}
+        .car-meta-line {{
+            font-size: 12.5px;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 2px;
+        }}
+        .history-visit-card {{
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            margin-bottom: 18px;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }}
+        .history-visit-header {{
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        .hvh-left {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        .badge-visit {{
+            background: #111827;
+            color: #f9cc01;
+            font-weight: 800;
+            font-size: 11.5px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }}
+        .badge-date, .badge-km {{
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+        }}
+        .badge-file {{
+            font-size: 11px;
+            color: #64748b;
+            font-family: monospace;
+        }}
+        .history-complaint {{
+            padding: 8px 14px;
+            background: #ffffff;
+            font-size: 12.5px;
+            border-bottom: 1px dashed #e2e8f0;
+            color: #1e293b;
+        }}
+        .history-tables-grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 10px 14px;
+        }}
+        .table-subheading {{
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }}
+        .history-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }}
+        .history-table th {{
+            background: #f1f5f9;
+            padding: 5px 6px;
+            text-align: left;
+            font-weight: 700;
+            color: #475569;
+            border-bottom: 1px solid #cbd5e1;
+        }}
+        .history-table td {{
+            padding: 5px 6px;
+            border-bottom: 1px solid #f1f5f9;
+        }}
+        .col-qty {{
+            width: 38px;
+            text-align: center !important;
+            font-weight: 700;
+        }}
+        .col-price {{
+            width: 75px;
+            text-align: right !important;
+            font-weight: 700;
+            font-family: monospace;
+        }}
+        .empty-row {{
+            text-align: center;
+            color: #94a3b8;
+            font-style: italic;
+            padding: 8px !important;
+        }}
+        .visit-card-totals {{
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 20px;
+            font-size: 12px;
+            color: #334155;
+        }}
+        .total-highlight {{
+            background: #fefce8;
+            color: #854d0e;
+            padding: 2px 8px;
+            border: 1px solid #fde047;
+            border-radius: 4px;
+            font-weight: 800;
+        }}
+        @media print {{
+            body {{
+                background: #ffffff;
+            }}
+            .print-toolbar {{
+                display: none !important;
+            }}
+            .sheet {{
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                max-width: 100%;
+            }}
+            .history-visit-card {{
+                border: 1px solid #94a3b8;
+                page-break-inside: avoid;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="print-toolbar">
+        <div>
+            <span class="toolbar-badge">Histórico</span>
+            <span class="toolbar-title">{_esc(plate_disp)} — {_esc(car_model)} ({total_selected} visitas selecionadas • {price_mode_title})</span>
+        </div>
+        <div>
+            <button class="btn-action btn-primary" onclick="window.print()">
+                🖨️ Imprimir Histórico Selecionado
+            </button>
+        </div>
+    </div>
+
+    <div class="sheet">
+        <div class="history-main-header">
+            <div class="brand-block">
+                <img src="/logo.png" alt="MecatroniCar" class="brand-logo">
+                <div>
+                    <div class="brand-title">MecatroniCar</div>
+                    <div class="brand-sub">Serviços e Autopeças Ltda • CNPJ 05.961.672/0001-87</div>
+                    <div class="brand-sub">Relatório Consolidado de Visitas • {price_mode_title}</div>
+                </div>
+            </div>
+            <div class="car-summary-box">
+                <div class="car-plate-title">{_esc(plate_disp)}</div>
+                <div class="car-meta-line">{_esc(car_model)} ({_esc(car_color)} • {_esc(car_year)})</div>
+                <div class="car-meta-line">👤 Cliente: <strong>{_esc(client_name)}</strong></div>
+                <div class="car-meta-line">📋 Visitas selecionadas: <strong>{total_selected}</strong></div>
+            </div>
+        </div>
+
+        {visits_html}
+    </div>
+
+    <script>
+        {auto_print_script}
+    </script>
+</body>
+</html>
+"""
