@@ -466,38 +466,89 @@ def nf_data_endpoint(plate=None):
             fpath = fpath or last_visit.get("file_path", "")
 
     if not det and not last_visit:
-        return jsonify({"success": False, "error": "Visita ou veículo não encontrado"}), 404
+        nf_rec = cache.get_nf_control(file_path=fpath, plate_clean=target_plate, visit_num=visit_num, db_path=db_path)
+        if nf_rec:
+            val_s = float(nf_rec.get("valor_servico", 0.0) or 0.0)
+            val_p = float(nf_rec.get("valor_pecas", 0.0) or 0.0)
+            last_visit = {
+                "plate": nf_rec.get("plate"),
+                "plate_display": nf_rec.get("plate_display") or nf_rec.get("plate"),
+                "car_model": nf_rec.get("car_model"),
+                "client_name": nf_rec.get("client_name"),
+                "entry_date": nf_rec.get("entry_date"),
+                "visit_num": nf_rec.get("visit_num"),
+                "total_servicos": f"R$ {val_s:.2f}".replace(".", ","),
+                "total_pecas": f"R$ {val_p:.2f}".replace(".", ","),
+                "total": f"R$ {(val_s + val_p):.2f}".replace(".", ","),
+            }
+            det = last_visit
+            fpath = fpath or nf_rec.get("file_path", "")
+        else:
+            return jsonify({"success": False, "error": "Visita ou veículo não encontrado"}), 404
 
     nf_rec = cache.get_nf_control(file_path=fpath, plate_clean=target_plate, visit_num=visit_num, db_path=db_path)
     copilot_payload = nf_copilot.build_copilot_payload(fpath, det or last_visit, nf_rec)
 
-    # Campos compatíveis com versões legadas
-    tot_servicos = copilot_payload.get("total_servicos", "R$ 0,00")
-    tot_pecas = copilot_payload.get("total_pecas", "R$ 0,00")
+    val_servicos_num = cache.parse_currency_float(copilot_payload.get("total_servicos", "0"))
+    val_pecas_num = cache.parse_currency_float(copilot_payload.get("total_pecas", "0"))
+
+    # Estrutura completa de nfse e nfe
+    nfse_obj = {
+        "status": (nf_rec.get("status_servico") if nf_rec else None) or copilot_payload["nf_status"]["nfse_status"],
+        "numero_nfse": (nf_rec.get("nf_servico_num") if nf_rec else "") or copilot_payload["nf_status"]["nfse_number"],
+        "data_emissao": (nf_rec.get("data_emissao_servico") if nf_rec else "") or copilot_payload["nf_status"]["nfse_date"],
+        "valor_servicos": val_servicos_num,
+        "discriminacao_completa": copilot_payload["copilot_texts"]["nfse_discriminacao"],
+        "itens_servico": [
+            {
+                "desc": s.get("description", ""),
+                "qty": s.get("quantity", "1"),
+                "unit_price": cache.parse_currency_float(s.get("unit_price", 0)),
+                "total": cache.parse_currency_float(s.get("total_price", 0))
+            }
+            for s in copilot_payload.get("servicos_items", [])
+        ]
+    }
+
+    nfe_obj = {
+        "status": (nf_rec.get("status_pecas") if nf_rec else None) or copilot_payload["nf_status"]["nfe_status"],
+        "numero_nfe": (nf_rec.get("nf_pecas_num") if nf_rec else "") or copilot_payload["nf_status"]["nfe_number"],
+        "data_emissao": (nf_rec.get("data_emissao_pecas") if nf_rec else "") or copilot_payload["nf_status"]["nfe_date"],
+        "valor_pecas": val_pecas_num,
+        "resumo_texto": copilot_payload["copilot_texts"]["nfe_pecas_resumo"],
+        "tabela_tsv": copilot_payload["copilot_texts"]["nfe_pecas_tsv"],
+        "itens_pecas": [
+            {
+                "desc": p.get("description", ""),
+                "qty": p.get("quantity", "1"),
+                "unit_price": cache.parse_currency_float(p.get("unit_price", 0)),
+                "total": cache.parse_currency_float(p.get("total_price", 0)),
+                "cfop": str(p.get("suggested_cfop", "5405")).replace(".", ""),
+                "cfop_display": p.get("suggested_cfop", "5.405"),
+                "ncm_sugerido": p.get("suggested_ncm", "8708.29.99"),
+                "ncm_desc": p.get("suggested_ncm_desc", "")
+            }
+            for p in copilot_payload.get("pecas_items", [])
+        ]
+    }
 
     return jsonify({
         "success": True,
         "plate": copilot_payload.get("plate_display") or copilot_payload.get("plate"),
+        "plate_display": copilot_payload.get("plate_display") or copilot_payload.get("plate"),
         "client_name": copilot_payload.get("client_name"),
         "car_model": copilot_payload.get("car_model"),
         "visit_num": copilot_payload.get("visit_num"),
+        "entry_date": copilot_payload.get("entry_date"),
         "discriminacao_nfse": copilot_payload["copilot_texts"]["nfse_discriminacao"],
         "dados_tomador": copilot_payload["copilot_texts"]["tomador_resumo"],
-        "valor_servicos": tot_servicos,
-        "valor_pecas": tot_pecas,
-        "valor_total": copilot_payload.get("total_geral"),
-        "pecas_nfe": [
-            {
-                "description": p.get("description"),
-                "quantity": p.get("quantity"),
-                "unit_price": p.get("unit_price"),
-                "total_price": p.get("total_price"),
-                "ncm": p.get("suggested_ncm"),
-                "cfop": str(p.get("suggested_cfop", "5405")).replace(".", ""),
-                "csosn": p.get("suggested_csosn")
-            }
-            for p in copilot_payload.get("pecas_items", [])
-        ],
+        "valor_servicos": val_servicos_num,
+        "valor_pecas": val_pecas_num,
+        "valor_total": val_servicos_num + val_pecas_num,
+        "nfse": nfse_obj,
+        "nfe": nfe_obj,
+        "tomador": copilot_payload.get("tomador"),
+        "pecas_nfe": nfe_obj["itens_pecas"],
         "copilot": copilot_payload,
         "nf_control": nf_rec
     })
@@ -511,6 +562,7 @@ def nf_queue_endpoint():
     return jsonify({
         "success": True,
         "queue": res.get("queue", []),
+        "items": res.get("queue", []),
         "stats": res.get("stats", {})
     })
 
@@ -546,42 +598,69 @@ def nf_copilot_text_endpoint():
     file_path = request.args.get("file_path", "").strip()
     text_type = request.args.get("type", "nfse_discriminacao").strip()
     plate = request.args.get("plate", "").strip()
+    db_path = cache.get_db_path(BASE_DIR)
 
-    if not file_path and plate:
-        db_path = cache.get_db_path(BASE_DIR)
+    det = None
+    if file_path and os.path.exists(file_path):
+        try:
+            import parser
+            det = parser.parse_file(file_path)
+        except Exception:
+            det = None
+
+    if not det and plate:
         hist = cache.get_car_history(plate, db_path)
         if hist:
-            file_path = hist[0].get("file_path", "")
+            file_path = file_path or hist[0].get("file_path", "")
+            det = hist[0].get("details") or hist[0]
 
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({"success": False, "error": "Planilha não encontrada"}), 404
+    nf_rec = cache.get_nf_control(file_path=file_path, plate_clean=plate, db_path=db_path)
+
+    if not det and nf_rec:
+        val_s = float(nf_rec.get("valor_servico", 0.0) or 0.0)
+        val_p = float(nf_rec.get("valor_pecas", 0.0) or 0.0)
+        det = {
+            "plate": nf_rec.get("plate"),
+            "plate_display": nf_rec.get("plate_display") or nf_rec.get("plate"),
+            "car_model": nf_rec.get("car_model"),
+            "client_name": nf_rec.get("client_name"),
+            "entry_date": nf_rec.get("entry_date"),
+            "visit_num": nf_rec.get("visit_num"),
+            "total_servicos": f"R$ {val_s:.2f}".replace(".", ","),
+            "total_pecas": f"R$ {val_p:.2f}".replace(".", ","),
+            "total": f"R$ {(val_s + val_p):.2f}".replace(".", ","),
+        }
+        file_path = file_path or nf_rec.get("file_path", "")
+
+    if not det:
+        return jsonify({"success": False, "error": "Visita ou planilha não encontrada"}), 404
 
     try:
-        import parser
-        det = parser.parse_file(file_path)
-        db_path = cache.get_db_path(BASE_DIR)
-        nf_rec = cache.get_nf_control(file_path=file_path, db_path=db_path)
         payload = nf_copilot.build_copilot_payload(file_path, det, nf_rec)
-
         texts = payload.get("copilot_texts", {})
         tomador = payload.get("tomador", {})
 
+        target_text = ""
         if text_type == "nfse_discriminacao":
-            return texts.get("nfse_discriminacao", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = texts.get("nfse_discriminacao", "")
         elif text_type == "tomador_resumo":
-            return texts.get("tomador_resumo", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = texts.get("tomador_resumo", "")
         elif text_type == "nfe_pecas_resumo":
-            return texts.get("nfe_pecas_resumo", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = texts.get("nfe_pecas_resumo", "")
         elif text_type == "nfe_pecas_tsv":
-            return texts.get("nfe_pecas_tsv", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = texts.get("nfe_pecas_tsv", "")
         elif text_type == "cpf_only":
-            return tomador.get("cpf", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = tomador.get("cpf", "")
         elif text_type == "cep_only":
-            return tomador.get("cep", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = tomador.get("cep", "")
         elif text_type == "endereco_only":
-            return tomador.get("address_single_line", ""), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            target_text = tomador.get("address_single_line", "")
         else:
             return jsonify({"success": True, "texts": texts, "tomador": tomador})
+
+        if request.args.get("raw") == "1" or request.headers.get("Accept") == "text/plain":
+            return target_text, 200, {"Content-Type": "text/plain; charset=utf-8"}
+        return jsonify({"success": True, "text": target_text, "type": text_type})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

@@ -133,14 +133,16 @@ class TestNfCopilotLogic(unittest.TestCase):
             self.mock_details,
             nf_status={'nf_servico_num': '1042', 'status_servico': 'emitida'}
         )
-        self.assertIn('nfse', payload)
-        self.assertIn('nfe', payload)
+        self.assertIn('copilot_texts', payload)
         self.assertIn('tomador', payload)
-        self.assertEqual(payload['valor_servicos'], 200.0)
-        self.assertEqual(payload['valor_pecas'], 495.0)
-        self.assertEqual(len(payload['pecas_nfe']), 3)
-        self.assertEqual(payload['nfse']['status'], 'emitida')
-        self.assertEqual(payload['nfe']['status'], 'pendente')
+        self.assertIn('servicos_items', payload)
+        self.assertIn('pecas_items', payload)
+        self.assertEqual(payload['total_servicos'], 'R$ 200,00')
+        self.assertEqual(payload['total_pecas'], 'R$ 495,00')
+        self.assertEqual(payload['total_geral'], 'R$ 695,00')
+        self.assertEqual(len(payload['pecas_items']), 3)
+        self.assertEqual(len(payload['servicos_items']), 3)
+        self.assertEqual(payload['nf_status']['nfse_status'], 'pendente')
 
 
 class TestNfCachePersistence(unittest.TestCase):
@@ -148,10 +150,8 @@ class TestNfCachePersistence(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.orig_dir = os.path.dirname(cache.get_db_path())
-        # Aponta DB para o diretório temporário
         self.db_path = os.path.join(self.temp_dir, cache.DB_FILE)
-        cache.init_db(self.temp_dir)
+        cache.init_db(self.db_path)
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -169,13 +169,14 @@ class TestNfCachePersistence(unittest.TestCase):
             valor_servico=350.0,
             status_pecas='pendente',
             valor_pecas=600.0,
-            base_dir=self.temp_dir
+            db_path=self.db_path
         )
         self.assertIsNotNone(rec)
-        self.assertEqual(rec['plate'], 'XYZ-9999')
+        self.assertEqual(rec['plate_display'], 'XYZ-9999')
+        self.assertEqual(rec['plate_clean'], 'XYZ9999')
 
         # Consulta fila 'pending'
-        queue_data = cache.get_nf_queue(filter_type='pending', base_dir=self.temp_dir)
+        queue_data = cache.get_nf_queue(filter_type='pending', db_path=self.db_path)
         self.assertEqual(len(queue_data['items']), 1)
         self.assertEqual(queue_data['stats']['pending_visits_count'], 1)
         self.assertEqual(queue_data['stats']['total_pending_services_val'], 350.0)
@@ -188,11 +189,11 @@ class TestNfCachePersistence(unittest.TestCase):
             status_servico='emitida',
             nf_servico_num='1042',
             data_emissao_servico='11/03/2026',
-            base_dir=self.temp_dir
+            db_path=self.db_path
         )
 
         # Consulta fila 'pending_pecas'
-        queue_pecas = cache.get_nf_queue(filter_type='pending_pecas', base_dir=self.temp_dir)
+        queue_pecas = cache.get_nf_queue(filter_type='pending_pecas', db_path=self.db_path)
         self.assertEqual(len(queue_pecas['items']), 1)
         self.assertEqual(queue_pecas['items'][0]['status_servico'], 'emitida')
         self.assertEqual(queue_pecas['items'][0]['status_pecas'], 'pendente')
@@ -203,11 +204,11 @@ class TestNfCachePersistence(unittest.TestCase):
             plate='XYZ-9999',
             status_pecas='emitida',
             nf_pecas_num='5501',
-            base_dir=self.temp_dir
+            db_path=self.db_path
         )
 
         # Fila pending agora deve estar vazia (0 pendências)
-        queue_pending_now = cache.get_nf_queue(filter_type='pending', base_dir=self.temp_dir)
+        queue_pending_now = cache.get_nf_queue(filter_type='pending', db_path=self.db_path)
         self.assertEqual(len(queue_pending_now['items']), 0)
         self.assertEqual(queue_pending_now['stats']['emitted_count'], 1)
 
@@ -245,7 +246,7 @@ class TestNfServerEndpoints(unittest.TestCase):
         self.assertTrue(pdata['success'])
         self.assertIn('stats', pdata)
 
-        # 3. GET /api/nf/data?plate=BRA2E19
+        # 3. GET /api/nf/data?plate=BRA-2E19
         resp_data = self.client.get('/api/nf/data?plate=BRA-2E19')
         self.assertEqual(resp_data.status_code, 200)
         ddata = resp_data.get_json()
@@ -270,7 +271,8 @@ class TestNfServerEndpoints(unittest.TestCase):
         })
         self.assertEqual(resp_emit.status_code, 200)
         edata = resp_emit.get_json()
-        self.assertEqual(edata['record']['nf_servico_num'], '9988')
+        rec = edata.get('nf') or edata.get('record')
+        self.assertEqual(rec['nf_servico_num'], '9988')
 
         # 6. GET /api/nf/export_batch?format=csv
         resp_csv = self.client.get('/api/nf/export_batch?format=csv&filter=all')

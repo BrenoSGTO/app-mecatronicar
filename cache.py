@@ -100,19 +100,67 @@ def _setup_nf_table(cur):
     CREATE TABLE IF NOT EXISTS nf_control (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_path TEXT,
+        plate TEXT,
         plate_clean TEXT,
+        plate_display TEXT,
+        client_name TEXT,
+        car_model TEXT,
+        entry_date TEXT,
         visit_num TEXT,
         nfse_status TEXT DEFAULT 'Pendente',
         nfse_number TEXT DEFAULT '',
+        nfse_date TEXT,
+        nfse_value REAL DEFAULT 0.0,
+        status_servico TEXT DEFAULT 'Pendente',
+        nf_servico_num TEXT DEFAULT '',
+        valor_servico REAL DEFAULT 0.0,
+        data_emissao_servico TEXT,
         nfe_status TEXT DEFAULT 'Pendente',
         nfe_number TEXT DEFAULT '',
+        nfe_date TEXT,
+        nfe_value REAL DEFAULT 0.0,
+        status_pecas TEXT DEFAULT 'Pendente',
+        nf_pecas_num TEXT DEFAULT '',
+        valor_pecas REAL DEFAULT 0.0,
+        data_emissao_pecas TEXT,
         updated_at TEXT,
+        updated_time TEXT,
         notes TEXT
     )
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_nf_file_path ON nf_control(file_path)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_nf_plate ON nf_control(plate_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_nf_plate_visit ON nf_control(plate_clean, visit_num)")
+
+    # Garante migração de colunas adicionais para bancos já existentes
+    cur.execute("PRAGMA table_info(nf_control)")
+    cols = {row[1] for row in cur.fetchall()}
+    extra_cols = [
+        ("plate", "TEXT"),
+        ("plate_display", "TEXT"),
+        ("client_name", "TEXT"),
+        ("car_model", "TEXT"),
+        ("entry_date", "TEXT"),
+        ("nfse_date", "TEXT"),
+        ("nfse_value", "REAL DEFAULT 0.0"),
+        ("status_servico", "TEXT DEFAULT 'Pendente'"),
+        ("nf_servico_num", "TEXT DEFAULT ''"),
+        ("valor_servico", "REAL DEFAULT 0.0"),
+        ("data_emissao_servico", "TEXT"),
+        ("nfe_date", "TEXT"),
+        ("nfe_value", "REAL DEFAULT 0.0"),
+        ("status_pecas", "TEXT DEFAULT 'Pendente'"),
+        ("nf_pecas_num", "TEXT DEFAULT ''"),
+        ("valor_pecas", "REAL DEFAULT 0.0"),
+        ("data_emissao_pecas", "TEXT"),
+        ("updated_time", "TEXT")
+    ]
+    for col_name, col_type in extra_cols:
+        if col_name not in cols:
+            try:
+                cur.execute(f"ALTER TABLE nf_control ADD COLUMN {col_name} {col_type}")
+            except Exception:
+                pass
 
 def init_db(db_path=None):
     path = db_path or get_db_path()
@@ -924,6 +972,13 @@ def _format_nf_dict(row_dict):
     if not row_dict:
         return None
     d = dict(row_dict)
+    raw_p = d.get("plate") or d.get("plate_display") or d.get("plate_clean") or ""
+    if not d.get("plate"):
+        d["plate"] = raw_p
+    if not d.get("plate_clean"):
+        d["plate_clean"] = clean_plate(raw_p) if raw_p else ""
+    if not d.get("plate_display"):
+        d["plate_display"] = format_plate_display(raw_p) if raw_p else ""
     d.setdefault("updated_time", d.get("updated_at", ""))
     d.setdefault("status_servico", d.get("nfse_status", ""))
     d.setdefault("nf_servico_num", d.get("nfse_number", ""))
@@ -991,9 +1046,10 @@ def list_nf_control(pending_only=False, nfse_status=None, nfe_status=None, plate
 
     query += " ORDER BY n.updated_at DESC, n.id DESC"
     cur.execute(query, params)
-    rows = [dict(r) for r in cur.fetchall()]
+    raw_rows = [dict(r) for r in cur.fetchall()]
 
-    for row in rows:
+    rows = []
+    for row in raw_rows:
         if not row.get("client_name") and row.get("plate_clean"):
             cur.execute("""
             SELECT client_name, car_model, car_year, car_color, plate_display, entry_date
@@ -1007,7 +1063,7 @@ def list_nf_control(pending_only=False, nfse_status=None, nfe_status=None, plate
                 for k, v in dict(f_match).items():
                     if not row.get(k):
                         row[k] = v
-        _format_nf_dict(row)
+        rows.append(_format_nf_dict(row))
 
     conn.close()
     return rows
@@ -1029,9 +1085,9 @@ def get_nf_control(id=None, file_path=None, plate_clean=None, visit_num=None, db
     elif file_path:
         cur.execute("SELECT * FROM nf_control WHERE file_path = ?", (file_path,))
         row = cur.fetchone()
-    elif plate_clean and visit_num is not None:
+    elif plate_clean and visit_num is not None and str(visit_num).strip() != "":
         p_clean = clean_plate(plate_clean)
-        cur.execute("SELECT * FROM nf_control WHERE plate_clean = ? AND visit_num = ?", (p_clean, str(visit_num)))
+        cur.execute("SELECT * FROM nf_control WHERE plate_clean = ? AND visit_num = ?", (p_clean, str(visit_num).strip()))
         row = cur.fetchone()
     elif plate_clean:
         p_clean = clean_plate(plate_clean)
@@ -1050,9 +1106,9 @@ def get_nf_control(id=None, file_path=None, plate_clean=None, visit_num=None, db
             for k, v in dict(f_match).items():
                 res.setdefault(k, v)
 
-    _format_nf_dict(res)
+    formatted_res = _format_nf_dict(res)
     conn.close()
-    return res
+    return formatted_res
 
 def update_nf_control(
     file_path=None,
@@ -1109,7 +1165,7 @@ def update_nf_control(
     client_name = kwargs.get("client_name", "")
     car_model = kwargs.get("car_model", "")
     entry_date = kwargs.get("entry_date", "")
-    plate_disp = kwargs.get("plate_display", "")
+    plate_disp = kwargs.get("plate_display", "") or (format_plate_display(raw_plate) if raw_plate else "")
 
     if file_path and (not p_clean or not v_num or not client_name):
         cur.execute("SELECT plate, plate_clean, plate_display, client_name, car_model, visit_num, entry_date FROM files WHERE file_path = ?", (file_path,))
@@ -1254,14 +1310,26 @@ def get_nf_queue(filter_type='pending', query='', db_path=None):
             f.visit_num, f.entry_date, f.entry_date_sort, f.odometer, f.odometer_int,
             f.complaint, f.data_json,
             n.id as nf_id, n.notes, n.updated_at as updated_time,
-            n.nfse_status, n.nfse_number,
-            n.nfe_status, n.nfe_number
+            n.nfse_status, n.nfse_number, n.valor_servico, n.data_emissao_servico,
+            n.nfe_status, n.nfe_number, n.valor_pecas, n.data_emissao_pecas
         FROM files f
         LEFT JOIN nf_control n ON (
             (n.file_path IS NOT NULL AND n.file_path != '' AND f.file_path = n.file_path) OR
             (n.plate_clean = f.plate_clean AND n.visit_num IS NOT NULL AND n.visit_num != '' AND f.visit_num = n.visit_num)
         )
-        ORDER BY f.entry_date_sort DESC, f.odometer_int DESC, CAST(f.visit_num AS INTEGER) DESC
+        UNION ALL
+        SELECT 
+            n.file_path, '' as file_name, n.plate, n.plate_clean, n.plate_display,
+            n.client_name, '' as client_clean, n.car_model, '' as car_year, '' as car_color,
+            n.visit_num, n.entry_date, '' as entry_date_sort, '' as odometer, 0 as odometer_int,
+            '' as complaint, '' as data_json,
+            n.id as nf_id, n.notes, n.updated_at as updated_time,
+            n.nfse_status, n.nfse_number, n.valor_servico, n.data_emissao_servico,
+            n.nfe_status, n.nfe_number, n.valor_pecas, n.data_emissao_pecas
+        FROM nf_control n
+        WHERE (n.file_path IS NULL OR n.file_path = '' OR n.file_path NOT IN (SELECT file_path FROM files WHERE file_path IS NOT NULL AND file_path != ''))
+          AND (n.plate_clean NOT IN (SELECT plate_clean FROM files WHERE plate_clean IS NOT NULL AND plate_clean != ''))
+        ORDER BY entry_date_sort DESC, odometer_int DESC
     """)
     rows = cur.fetchall()
 
@@ -1291,7 +1359,19 @@ def get_nf_queue(filter_type='pending', query='', db_path=None):
         tot_geral_str = d_json.get("total") or d_json.get("subtotal") or ""
 
         val_serv = parse_currency_float(tot_serv_str)
+        if val_serv == 0.0 and r["valor_servico"]:
+            try:
+                val_serv = float(r["valor_servico"])
+            except Exception:
+                pass
+
         val_pec = parse_currency_float(tot_pecas_str)
+        if val_pec == 0.0 and r["valor_pecas"]:
+            try:
+                val_pec = float(r["valor_pecas"])
+            except Exception:
+                pass
+
         val_tot = val_serv + val_pec if (val_serv + val_pec) > 0 else parse_currency_float(tot_geral_str)
 
         has_serv = len(servicos) > 0 or val_serv > 0
@@ -1312,9 +1392,9 @@ def get_nf_queue(filter_type='pending', query='', db_path=None):
             st_pec = "pendente" if has_pec else "nao_se_aplica"
 
         num_serv = r["nfse_number"] or ""
-        date_serv = ""
+        date_serv = r["data_emissao_servico"] or ""
         num_pec = r["nfe_number"] or ""
-        date_pec = ""
+        date_pec = r["data_emissao_pecas"] or ""
 
         is_pending_serv = (st_serv == "pendente")
         is_pending_pec = (st_pec == "pendente")
@@ -1418,7 +1498,7 @@ def get_nf_queue(filter_type='pending', query='', db_path=None):
         "total_pending_pecas_fmt": f"R$ {total_pending_pecas_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     }
 
-    return {"queue": items, "stats": stats}
+    return {"queue": items, "items": items, "stats": stats}
 
 def get_pending_nf_list(db_path=None):
     """
@@ -1435,8 +1515,14 @@ def get_nf_records(db_path=None):
 def get_nf_by_plate(plate, db_path=None):
     return get_nf_control(plate_clean=plate, db_path=db_path)
 
-def save_nf_control(data, db_path=None):
-    return update_nf_control(db_path=db_path, **data)
+def save_nf_control(data=None, db_path=None, **kwargs):
+    payload = {}
+    if isinstance(data, dict):
+        payload.update(data)
+    elif data is not None:
+        payload["data"] = data
+    payload.update(kwargs)
+    return update_nf_control(db_path=db_path, **payload)
 
 def get_pending_nfs(db_path=None):
     return get_nf_queue(filter_type='pending', db_path=db_path).get("queue", [])
