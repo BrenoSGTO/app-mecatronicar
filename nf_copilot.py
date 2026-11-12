@@ -29,9 +29,10 @@ COMPANY_INFO = {
 
 # Tabela de sugestão inteligente de NCM conforme palavras-chave
 NCM_KEYWORD_RULES = [
-    (r"\b(oleo|óleo|lubrificante|fluido|aditivo)\b", "2710.19.32", "Óleos lubrificantes automotivos"),
     (r"\b(filtro de oleo|filtro de óleo|filtro oleo|filtro óleo|filtro combustivel|filtro combustível)\b", "8421.23.00", "Filtros de óleo ou combustível para motores de ignição"),
     (r"\b(filtro de ar|filtro ar|filtro de cabine|filtro ar condicionado)\b", "8421.31.00", "Filtros de entrada de ar para motores de combustão"),
+    (r"\b(filtro|filtros)\b", "8421.23.00", "Filtros e aparelhos para filtrar líquidos ou gases"),
+    (r"\b(oleo|óleo|lubrificante|fluido|aditivo)\b", "2710.19.32", "Óleos lubrificantes automotivos"),
     (r"\b(pastilha|disco|freio|lona|tambor|cilindro mestre|cilindro roda|servo freio|hidrovacuo)\b", "8708.30.90", "Freios e servo-freios, guarnições montadas"),
     (r"\b(amortecedor|suspensao|suspensão|mola|batente|coxim|bieleta|pivo|pivô|bandeja|bucha)\b", "8708.80.00", "Sistemas de suspensão e suas partes (amortecedores)"),
     (r"\b(vela|velas|ignicao|ignição|cabo de vela|bobina)\b", "8511.10.00", "Velas de ignição e aparelhos elétricos de ignição"),
