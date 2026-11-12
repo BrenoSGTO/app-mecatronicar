@@ -3045,6 +3045,800 @@ body {
     accent-color: #f9cc01;
 }
 
+/* ==============================================================================
+   ISSUE #11 - REDESIGN DA TELA INICIAL (DASHBOARD MECATRONICAR)
+   ============================================================================== */
+
+/* Ampliar largura máxima do container para acomodar as 3 colunas confortavelmente */
+.main-container {
+    max-width: 1560px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+.home-dashboard-section {
+    display: block;
+    width: 100%;
+}
+
+.home-dashboard-grid {
+    display: grid;
+    grid-template-columns: 290px minmax(0, 1fr) 330px;
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 1280px) {
+    .home-dashboard-grid {
+        grid-template-columns: 260px minmax(0, 1fr) 300px;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .home-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-sidebar {
+        max-height: none !important;
+        position: static !important;
+    }
+}
+
+/* --- SIDEBARS (Esquerda e Direita) --- */
+.dashboard-sidebar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 170px);
+    position: sticky;
+    top: 90px;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.sidebar-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-icon {
+    font-size: 20px;
+}
+
+.sidebar-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.sidebar-subtitle {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 1px;
+}
+
+.sidebar-filter-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.sidebar-filter-input:focus {
+    border-color: #f9cc01;
+    box-shadow: 0 0 0 2px rgba(249, 204, 1, 0.2);
+}
+
+/* --- LISTA DA SIDEBAR ESQUERDA (HISTÓRICO RÁPIDO) --- */
+.quick-history-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+    flex: 1;
+}
+
+.quick-history-list::-webkit-scrollbar {
+    width: 5px;
+}
+.quick-history-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.quick-history-item {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.quick-history-item:hover {
+    border-color: #f9cc01;
+    background: #fefce8;
+    transform: translateX(2px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.quick-history-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quick-history-plate {
+    font-family: 'Arial Black', Impact, sans-serif;
+    font-size: 12.5px;
+    font-weight: 900;
+    color: #003399;
+    background: #e0f2fe;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #bae6fd;
+    letter-spacing: 0.5px;
+}
+
+.quick-history-visits {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 10px;
+}
+
+.quick-history-model {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quick-history-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+.quick-history-owner {
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.quick-history-date {
+    font-size: 11px;
+}
+
+/* --- CENTRO DO DASHBOARD --- */
+.dashboard-center {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.dashboard-center-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    padding: 12px 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.dashboard-tabs {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.dashboard-tab {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #475569;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+
+.dashboard-tab:hover {
+    color: #0f172a;
+}
+
+.dashboard-tab.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.tab-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.dashboard-tab.active .tab-badge {
+    background: #f9cc01;
+    color: #111827;
+}
+
+.dashboard-center-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Filtros rápidos por status do pátio */
+.patio-status-filter-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.patio-filter-pill {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.patio-filter-pill:hover {
+    border-color: #f9cc01;
+    background: #fefce8;
+    color: #111827;
+}
+
+.patio-filter-pill.active {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+}
+
+/* Banner de informação da aba entregues */
+.delivered-info-banner {
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #166534;
+    font-size: 13px;
+}
+
+.delivered-info-banner .info-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+/* --- GRID DE CARDS DO PÁTIO (CARDS GRANDES E DESTACADOS) --- */
+.patio-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 16px;
+}
+
+.patio-car-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.patio-car-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.car-card-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* PLACA MERCOSUL OFICIAL MECATRONICAR */
+.mercosul-plate-card {
+    width: 140px;
+    height: 52px;
+    background: #ffffff;
+    border: 2.5px solid #000000;
+    border-radius: 7px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    flex-shrink: 0;
+}
+
+.mercosul-plate-top {
+    background: #003399;
+    color: #ffffff;
+    height: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    line-height: 1;
+}
+
+.mercosul-plate-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+}
+
+.mercosul-plate-text {
+    font-family: 'Arial Black', Impact, sans-serif;
+    font-size: 21px;
+    font-weight: 900;
+    color: #000000;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+/* STATUS BADGE NO CARD */
+.car-card-status-badge {
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 4px 9px;
+    border-radius: 6px;
+    text-align: center;
+    line-height: 1.2;
+    border: 1px solid transparent;
+}
+
+.status-badge-diag {
+    background: #e0e7ff;
+    color: #3730a3;
+    border-color: #c7d2fe;
+}
+
+.status-badge-orc {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.status-badge-pecas {
+    background: #ffedd5;
+    color: #9a3412;
+    border-color: #fed7aa;
+}
+
+.status-badge-exec {
+    background: #e0f2fe;
+    color: #075985;
+    border-color: #bae6fd;
+}
+
+.status-badge-retirada {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.status-badge-entregue {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+/* INFORMAÇÕES DO VEÍCULO E CLIENTE */
+.car-card-main-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.car-card-model {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+}
+
+.car-card-owner {
+    font-size: 13.5px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.owner-name-short {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #fefce8;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid #fef08a;
+}
+
+.owner-name-full {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.car-card-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #475569;
+    padding-top: 4px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.car-card-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.car-card-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.car-card-notes {
+    font-size: 12px;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 3px solid #cbd5e1;
+    line-height: 1.3;
+}
+
+.car-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.status-select-wrapper {
+    flex: 1;
+}
+
+.status-quick-select {
+    width: 100%;
+    height: 32px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0 6px;
+    background: #ffffff;
+    color: #1e293b;
+    cursor: pointer;
+}
+
+.btn-deliver-action {
+    background: #10b981;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-deliver-action:hover {
+    background: #059669;
+}
+
+.btn-reactivate-action {
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-reactivate-action:hover {
+    background: #0369a1;
+}
+
+/* --- SIDEBAR DIREITA: AGENDAMENTOS --- */
+.agenda-filter-row {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 8px;
+}
+
+.agenda-filter-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    padding: 5px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.agenda-filter-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.agenda-events-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+    flex: 1;
+}
+
+.agenda-events-list::-webkit-scrollbar {
+    width: 5px;
+}
+.agenda-events-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.agenda-event-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+
+.agenda-event-card:hover {
+    border-color: #f9cc01;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+
+.agenda-time-pill {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    font-weight: 800;
+    background: #fefce8;
+    color: #854d0e;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid #fef08a;
+}
+
+.agenda-time-pill.today {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.agenda-event-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+}
+
+.agenda-event-client {
+    font-size: 12.5px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.agenda-plate-badge {
+    font-size: 11px;
+    font-weight: 800;
+    background: #003399;
+    color: #ffffff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.agenda-car-model {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.agenda-notes {
+    font-size: 11.5px;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1.3;
+}
+
+.agenda-event-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 6px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.agenda-status-pill {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.status-agendado {
+    background: #f1f5f9;
+    color: #475569;
+}
+.status-confirmado {
+    background: #dcfce7;
+    color: #166534;
+}
+.status-em-atendimento {
+    background: #e0f2fe;
+    color: #075985;
+}
+.status-concluido {
+    background: #e2e8f0;
+    color: #64748b;
+    text-decoration: line-through;
+}
+
+.agenda-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-to-patio {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 3px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-to-patio:hover {
+    background: #fde68a;
+}
+
+.btn-agenda-action {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.btn-agenda-action:hover {
+    background: #e2e8f0;
+}
+
+.empty-state-box {
+    text-align: center;
+    padding: 30px 16px;
+    color: #64748b;
+    font-size: 13px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1.5px dashed #cbd5e1;
+}
+
+.empty-state-box .empty-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
 
 /* ==============================================================================
    ANALYTICS & MÉTRICAS DA OFICINA (Issue #16)

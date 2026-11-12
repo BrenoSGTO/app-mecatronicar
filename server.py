@@ -499,13 +499,42 @@ def apply_update_endpoint():
 @app.route("/api/patio", methods=["GET"])
 def get_patio_endpoint():
     db_path = cache.get_db_path(BASE_DIR)
+    all_patio = cache.list_patio_status(db_path=db_path)
+    if len(all_patio) < 3:
+        cache.seed_sample_patio_if_empty(db_path=db_path)
     summary = cache.get_patio_summary(db_path)
     local_ip = get_local_ip()
+
+    active_cars = []
+    delivered_cars = []
+    now = datetime.datetime.now()
+    two_days_ago = now - datetime.timedelta(days=2)
+
+    for c in summary.get("cars", []):
+        st = (c.get("status") or "").strip()
+        st_disp = (c.get("status_display") or "").strip()
+        if st == "Entregue" or st_disp == "Entregue":
+            up_time_str = c.get("updated_at") or c.get("updated_time") or ""
+            is_recent = True
+            if up_time_str:
+                try:
+                    dt = datetime.datetime.strptime(up_time_str[:19], "%Y-%m-%d %H:%M:%S")
+                    if dt < two_days_ago:
+                        is_recent = False
+                except Exception:
+                    pass
+            if is_recent:
+                delivered_cars.append(c)
+        else:
+            active_cars.append(c)
+
     return jsonify({
         "success": True,
         "total": summary["total"],
         "by_status": summary["by_status"],
         "cars": summary["cars"],
+        "active_cars": active_cars,
+        "delivered_cars": delivered_cars,
         "statuses": cache.PATIO_STATUSES,
         "local_ip": local_ip,
         "tv_url": f"http://{local_ip}:54321/tv",
@@ -699,6 +728,75 @@ def gcal_sync_endpoint():
     import calendar_sync
     result = calendar_sync.sync_agendamento_to_gcal(data)
     return jsonify(result)
+
+# ==========================================
+# ROTAS DO CALENDÁRIO / AGENDAMENTOS (Issue #11)
+# ==========================================
+@app.route("/api/agenda", methods=["GET"])
+def get_agenda_endpoint():
+    db_path = cache.get_db_path(BASE_DIR)
+    cache.seed_sample_agenda_if_empty(db_path=db_path)
+    status = request.args.get("status")
+    start_date = request.args.get("start_date")
+    events = cache.list_agenda_events(start_date=start_date, status=status, db_path=db_path)
+    return jsonify({
+        "success": True,
+        "events": events,
+        "today": datetime.date.today().strftime("%Y-%m-%d"),
+        "total": len(events)
+    })
+
+@app.route("/api/agenda", methods=["POST"])
+def save_agenda_endpoint():
+    data = request.json or {}
+    db_path = cache.get_db_path(BASE_DIR)
+    try:
+        saved = cache.save_agenda_event(data, db_path=db_path)
+        return jsonify({"success": True, "event": saved})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route("/api/agenda/status", methods=["POST"])
+def update_agenda_status_endpoint():
+    data = request.json or {}
+    event_id = data.get("id") or data.get("event_id")
+    status = data.get("status")
+    if not event_id or not status:
+        return jsonify({"success": False, "error": "ID e status são obrigatórios"}), 400
+    db_path = cache.get_db_path(BASE_DIR)
+    updated = cache.update_agenda_event_status(event_id, status, db_path=db_path)
+    if not updated:
+        return jsonify({"success": False, "error": "Agendamento não encontrado"}), 404
+    return jsonify({"success": True, "event": updated})
+
+@app.route("/api/agenda/<int:event_id>", methods=["DELETE"])
+def delete_agenda_endpoint(event_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    success = cache.delete_agenda_event(event_id, db_path=db_path)
+    return jsonify({"success": success})
+
+@app.route("/api/agenda/<int:event_id>/to_patio", methods=["POST"])
+def agenda_to_patio_endpoint(event_id):
+    db_path = cache.get_db_path(BASE_DIR)
+    ev = cache.get_agenda_event(event_id, db_path=db_path)
+    if not ev:
+        return jsonify({"success": False, "error": "Agendamento não encontrado"}), 404
+    data = request.json or {}
+    status = data.get("status") or "Em Diagnóstico"
+    patio_car = cache.update_patio_status(
+        plate=ev.get("plate") or ev.get("plate_clean"),
+        client_name=ev.get("client_name"),
+        car_model=ev.get("car_model"),
+        status=status,
+        notes=f"Agendamento: {ev.get('title', '')} - {ev.get('notes', '')}".strip(" -"),
+        db_path=db_path
+    )
+    cache.update_agenda_event_status(event_id, "Em Atendimento", db_path=db_path)
+    return jsonify({
+        "success": True,
+        "car": patio_car,
+        "event": cache.get_agenda_event(event_id, db_path=db_path)
+    })
 
 # ==========================================
 # CRIAÇÃO E EDIÇÃO DE OS / MOTOR EXCEL (CP-02 / CP-03)

@@ -98,7 +98,10 @@
         <!-- Search Results Grid (when searching text) -->
         <section id="search-results-section" class="search-results-section" style="display: none;">
             <div class="section-header">
-                <h2 id="search-results-title">Resultados da Busca</h2>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button type="button" id="btn-back-home-from-search" class="btn btn-secondary btn-sm" title="Voltar ao Início">⬅️ Início</button>
+                    <h2 id="search-results-title">Resultados da Busca</h2>
+                </div>
                 <span id="search-results-count" class="badge">0 encontrados</span>
             </div>
             <div id="search-cards-grid" class="cards-grid">
@@ -168,6 +171,9 @@
                 </div>
 
                 <div class="vehicle-actions-block">
+                    <button type="button" id="btn-back-home-from-history" class="btn btn-secondary" title="Voltar para a tela inicial">
+                        ⬅️ Início
+                    </button>
                     <button id="btn-vehicle-new-visit" class="btn btn-primary" title="Abrir uma nova visita para este carro com dados pré-preenchidos">
                         Nova Visita
                     </button>
@@ -231,23 +237,116 @@
             </div>
         </section>
 
-        <!-- Empty / Welcome State -->
-        <section id="welcome-section" class="welcome-section">
-            <div class="welcome-card">
-                <img src="logo.png" alt="MecatroniCar" class="welcome-logo">
-                <h2>Bem-vindo ao MecatroniCar</h2>
-                <p>Digite uma placa ou nome de cliente acima para consultar todo o histórico de visitas, serviços feitos, peças trocadas e notas de diagnóstico.</p>
-                <div style="margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="welcome-btn-analytics" class="btn btn-analytics" style="padding: 9px 16px; font-size: 13.5px; font-weight: 700;">
-                         Analytics &amp; Métricas
-                    </button>
-                    <button id="welcome-btn-patio" class="btn btn-patio" style="padding: 9px 16px; font-size: 13.5px; font-weight: 700;">
-                        Pátio &amp; TV
-                    </button>
-                    <button id="welcome-btn-fiscal" class="btn btn-fiscal" style="padding: 9px 16px; font-size: 13.5px; font-weight: 700;">
-                        Copiloto Fiscal
-                    </button>
+        <!-- Home Screen Dashboard (Issue #11) -->
+        <section id="welcome-section" class="home-dashboard-section">
+            <div class="home-dashboard-grid">
+                <!-- 1. SIDEBAR ESQUERDA: HISTÓRICO RÁPIDO / ÚLTIMOS VEÍCULOS -->
+                <aside class="dashboard-sidebar dashboard-sidebar-left">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title-group">
+                            <span class="sidebar-icon"></span>
+                            <div>
+                                <h3 class="sidebar-title">Histórico Rápido</h3>
+                                <p class="sidebar-subtitle">Últimos carros na oficina</p>
+                            </div>
+                        </div>
+                        <span id="quick-history-count" class="badge">0</span>
+                    </div>
+                    
+                    <div class="sidebar-search-box">
+                        <input type="text" id="quick-history-filter" class="sidebar-filter-input" placeholder="Filtrar nesta lista..." autocomplete="off">
+                    </div>
+
+                    <div id="quick-history-list" class="quick-history-list">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </aside>
+
+                <!-- 2. CENTRO DA TELA INICIAL (Área destacada em vermelho no esboço) -->
+                <div class="dashboard-center">
+                    <!-- Dashboard Tabs & Header Actions -->
+                    <div class="dashboard-center-header">
+                        <div class="dashboard-tabs">
+                            <button type="button" id="tab-btn-patio" class="dashboard-tab active">
+                                No Pátio Agora
+                                <span id="patio-active-count" class="tab-badge">0</span>
+                            </button>
+                            <button type="button" id="tab-btn-entregues" class="dashboard-tab">
+                                Entregues Recentemente
+                                <span id="patio-delivered-count" class="tab-badge">0</span>
+                            </button>
+                        </div>
+                        <div class="dashboard-center-actions">
+                            <button type="button" id="btn-dashboard-new-patio" class="btn btn-primary btn-sm" title="Adicionar veículo ao pátio">
+                                Entrada no Pátio
+                            </button>
+                            <a href="/tv" target="_blank" class="btn btn-tv btn-sm" title="Abrir Painel de TV">
+                                Painel TV
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Tab 1: Pátio Ativo (Cards grandes e destacados) -->
+                    <div id="tab-content-patio" class="dashboard-tab-content active">
+                        <div class="patio-status-filter-bar">
+                            <button type="button" class="patio-filter-pill active" data-filter="all">Todos (<span id="count-pill-all">0</span>)</button>
+                            <button type="button" class="patio-filter-pill" data-filter="diagnostico">Diagnóstico (<span id="count-pill-diag">0</span>)</button>
+                            <button type="button" class="patio-filter-pill" data-filter="orcamento">Orçamento (<span id="count-pill-orc">0</span>)</button>
+                            <button type="button" class="patio-filter-pill" data-filter="pecas">Aguardando Peças (<span id="count-pill-pecas">0</span>)</button>
+                            <button type="button" class="patio-filter-pill" data-filter="execucao">Em Execução (<span id="count-pill-exec">0</span>)</button>
+                            <button type="button" class="patio-filter-pill" data-filter="retirada">Aguardando Retirada (<span id="count-pill-ret">0</span>)</button>
+                        </div>
+
+                        <div id="patio-active-grid" class="patio-cards-grid">
+                            <!-- Populated dynamically with large cards -->
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Entregues Recentemente (Últimos 2 dias) -->
+                    <div id="tab-content-entregues" class="dashboard-tab-content" style="display: none;">
+                        <div class="delivered-info-banner">
+                            <span class="info-icon"></span>
+                            <div>
+                                <strong>Aba Entregues Recentemente</strong>
+                                <p>Carros entregues saem da visão principal e ficam acessíveis aqui por 48 horas (2 dias) para consulta imediata, sem ocupar espaço central na tela inicial.</p>
+                            </div>
+                        </div>
+
+                        <div id="patio-delivered-grid" class="patio-cards-grid">
+                            <!-- Populated dynamically with delivered cards -->
+                        </div>
+                    </div>
                 </div>
+
+                <!-- 3. SIDEBAR DIREITA: AGENDAMENTOS E EVENTOS FUTUROS (Área destacada em rosa no esboço) -->
+                <aside class="dashboard-sidebar dashboard-sidebar-right">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title-group">
+                            <span class="sidebar-icon"></span>
+                            <div>
+                                <h3 class="sidebar-title">Agendamentos</h3>
+                                <p class="sidebar-subtitle">Calendário e eventos futuros</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span id="agenda-count" class="badge">0</span>
+                            <button type="button" id="btn-open-agenda-modal" class="btn btn-primary btn-xs" title="Novo Agendamento">
+                                Novo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Agenda Filter Tabs -->
+                    <div class="agenda-filter-row">
+                        <button type="button" class="agenda-filter-btn active" data-period="all">Todos</button>
+                        <button type="button" class="agenda-filter-btn" data-period="today">Hoje</button>
+                        <button type="button" class="agenda-filter-btn" data-period="upcoming">Próximos</button>
+                    </div>
+
+                    <div id="agenda-events-list" class="agenda-events-list">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </aside>
             </div>
         </section>
             </main>
@@ -1547,12 +1646,80 @@
                 </form>
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
-                <button type="button" id="sec-agenda-btn-delete" class="btn btn-danger" style="display: none;">️ Excluir</button>
+                <button type="button" id="sec-agenda-btn-delete" class="btn btn-danger" style="display: none;">Excluir</button>
                 <div style="display: flex; gap: 8px; margin-left: auto;">
                     <button type="button" id="sec-agenda-btn-cancel" class="btn btn-secondary">Cancelar</button>
-                    <button type="button" id="sec-agenda-btn-save" class="btn btn-primary"> Salvar Agendamento</button>
+                    <button type="button" id="sec-agenda-btn-save" class="btn btn-primary">Salvar Agendamento</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for Agenda / New Appointment (Issue #11) -->
+    <div id="agenda-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog" style="max-width: 500px;">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon"></span>
+                    <h3 class="modal-title" id="agenda-modal-title">Novo Agendamento</h3>
+                </div>
+                <button type="button" class="modal-close" id="agenda-modal-close-btn" title="Fechar (Esc)">&times;</button>
+            </div>
+            <form id="agenda-form" class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="agenda-input-id" value="">
+                <div>
+                    <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Título ou Motivo:</label>
+                    <input type="text" id="agenda-input-title" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Ex: Revisão Geral e Troca de Óleo" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Data:</label>
+                        <input type="date" id="agenda-input-date" class="search-input" style="height: 38px; font-size: 14px;" required>
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Horário:</label>
+                        <input type="time" id="agenda-input-time" class="search-input" style="height: 38px; font-size: 14px;" value="09:00" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Cliente:</label>
+                        <input type="text" id="agenda-input-client" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Nome do cliente" required>
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Placa (opcional):</label>
+                        <input type="text" id="agenda-input-plate" class="search-input" style="height: 38px; font-size: 14px; text-transform: uppercase;" placeholder="Ex: FNB-1A77">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Modelo do Carro:</label>
+                        <input type="text" id="agenda-input-model" class="search-input" style="height: 38px; font-size: 14px;" placeholder="Ex: VW Fox 1.0">
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Tipo de Serviço:</label>
+                        <select id="agenda-input-service" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0 10px; font-size: 13.5px; background: #ffffff;">
+                            <option value="Revisão Geral">Revisão Geral</option>
+                            <option value="Troca de Óleo / Filtros">Troca de Óleo / Filtros</option>
+                            <option value="Freios">Freios (Pastilhas / Discos)</option>
+                            <option value="Suspensão">Suspensão / Amortecedores</option>
+                            <option value="Diagnóstico / Injeção">Diagnóstico / Injeção</option>
+                            <option value="Correia Dentada">Correia Dentada</option>
+                            <option value="Ar Condicionado">Ar Condicionado</option>
+                            <option value="Alinhamento e Balanceamento">Alinhamento e Balanceamento</option>
+                            <option value="Outro">Outro Serviço</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Observações:</label>
+                    <textarea id="agenda-input-notes" class="search-input" style="height: 60px; font-size: 13px; resize: vertical;" placeholder="Observações, sintomas relatados pelo cliente..."></textarea>
+                </div>
+                <div class="modal-footer" style="padding: 10px 0 0 0; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" id="agenda-modal-cancel-btn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="agenda-modal-save-btn">Salvar Agendamento</button>
+                </div>
+            </form>
         </div>
     </div>
 
