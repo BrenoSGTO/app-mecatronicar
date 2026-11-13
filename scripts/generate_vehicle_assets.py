@@ -419,7 +419,7 @@ FONT = "'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif"
 
 
 def brand_svg(text):
-    size = 26 if len(text) <= 2 else 20
+    size = 26 if len(text) <= 2 else 17
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" '
         f'color="{DEFAULT_COLOR}">'
