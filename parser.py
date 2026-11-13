@@ -2,9 +2,54 @@
 import os
 import re
 import datetime
+import threading
 import unicodedata
 import openpyxl
 import xlrd
+from openpyxl.utils.cell import range_boundaries
+
+# ------------------------------------------------------------------------------
+# Leitura rápida de .xlsx: células mescladas
+# ------------------------------------------------------------------------------
+# O profiling (scripts/benchmark.py --profile) mostrou que ~55% do tempo de
+# openpyxl.load_workbook nas fichas da oficina vai para WorksheetReader.bind_merged_cells,
+# que cria um MergedCell e recalcula as bordas de cada célula de cada intervalo mesclado.
+# O parser só lê valores, cores e comentários; das células mescladas basta saber que
+# as não-âncora não têm valor. A versão rápida apenas remove essas células (o mesmo
+# efeito visível para o parser, conferido arquivo a arquivo em planilhas_exemplo/).
+# É ligada só dentro de parse_xlsx e por thread, então o excel_writer (que salva as
+# planilhas e precisa dos intervalos mesclados) continua usando o caminho original.
+_fast_merge_tls = threading.local()
+
+try:
+    from openpyxl.worksheet import _reader as _ox_reader
+    _orig_bind_merged_cells = _ox_reader.WorksheetReader.bind_merged_cells
+
+    def _bind_merged_cells_fast(self):
+        if not getattr(_fast_merge_tls, "on", False):
+            return _orig_bind_merged_cells(self)
+        merged = getattr(self.parser, "merged_cells", None)
+        if not merged:
+            return
+        cells = self.ws._cells
+        for cr in merged.mergeCell:
+            min_col, min_row, max_col, max_row = range_boundaries(cr.ref)
+            for r in range(min_row, max_row + 1):
+                for c in range(min_col, max_col + 1):
+                    if r != min_row or c != min_col:
+                        cells.pop((r, c), None)
+
+    _ox_reader.WorksheetReader.bind_merged_cells = _bind_merged_cells_fast
+except Exception:  # versão do openpyxl sem esse ponto interno: segue no caminho padrão
+    _ox_reader = None
+
+
+def _load_workbook_for_reading(filepath):
+    _fast_merge_tls.on = True
+    try:
+        return openpyxl.load_workbook(filepath, data_only=True)
+    finally:
+        _fast_merge_tls.on = False
 
 def remove_accents(input_str):
     if not input_str:
@@ -221,7 +266,7 @@ def parse_xlsx(filepath):
     filename = os.path.basename(filepath)
     meta_fn = parse_filename(filename)
     
-    wb = openpyxl.load_workbook(filepath, data_only=True)
+    wb = _load_workbook_for_reading(filepath)
     all_sheet_names = wb.sheetnames
     
     sheet_name = 'Plan1' if 'Plan1' in all_sheet_names else all_sheet_names[0]
