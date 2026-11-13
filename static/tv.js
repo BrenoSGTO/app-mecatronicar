@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const soundIcon = document.getElementById("sound-icon");
     const btnFullscreen = document.getElementById("btn-fullscreen");
     const btnEmptyAddCar = document.getElementById("btn-empty-add-car");
+    const btnOpenManageModal = document.getElementById("btn-open-manage-modal");
 
     // Elementos do Grid e Fases
     const gridWrapper = document.getElementById("tv-grid-wrapper");

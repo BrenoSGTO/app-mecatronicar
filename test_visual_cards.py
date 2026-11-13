@@ -198,6 +198,35 @@ class TestVisualCardsAndAssets(unittest.TestCase):
         self.assertEqual(len(self.emoji_pattern.findall(orcamento_html)), 0)
         self.assertEqual(len(self.emoji_pattern.findall(checklist_html)), 0)
 
+    def test_07_server_serves_static_assets(self):
+        """Verifica se o servidor Flask serve corretamente as rotas de assets estáticos com e sem prefixo /static/."""
+        import server
+        client = server.app.test_client()
+
+        # Testa logos de montadoras com e sem /static/
+        res_brand_static = client.get('/static/brands/nissan.svg')
+        self.assertEqual(res_brand_static.status_code, 200, "Falha ao servir /static/brands/nissan.svg")
+        self.assertIn('image/svg+xml', res_brand_static.content_type)
+
+        res_brand_direct = client.get('/brands/nissan.svg')
+        self.assertEqual(res_brand_direct.status_code, 200, "Falha ao servir /brands/nissan.svg")
+
+        # Testa silhuetas de modelos com e sem /static/
+        res_model_static = client.get('/static/models/nissan-sentra.svg')
+        self.assertEqual(res_model_static.status_code, 200, "Falha ao servir /static/models/nissan-sentra.svg")
+        self.assertIn('image/svg+xml', res_model_static.content_type)
+
+        res_model_direct = client.get('/models/nissan-sentra.svg')
+        self.assertEqual(res_model_direct.status_code, 200, "Falha ao servir /models/nissan-sentra.svg")
+
+        # Testa assets genéricos de fallback
+        res_gen_brand = client.get('/static/brands/generic.svg')
+        self.assertEqual(res_gen_brand.status_code, 200)
+
+        res_gen_car = client.get('/static/models/car-generic.svg')
+        self.assertEqual(res_gen_car.status_code, 200)
+
 
 if __name__ == '__main__':
     unittest.main()
+

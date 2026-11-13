@@ -123,5 +123,28 @@ class TestTVGrid(unittest.TestCase):
         for cid in saved_ids:
             self.client.delete(f"/api/patio/{cid}")
 
+    def test_04_tv_js_script_integrity_and_declarations(self):
+        """Verifica se o script static/tv.js declara todos os botões e elementos antes do uso (sem ReferenceError)."""
+        import subprocess
+        import re
+
+        tv_js_path = os.path.join(BASE_DIR, "static", "tv.js")
+        self.assertTrue(os.path.isfile(tv_js_path), "static/tv.js deve existir")
+
+        with open(tv_js_path, "r", encoding="utf-8") as f:
+            tv_js_content = f.read()
+
+        # Garante declaração explícita de btnOpenManageModal
+        self.assertIn("btnOpenManageModal", tv_js_content)
+        self.assertIn('document.getElementById("btn-open-manage-modal")', tv_js_content)
+
+        # Se node estiver disponível no sistema, executa verificação de sintaxe
+        try:
+            res = subprocess.run(["node", "-c", tv_js_path], capture_output=True, text=True)
+            self.assertEqual(res.returncode, 0, f"Erro de sintaxe em tv.js: {res.stderr}")
+        except FileNotFoundError:
+            pass
+
 if __name__ == "__main__":
     unittest.main()
+

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent !important;
+    }
+    .gallery-container {
+      padding: 8px 0;
+      color: var(--foreground, #f8fafc);
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--foreground, #f8fafc);
+      margin: 16px 0 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title:first-child {
+      margin-top: 0;
+    }
+    .badge-pill {
+      background: #f9cc01;
+      color: #111827;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .brands-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .brand-pill {
+      background: #ffffff;
+      border: 1px solid var(--border, #cbd5e1);
+      border-radius: 8px;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .brand-pill img {
+      width: 48px;
+      height: 30px;
+      object-fit: contain;
+      margin-bottom: 4px;
+    }
+    .brand-pill span {
+      font-size: 11px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .cars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+    .car-card {
+      background: var(--card, #1e293b);
+      border: 1px solid var(--border, #334155);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+    }
+    .car-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .car-brand-logo {
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 4px;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .car-brand-logo img {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+    }
+    .car-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--foreground, #ffffff);
+      line-height: 1.1;
+    }
+    .car-body {
+      font-size: 10px;
+      color: var(--muted, #94a3b8);
+      font-weight: 500;
+    }
+    .car-stage {
+      width: 100%;
+      height: 80px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .car-stage img {
+      max-width: 95%;
+      max-height: 95%;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    }
+  </style>
+</head>
+<body>
+  <div class="gallery-container">
+    <div class="section-title">
+      <span>Logos Oficiais das Montadoras</span>
+      <span class="badge-pill">Vetores Oficiais</span>
+    </div>
+    <div class="brands-grid">
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/fiat.svg"><span>Fiat</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/volkswagen.svg"><span>Volkswagen</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/chevrolet.svg"><span>Chevrolet</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/toyota.svg"><span>Toyota</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/hyundai.svg"><span>Hyundai</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/renault.svg"><span>Renault</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/jeep.svg"><span>Jeep</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/nissan.svg"><span>Nissan</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/honda.svg"><span>Honda</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/ford.svg"><span>Ford</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/peugeot.svg"><span>Peugeot</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/citroen.svg"><span>Citroën</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/mitsubishi.svg"><span>Mitsubishi</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/chery.svg"><span>Chery</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/bmw.svg"><span>BMW</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/mercedes.svg"><span>Mercedes</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/audi.svg"><span>Audi</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/kia.svg"><span>Kia</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/byd.svg"><span>BYD</span></div>
+      <div class="brand-pill"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/generic.svg"><span>MecatroniCar</span></div>
+    </div>
+
+    <div class="section-title">
+      <span>Modelos em Render Fotorrealista de Estúdio</span>
+      <span class="badge-pill">Alta Definição</span>
+    </div>
+    <div class="cars-grid">
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/fiat.svg"></div>
+          <div><div class="car-name">Fiat Strada</div><div class="car-body">Picape Compacta</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/fiat-strada.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/volkswagen.svg"></div>
+          <div><div class="car-name">VW Gol</div><div class="car-body">Hatchback</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/vw-gol.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/toyota.svg"></div>
+          <div><div class="car-name">Toyota Corolla</div><div class="car-body">Sedan Médio</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/toyota-corolla.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/chevrolet.svg"></div>
+          <div><div class="car-name">Chevrolet Onix</div><div class="car-body">Hatchback</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/chevrolet-onix.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/jeep.svg"></div>
+          <div><div class="car-name">Jeep Renegade</div><div class="car-body">SUV Robusto</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/jeep-renegade.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/jeep.svg"></div>
+          <div><div class="car-name">Jeep Compass</div><div class="car-body">SUV Médio</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/jeep-compass.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/hyundai.svg"></div>
+          <div><div class="car-name">Hyundai HB20</div><div class="car-body">Hatchback</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/hyundai-hb20.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/toyota.svg"></div>
+          <div><div class="car-name">Toyota Hilux</div><div class="car-body">Picape 4x4</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/toyota-hilux.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/fiat.svg"></div>
+          <div><div class="car-name">Fiat Toro</div><div class="car-body">Picape Unibody</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/fiat-toro.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/honda.svg"></div>
+          <div><div class="car-name">Honda Civic</div><div class="car-body">Sedan Esportivo</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/honda-civic.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/volkswagen.svg"></div>
+          <div><div class="car-name">VW T-Cross</div><div class="car-body">SUV Crossover</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/vw-tcross.svg"></div>
+      </div>
+
+      <div class="car-card">
+        <div class="car-header">
+          <div class="car-brand-logo"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/brands/fiat.svg"></div>
+          <div><div class="car-name">Fiat Fiorino</div><div class="car-body">Furgão Comercial</div></div>
+        </div>
+        <div class="car-stage"><img src="C:/Users/breno/.t3/scratch/2026-11-05-na-oficina-mec-nica-do-0c016554/static/models/fiat-fiorino.svg"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

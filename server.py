@@ -112,6 +112,10 @@ def index():
 def tv_route():
     return send_from_directory(STATIC_DIR, "tv.html")
 
+@app.route("/static/<path:filename>")
+def serve_static_explicit(filename):
+    return send_from_directory(STATIC_DIR, filename)
+
 @app.route("/api/config", methods=["GET"])
 def get_config_endpoint():
     cfg = config.load_config(BASE_DIR)
