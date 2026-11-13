@@ -40,66 +40,49 @@ class TestVisualCardsAndAssets(unittest.TestCase):
             self.assertIn('</svg>', content, f"Arquivo {brand_file} não contém fechamento </svg>")
 
     def test_02_popular_model_silhouettes_exist(self):
-        """Verifica se as silhuetas dos 100 modelos populares + genéricos existem em static/models/."""
+        """Verifica se toda silhueta referenciada pelo catálogo (arquétipos + genéricos) existe.
+
+        Repaginação v3 (T6): as ~100 silhuetas individuais foram substituídas por
+        arquétipos de carroceria em escala real; cada modelo de POPULAR_MODELS
+        aponta para um arquétipo pelo campo ``shape`` em static/car_catalog.js.
+        """
         self.assertTrue(os.path.isdir(self.models_dir), f"Diretório {self.models_dir} não encontrado")
 
-        # 10 modelos das 10 principais montadoras
-        expected_models = [
-            # Fiat
-            'fiat-argo.svg', 'fiat-cronos.svg', 'fiat-fastback.svg', 'fiat-fiorino.svg',
-            'fiat-mobi.svg', 'fiat-palio.svg', 'fiat-pulse.svg', 'fiat-strada.svg',
-            'fiat-toro.svg', 'fiat-uno.svg',
-            # VW
-            'vw-fox.svg', 'vw-gol.svg', 'vw-nivus.svg', 'vw-polo.svg',
-            'vw-saveiro.svg', 'vw-taos.svg', 'vw-tcross.svg', 'vw-up.svg',
-            'vw-virtus.svg', 'vw-voyage.svg',
-            # Chevrolet
-            'chevrolet-celta.svg', 'chevrolet-corsa.svg', 'chevrolet-cruze.svg', 'chevrolet-montana.svg',
-            'chevrolet-onix-plus.svg', 'chevrolet-onix.svg', 'chevrolet-prisma.svg', 'chevrolet-s10.svg',
-            'chevrolet-spin.svg', 'chevrolet-tracker.svg',
-            # Toyota
-            'toyota-bandeirante.svg', 'toyota-corolla-cross.svg', 'toyota-corolla.svg', 'toyota-etios.svg',
-            'toyota-hilux.svg', 'toyota-prius.svg', 'toyota-rav4.svg', 'toyota-sw4.svg',
-            'toyota-yaris-hatch.svg', 'toyota-yaris-sedan.svg',
-            # Hyundai
-            'hyundai-azera.svg', 'hyundai-creta.svg', 'hyundai-elantra.svg', 'hyundai-hb20.svg',
-            'hyundai-hb20s.svg', 'hyundai-hr.svg', 'hyundai-i30.svg', 'hyundai-ix35.svg',
-            'hyundai-santafe.svg', 'hyundai-tucson.svg',
-            # Renault
-            'renault-captur.svg', 'renault-clio.svg', 'renault-duster.svg', 'renault-kangoo.svg',
-            'renault-kwid.svg', 'renault-logan.svg', 'renault-master.svg', 'renault-megane.svg',
-            'renault-oroch.svg', 'renault-sandero.svg',
-            # Jeep
-            'jeep-cherokee.svg', 'jeep-commander-blackhawk.svg', 'jeep-commander.svg', 'jeep-compass-4xe.svg',
-            'jeep-compass.svg', 'jeep-gladiator.svg', 'jeep-grandcherokee.svg', 'jeep-renegade-4xe.svg',
-            'jeep-renegade.svg', 'jeep-wrangler.svg',
-            # Nissan
-            'nissan-frontier.svg', 'nissan-grandlivina.svg', 'nissan-kicks.svg', 'nissan-livina.svg',
-            'nissan-march.svg', 'nissan-sentra.svg', 'nissan-tiida.svg', 'nissan-vdrive.svg',
-            'nissan-versa.svg', 'nissan-xtrail.svg',
-            # Honda
-            'honda-accord.svg', 'honda-city-hatchback.svg', 'honda-city.svg', 'honda-civic.svg',
-            'honda-crv.svg', 'honda-fit.svg', 'honda-hrv.svg', 'honda-prelude.svg',
-            'honda-wrv.svg', 'honda-zrv.svg',
-            # Ford
-            'ford-bronco-sport.svg', 'ford-ecosport.svg', 'ford-fiesta.svg', 'ford-focus.svg',
-            'ford-fusion.svg', 'ford-ka-sedan.svg', 'ford-ka.svg', 'ford-maverick.svg',
-            'ford-ranger.svg', 'ford-territory.svg',
-            # Silhuetas Genéricas
-            'car-generic.svg', 'hatch-generic.svg', 'sedan-generic.svg',
-            'suv-generic.svg', 'pickup-generic.svg', 'van-generic.svg'
-        ]
+        catalog_path = os.path.join(self.root_dir, 'static', 'car_catalog.js')
+        with open(catalog_path, 'r', encoding='utf-8') as f:
+            catalog = f.read()
+        model_keys = re.findall(r"key:\s*'([^']+)',\s*name:", catalog)
+        shapes = re.findall(r"key:\s*'[^']+',\s*name:\s*'[^']+',\s*body:\s*'[^']+',\s*shape:\s*'([^']+)'", catalog)
+        self.assertGreaterEqual(len(model_keys), 100, "Catálogo deveria mapear ao menos 100 modelos")
+        self.assertEqual(len(shapes), len(model_keys), "Todo modelo do catálogo precisa de um campo shape")
 
-        self.assertEqual(len(expected_models), 106, "Deveriam existir 106 silhuetas mapeadas")
+        generics = ['car-generic', 'hatch-generic', 'sedan-generic',
+                    'suv-generic', 'pickup-generic', 'van-generic']
+        for name in sorted(set(shapes) | set(generics)):
+            file_path = os.path.join(self.models_dir, f'{name}.svg')
+            self.assertTrue(os.path.isfile(file_path), f"Silhueta não encontrada: {name}.svg")
+            self._assert_clean_svg(file_path)
 
-        for model_file in expected_models:
-            file_path = os.path.join(self.models_dir, model_file)
-            self.assertTrue(os.path.isfile(file_path), f"Silhueta não encontrada: {model_file}")
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.assertGreater(len(content), 50, f"SVG muito pequeno: {model_file}")
-            self.assertIn('<svg', content, f"{model_file} sem tag <svg")
-            self.assertIn('</svg>', content, f"{model_file} sem tag </svg>")
+    def test_02b_assets_are_optimized_and_themeable(self):
+        """Todos os SVGs de marcas e modelos: < 3 KB, viewBox, sem width/height fixos, currentColor."""
+        for folder in (self.brands_dir, self.models_dir):
+            for name in os.listdir(folder):
+                if name.endswith('.svg'):
+                    self._assert_clean_svg(os.path.join(folder, name))
+
+    def _assert_clean_svg(self, file_path):
+        name = os.path.basename(file_path)
+        self.assertLess(os.path.getsize(file_path), 3 * 1024, f"{name} maior que 3 KB")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        root = re.search(r'<svg\b[^>]*>', content)
+        self.assertIsNotNone(root, f"{name} sem tag <svg")
+        self.assertIn('</svg>', content, f"{name} sem tag </svg>")
+        self.assertIn('viewBox="', root.group(0), f"{name} sem viewBox")
+        self.assertNotRegex(root.group(0), r'\s(width|height)=', f"{name} com width/height fixos")
+        self.assertIn('currentColor', content, f"{name} não usa currentColor")
+        for junk in ('<metadata', '<!--', 'sodipodi', 'inkscape', 'data:image'):
+            self.assertNotIn(junk, content, f"{name} contém {junk}")
 
     def test_03_car_catalog_js_contains_required_functions(self):
         """Verifica se static/car_catalog.js expõe todas as funções necessárias."""
