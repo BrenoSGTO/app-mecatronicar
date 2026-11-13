@@ -152,7 +152,8 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         content_orc = resp_orc.data.decode("utf-8")
         self.assertIn("MecatroniCar", content_orc)
         self.assertIn("05.961.672/0001-87", content_orc)
-        self.assertIn("FNB 1A77", content_orc)
+        self.assertIn("FNB1A77", content_orc)
+        self.assertIn("Orcamento_FNB1A77_MecatroniCar", content_orc, "Nome de arquivo padronizado no <title>")
 
         # Checklist (Sem Valores)
         resp_chk = self.client.get(f"/api/checklist_pdf?file_path={sample_xlsx}")
@@ -164,10 +165,9 @@ class TestMecatroniCarV2Integration(unittest.TestCase):
         self.assertIn("plate-mercosul", content_chk)
         self.assertIn("Danilo Pereira", content_chk)
         self.assertNotIn("R$ 724,00", content_chk, "Não deve conter valores monetários individuais")
-        self.assertNotIn("ANOTAÇÕES DO MECÂNICO", content_chk, "Campo de notas longas deve ser removido")
-        self.assertNotIn("Mecânico Responsável", content_chk, "Bloco de assinatura deve ser removido")
-        self.assertNotIn("Conferência Final", content_chk, "Conferência final deve ser removida")
-        self.assertNotIn("Teste de Rodagem", content_chk, "Teste de rodagem deve ser removido")
+        self.assertIn("Anotações do mecânico", content_chk)
+        self.assertIn("Teste de rodagem", content_chk)
+        self.assertIn("Checklist_FNB1A77_MecatroniCar", content_chk, "Nome de arquivo padronizado no <title>")
 
     def test_04_tv_panel_routes_and_patio_flow(self):
         """Valida rota /tv, consulta /api/patio e fluxo de movimentação dos 7 status."""

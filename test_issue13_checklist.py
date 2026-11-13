@@ -34,22 +34,19 @@ class TestIssue13ChecklistAndVisitsSelection(unittest.TestCase):
         db_path = cache.get_db_path(BASE_DIR)
         cache.scan_and_index_folder(os.path.join(BASE_DIR, "planilhas_exemplo"), db_path)
 
-    def test_checklist_removed_unnecessary_sections(self):
-        """Valida que notas do mecânico, assinatura, conferência final e teste de rodagem foram removidos."""
+    def test_checklist_has_mechanic_sections_and_no_prices(self):
+        """T5: checklist traz anotações, teste de rodagem e responsável, e nenhum valor financeiro."""
         html = pdf_generator.generate_checklist_from_file(self.sample_xlsx)
-        
-        # Verifica cabeçalho e estrutura essencial
+
         self.assertIn("CHECKLIST", html)
         self.assertIn("FOLHA DE CHÃO DE OFICINA", html)
         self.assertIn("plate-mercosul", html)
-        
-        # Verifica que as seções desnecessárias foram removidas
-        self.assertNotIn("ANOTAÇÕES DO MECÂNICO", html, "Campo de notas longas deve ser removido")
-        self.assertNotIn("mechanic-notes-box", html)
-        self.assertNotIn("Mecânico Responsável", html, "Assinatura do mecânico deve ser removida")
-        self.assertNotIn("Conferência Final", html, "Conferência final deve ser removida")
-        self.assertNotIn("Teste de Rodagem", html, "Teste de rodagem deve ser removido")
-        self.assertNotIn("inspection-footer", html)
+
+        self.assertIn("Anotações do mecânico", html)
+        self.assertIn("Teste de rodagem", html)
+        self.assertIn("Mecânico responsável", html)
+        self.assertIn("check-box", html)
+        self.assertNotIn("R$", html, "Checklist não pode conter valores monetários")
 
     def test_checklist_scanner_toggle(self):
         """Valida inclusão e exclusão do bloco de códigos de falha do scanner OBD2."""
@@ -131,7 +128,7 @@ class TestIssue13ChecklistAndVisitsSelection(unittest.TestCase):
         content = resp.data.decode("utf-8")
         self.assertIn("MecatroniCar", content)
         self.assertIn("HISTÓRICO COMPLETO", content)
-        self.assertIn("FNB 1A77", content)
+        self.assertIn("FNB1A77", content)
         self.assertIn("Visitas selecionadas: <strong>1</strong>", content)
 
     def test_history_pdf_without_prices(self):
