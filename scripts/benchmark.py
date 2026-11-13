@@ -272,6 +272,8 @@ def run(args):
     shutil.copytree(folder_src, folder)
     db_path = os.path.join(work, "bench.db")
     cache.get_db_path = lambda base_dir=None: db_path  # isola do banco oficial
+    if hasattr(cache, "enable_connection_pool"):
+        cache.enable_connection_pool(db_path)  # como o servidor faz com o banco do app
     server.app.config["TESTING"] = False
     client = server.app.test_client()
     n_files = len(os.listdir(folder))

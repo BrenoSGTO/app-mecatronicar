@@ -4,15 +4,229 @@ import sqlite3
 import json
 import re
 import datetime
+import logging
+import threading
+import time
+import zipfile
 from parser import parse_file, parse_filename, remove_accents, clean_plate, format_plate_display, PARSER_VERSION, parse_currency_float
 
 DB_FILE = "oficina_cache.db"
 FAST_INDEX_THRESHOLD = 15
 
+log = logging.getLogger("mecatronicar.cache")
+
 def get_db_path(base_dir=None):
     if base_dir:
         return os.path.join(base_dir, DB_FILE)
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), DB_FILE)
+
+
+# ==============================================================================
+# CONEXÕES SQLITE
+# ==============================================================================
+# - Toda conexão sai daqui com busy_timeout e synchronous=NORMAL (o banco usa WAL,
+#   ativado uma única vez em init_db, e o modo fica gravado no arquivo).
+# - Para o banco do aplicativo (registrado por enable_connection_pool) cada thread
+#   reaproveita a sua conexão: abrir uma conexão SQLite no Windows custa ~4 ms
+#   (arquivos -wal/-shm + antivírus), mais que a maioria das consultas.
+# - Bancos não registrados (ex.: bancos temporários dos testes) continuam com uma
+#   conexão nova por chamada, para que possam ser apagados logo depois no Windows.
+
+_BUSY_TIMEOUT_S = 10.0
+_INIT_LOCK = threading.Lock()
+_initialized = {}          # path -> identidade do arquivo quando o schema foi garantido
+_POOLED_PATHS = set()
+_tls = threading.local()
+
+
+def _norm_path(path):
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _file_identity(path):
+    try:
+        st = os.stat(path)
+        return (st.st_dev, st.st_ino, getattr(st, "st_birthtime_ns", st.st_ctime_ns))
+    except OSError:
+        return None
+
+
+def _configure_connection(conn):
+    conn.execute("PRAGMA synchronous = NORMAL")
+    conn.execute("PRAGMA temp_store = MEMORY")
+
+
+def enable_connection_pool(db_path):
+    """Ativa o reaproveitamento de conexões por thread para este banco."""
+    _POOLED_PATHS.add(_norm_path(db_path))
+
+
+def close_thread_connections():
+    """Fecha as conexões reaproveitadas da thread atual (usado no desligamento/testes)."""
+    conns = getattr(_tls, "conns", None)
+    if not conns:
+        return
+    for raw, _ident, _state in list(conns.values()):
+        try:
+            raw.close()
+        except Exception:
+            pass
+    conns.clear()
+
+
+class _PooledConnection:
+    """
+    Fachada de uma conexão reaproveitada. Mantém a mesma interface usada no módulo
+    (cursor/commit/close/row_factory), mas `close()` não fecha a conexão real:
+    apenas desfaz uma transação pendente quando o último usuário da conexão sai,
+    reproduzindo a semântica de "fechar sem commit = descartar".
+    """
+    __slots__ = ("_raw", "_state", "row_factory", "_closed")
+
+    def __init__(self, raw, state):
+        self._raw = raw
+        self._state = state
+        self.row_factory = None
+        self._closed = False
+        state["users"] += 1
+
+    def cursor(self):
+        cur = self._raw.cursor()
+        cur.row_factory = self.row_factory
+        return cur
+
+    def execute(self, sql, params=()):
+        return self.cursor().execute(sql, params)
+
+    def executemany(self, sql, seq):
+        return self.cursor().executemany(sql, seq)
+
+    def commit(self):
+        self._raw.commit()
+
+    def rollback(self):
+        self._raw.rollback()
+
+    @property
+    def in_transaction(self):
+        return self._raw.in_transaction
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        self._state["users"] -= 1
+        if self._state["users"] <= 0 and self._raw.in_transaction:
+            try:
+                self._raw.rollback()
+            except Exception:
+                pass
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self._raw.commit()
+        else:
+            self._raw.rollback()
+        return False
+
+
+def _connect(path):
+    key = _norm_path(path)
+    if key in _POOLED_PATHS:
+        conns = getattr(_tls, "conns", None)
+        if conns is None:
+            conns = _tls.conns = {}
+        ident = _file_identity(path)
+        entry = conns.get(key)
+        if entry and entry[1] == ident and ident is not None:
+            return _PooledConnection(entry[0], entry[2])
+        if entry:
+            try:
+                entry[0].close()
+            except Exception:
+                pass
+        raw = sqlite3.connect(path, timeout=_BUSY_TIMEOUT_S)
+        _configure_connection(raw)
+        state = {"users": 0}
+        conns[key] = (raw, _file_identity(path), state)
+        return _PooledConnection(raw, state)
+    raw = sqlite3.connect(path, timeout=_BUSY_TIMEOUT_S)
+    _configure_connection(raw)
+    return raw
+
+
+# Tabelas cujas mudanças são contadas (para ETag do pátio e cache de analytics).
+_TRACKED_TABLES = ("files", "patio_status", "nf_control", "agendamentos", "agenda_events")
+
+
+def _setup_change_tracking(cur):
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS change_counters (
+        name TEXT PRIMARY KEY,
+        gen INTEGER NOT NULL DEFAULT 0
+    )
+    """)
+    for t in _TRACKED_TABLES:
+        cur.execute("INSERT OR IGNORE INTO change_counters (name, gen) VALUES (?, 0)", (t,))
+        for op in ("INSERT", "UPDATE", "DELETE"):
+            cur.execute(f"""
+            CREATE TRIGGER IF NOT EXISTS trg_gen_{t}_{op.lower()}
+            AFTER {op} ON {t}
+            BEGIN
+                UPDATE change_counters SET gen = gen + 1 WHERE name = '{t}';
+            END
+            """)
+
+
+_RESULT_CACHE = {}
+_RESULT_CACHE_LOCK = threading.Lock()
+_RESULT_CACHE_MAX = 32
+
+
+def _cached_result(name, path, args, tables, compute):
+    """Memoiza `compute()` pela geração das tabelas envolvidas (ver change_counters)."""
+    gens = get_change_counters(path)
+    # A identidade do arquivo entra na chave: um banco apagado e recriado no mesmo
+    # caminho recomeça os contadores do zero e não pode reaproveitar o cache.
+    key = (name, _norm_path(path), args, _file_identity(path), tuple(gens.get(t, 0) for t in tables))
+    with _RESULT_CACHE_LOCK:
+        hit = _RESULT_CACHE.get(key)
+    if hit is not None:
+        return hit
+    result = compute()
+    with _RESULT_CACHE_LOCK:
+        stale = [k for k in _RESULT_CACHE if k[:3] == key[:3]]
+        for k in stale:
+            del _RESULT_CACHE[k]
+        while len(_RESULT_CACHE) >= _RESULT_CACHE_MAX:
+            del _RESULT_CACHE[next(iter(_RESULT_CACHE))]
+        _RESULT_CACHE[key] = result
+    return result
+
+
+def get_change_counters(db_path=None):
+    """
+    Retorna {tabela: geração}. A geração sobe a cada linha inserida/alterada/apagada
+    (via triggers), inclusive por outros processos, e serve para ETag e caches.
+    """
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT name, gen FROM change_counters")
+        return {name: gen for name, gen in cur.fetchall()}
+    finally:
+        conn.close()
 
 PATIO_STATUSES = [
     "Em Diagnostico",
@@ -230,9 +444,91 @@ def _setup_agenda_table(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_agenda_plate ON agenda_events(plate_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_agenda_status ON agenda_events(status)")
 
+_FILE_COLUMNS = (
+    "file_path", "file_name", "file_mtime", "file_size",
+    "plate", "plate_clean", "plate_display", "client_name", "client_clean",
+    "car_model", "car_year", "car_color", "visit_num",
+    "entry_date", "entry_date_sort", "odometer", "odometer_int",
+    "complaint", "data_json", "search_text",
+)
+_UPSERT_FILE_SQL = (
+    f"INSERT OR REPLACE INTO files ({', '.join(_FILE_COLUMNS)}) "
+    f"VALUES ({', '.join('?' * len(_FILE_COLUMNS))})"
+)
+_SEARCH_SEP = "\x1f"  # separador que a busca nunca contém: impede casar "entre" campos
+
+
+def build_search_text(plate_clean="", client_name="", car_model="", file_name="", complaint=""):
+    """Texto de busca normalizado (minúsculo e sem acento) de uma planilha."""
+    parts = [plate_clean or "", client_name or "", car_model or "", file_name or "", complaint or ""]
+    return _SEARCH_SEP.join(remove_accents(p).lower() for p in parts)
+
+
+def _upsert_file_row(cur, row):
+    row["search_text"] = build_search_text(
+        row.get("plate_clean"), row.get("client_name"), row.get("car_model"),
+        row.get("file_name"), row.get("complaint"),
+    )
+    cur.execute(_UPSERT_FILE_SQL, tuple(row.get(c) for c in _FILE_COLUMNS))
+
+
+def _setup_files_search_column(cur):
+    cur.execute("PRAGMA table_info(files)")
+    cols = {r[1] for r in cur.fetchall()}
+    if "search_text" not in cols:
+        cur.execute("ALTER TABLE files ADD COLUMN search_text TEXT")
+    # Se outro código (ex.: gerar_massa_dados.py) alterar os campos pesquisáveis sem
+    # recalcular search_text, invalida-o; backfill_search_text() o recalcula depois.
+    cur.execute("""
+    CREATE TRIGGER IF NOT EXISTS trg_files_search_stale
+    AFTER UPDATE OF plate_clean, client_name, car_model, file_name, complaint ON files
+    WHEN NEW.search_text IS OLD.search_text
+    BEGIN
+        UPDATE files SET search_text = NULL WHERE file_path = NEW.file_path;
+    END
+    """)
+    _backfill_search_text(cur)
+
+
+def _backfill_search_text(cur):
+    cur.execute("""
+        SELECT file_path, plate_clean, client_name, car_model, file_name, complaint
+        FROM files WHERE search_text IS NULL
+    """)
+    rows = cur.fetchall()
+    if rows:
+        cur.executemany(
+            "UPDATE files SET search_text = ? WHERE file_path = ?",
+            [(build_search_text(pc, cn, cm, fn, cp), fp) for fp, pc, cn, cm, fn, cp in rows],
+        )
+    return len(rows)
+
+
 def init_db(db_path=None):
+    """
+    Garante o schema do banco. É chamado no início de quase toda função do módulo,
+    então só executa o DDL uma vez por arquivo (memoizado pela identidade do arquivo:
+    se o banco for apagado e recriado, o schema é garantido de novo).
+    """
     path = db_path or get_db_path()
-    conn = sqlite3.connect(path)
+    key = _norm_path(path)
+    ident = _file_identity(path)
+    if ident is not None and _initialized.get(key) == ident:
+        return
+    with _INIT_LOCK:
+        ident = _file_identity(path)
+        if ident is not None and _initialized.get(key) == ident:
+            return
+        _init_db_schema(path)
+        _initialized[key] = _file_identity(path)
+
+
+def _init_db_schema(path):
+    conn = sqlite3.connect(path, timeout=_BUSY_TIMEOUT_S)
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+    except sqlite3.OperationalError as e:
+        log.warning("Não foi possível ativar WAL em %s: %s", path, e)
     cur = conn.cursor()
     cur.execute("""
     CREATE TABLE IF NOT EXISTS files (
@@ -260,12 +556,15 @@ def init_db(db_path=None):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_plate_clean ON files(plate_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_client_clean ON files(client_clean)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_entry_date_sort ON files(entry_date_sort)")
+    _setup_files_search_column(cur)
 
     # Estruturas do CP-01 (patio_status, nf_control e templates), Issue #15 (agendamentos) e Agenda
     _setup_patio_table(cur)
     _setup_nf_table(cur)
     _setup_agendamentos_table(cur)
     _setup_agenda_table(cur)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_patio_updated ON patio_status(updated_at)")
+    _setup_change_tracking(cur)
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS templates (
@@ -308,6 +607,85 @@ def parse_visit_int(visit_str):
     except Exception:
         return 0
 
+# Erros típicos de planilha aberta/sendo salva pelo Excel (arquivo bloqueado ou
+# gravado pela metade). São tratados como transitórios: a linha fica pendente e
+# a próxima varredura tenta de novo.
+_TRANSIENT_FILE_ERRORS = (PermissionError, zipfile.BadZipFile, EOFError)
+
+
+class FileBusyError(Exception):
+    """Planilha bloqueada ou incompleta (normalmente aberta/sendo salva no Excel)."""
+
+
+def _parse_file_resilient(fpath, retries=0, delay=0.3):
+    attempt = 0
+    while True:
+        try:
+            return parse_file(fpath)
+        except _TRANSIENT_FILE_ERRORS as e:
+            if attempt >= retries:
+                raise FileBusyError(f"arquivo em uso ou incompleto (aberto no Excel?): {e}") from e
+            attempt += 1
+            time.sleep(delay)
+
+
+def _row_from_parsed(fpath, parsed, mtime, fsize, fallback=None):
+    fb = fallback or {}
+    plate_raw = parsed.get("plate", "") or fb.get("plate", "") or ""
+    client_name = parsed.get("client_name", "") or fb.get("client_name", "") or ""
+    entry_date = parsed.get("entry_date", "") or ""
+    odometer = parsed.get("odometer", "") or ""
+    return {
+        "file_path": fpath,
+        "file_name": parsed.get("file_name") or os.path.basename(fpath),
+        "file_mtime": mtime,
+        "file_size": fsize,
+        "plate": plate_raw,
+        "plate_clean": clean_plate(plate_raw),
+        "plate_display": parsed.get("plate_display", "") or format_plate_display(plate_raw),
+        "client_name": client_name,
+        "client_clean": remove_accents(client_name).lower(),
+        "car_model": parsed.get("car_model", "") or fb.get("car_model", "") or "",
+        "car_year": parsed.get("car_year", "") or fb.get("car_year", "") or "",
+        "car_color": parsed.get("car_color", "") or fb.get("car_color", "") or "",
+        "visit_num": parsed.get("visit_num", "") or fb.get("visit_num", "") or "",
+        "entry_date": entry_date,
+        "entry_date_sort": parse_date_sortable(entry_date),
+        "odometer": odometer,
+        "odometer_int": parse_odometer_int(odometer),
+        "complaint": parsed.get("complaint", "") or "",
+        "data_json": json.dumps(parsed, ensure_ascii=False),
+    }
+
+
+def _row_from_filename(fpath, mtime, fsize):
+    fname = os.path.basename(fpath)
+    meta = parse_filename(fname)
+    plate_raw = meta.get("plate", "")
+    client_name = meta.get("owner", "")
+    return {
+        "file_path": fpath,
+        "file_name": fname,
+        "file_mtime": mtime,
+        "file_size": fsize,
+        "plate": plate_raw,
+        "plate_clean": clean_plate(plate_raw),
+        "plate_display": format_plate_display(plate_raw),
+        "client_name": client_name,
+        "client_clean": remove_accents(client_name).lower(),
+        "car_model": meta.get("model", ""),
+        "car_year": "",
+        "car_color": meta.get("color", ""),
+        "visit_num": meta.get("visit_num", ""),
+        "entry_date": "",
+        "entry_date_sort": "0000-00-00",
+        "odometer": "",
+        "odometer_int": 0,
+        "complaint": "",
+        "data_json": "",
+    }
+
+
 def _ensure_row_parsed(conn, cur, d):
     """
     Se a planilha foi indexada apenas pelo nome do arquivo (modo ultrarrápido),
@@ -321,207 +699,336 @@ def _ensure_row_parsed(conn, cur, d):
             if loaded.get("parser_version") == PARSER_VERSION and "servicos_items" in loaded:
                 d["details"] = loaded
                 return d, False
-        except Exception:
-            pass
+        except ValueError:
+            log.warning("data_json inválido no cache para %s; relendo a planilha", fpath)
 
     if not fpath or not os.path.exists(fpath):
         d["details"] = None
         return d, False
 
     try:
-        mtime = os.path.getmtime(fpath)
-        fsize = os.path.getsize(fpath)
-        parsed = parse_file(fpath)
-
-        plate_raw = parsed.get("plate", "") or d.get("plate", "")
-        plate_clean = clean_plate(plate_raw)
-        plate_display = parsed.get("plate_display", "") or format_plate_display(plate_raw)
-        client_name = parsed.get("client_name", "") or d.get("client_name", "")
-        client_clean = remove_accents(client_name).lower()
-        car_model = parsed.get("car_model", "") or d.get("car_model", "")
-        car_year = parsed.get("car_year", "") or d.get("car_year", "")
-        car_color = parsed.get("car_color", "") or d.get("car_color", "")
-        visit_num = parsed.get("visit_num", "") or d.get("visit_num", "")
-        entry_date = parsed.get("entry_date", "")
-        entry_date_sort = parse_date_sortable(entry_date)
-        odometer = parsed.get("odometer", "")
-        odometer_int = parse_odometer_int(odometer)
-        complaint = parsed.get("complaint", "")
-        data_json = json.dumps(parsed, ensure_ascii=False)
-
-        cur.execute("""
-        INSERT OR REPLACE INTO files (
-            file_path, file_name, file_mtime, file_size,
-            plate, plate_clean, plate_display, client_name, client_clean,
-            car_model, car_year, car_color, visit_num,
-            entry_date, entry_date_sort, odometer, odometer_int,
-            complaint, data_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            fpath, parsed.get("file_name", os.path.basename(fpath)), mtime, fsize,
-            plate_raw, plate_clean, plate_display, client_name, client_clean,
-            car_model, car_year, car_color, visit_num,
-            entry_date, entry_date_sort, odometer, odometer_int,
-            complaint, data_json
-        ))
-
-        d.update({
-            "plate": plate_raw,
-            "plate_clean": plate_clean,
-            "plate_display": plate_display,
-            "client_name": client_name,
-            "car_model": car_model,
-            "car_year": car_year,
-            "car_color": car_color,
-            "visit_num": visit_num,
-            "entry_date": entry_date,
-            "entry_date_sort": entry_date_sort,
-            "odometer": odometer,
-            "odometer_int": odometer_int,
-            "complaint": complaint,
-            "data_json": data_json,
-            "details": parsed
-        })
-        return d, True
+        st = os.stat(fpath)
+        parsed = _parse_file_resilient(fpath)
+    except FileBusyError as e:
+        log.info("Leitura sob demanda adiada (%s): %s", os.path.basename(fpath), e)
+        d["details"] = None
+        return d, False
     except Exception:
+        log.exception("Falha ao ler a planilha %s", fpath)
         d["details"] = None
         return d, False
 
-def scan_and_index_folder(folder_path, db_path=None, progress_callback=None):
+    row = _row_from_parsed(fpath, parsed, st.st_mtime, st.st_size, fallback=d)
+    _upsert_file_row(cur, row)
+    row.pop("search_text", None)
+    d.update(row)
+    d["details"] = parsed
+    return d, True
+
+
+def _iter_spreadsheets(folder_path):
+    """
+    Lista (caminho, mtime, tamanho) das planilhas .xlsx/.xls da pasta, recursivamente.
+    Usa os.scandir: no Windows o stat vem junto da listagem do diretório (sem
+    uma chamada extra por arquivo), o que torna a reindexação sem mudanças barata.
+    """
+    stack = [folder_path]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as it:
+                for entry in it:
+                    name = entry.name
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            stack.append(entry.path)
+                            continue
+                        if name.startswith("~$"):  # arquivo de bloqueio do Excel
+                            continue
+                        ext = os.path.splitext(name)[1].lower()
+                        if ext not in (".xlsx", ".xls"):
+                            continue
+                        st = entry.stat()
+                        yield os.path.join(current, name), st.st_mtime, st.st_size
+                    except OSError as e:
+                        log.warning("Não foi possível ler %s: %s", entry.path, e)
+        except OSError as e:
+            log.warning("Não foi possível listar a pasta %s: %s", current, e)
+
+
+def _pending_parse_where():
+    return ("(data_json IS NULL OR data_json = '' "
+            "OR json_extract(data_json, '$.parser_version') IS NOT ?)")
+
+
+def scan_and_index_folder(folder_path, db_path=None, progress_callback=None, full_parse=None):
+    """
+    Varredura incremental da pasta de planilhas.
+
+    - Só olha planilhas novas ou alteradas (mtime ou tamanho diferentes do cache).
+    - Poucas mudanças (até FAST_INDEX_THRESHOLD) são lidas por completo na hora;
+      muitas (ex.: primeira indexação) entram pelo nome do arquivo, em milissegundos,
+      e o conteúdo fica pendente para parse_pending_rows() (rodado em segundo plano
+      por start_background_index).
+    - Remove do cache planilhas que não existem mais na pasta.
+    """
     if not folder_path or not os.path.isdir(folder_path):
         return {"error": "Pasta inválida", "indexed": 0, "total": 0}
-        
+
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
-    cur = conn.cursor()
-    
-    # Collect all xlsx and xls files
-    all_files = []
-    for root, dirs, files in os.walk(folder_path):
-        for f in files:
-            if f.startswith("~$"):  # Excel temporary file
-                continue
-            ext = os.path.splitext(f)[1].lower()
-            if ext in ('.xlsx', '.xls'):
-                all_files.append(os.path.join(root, f))
-                
-    total_files = len(all_files)
-    indexed_count = 0
-    errors = []
-    
-    # Check existing mtimes and parser_version in batch
-    cur.execute("SELECT file_path, file_mtime, data_json FROM files")
-    cached_mtimes = {}
-    for row_fp, row_mt, row_dj in cur.fetchall():
-        is_current_schema = True
-        if row_dj:
-            try:
-                is_current_schema = json.loads(row_dj).get("parser_version") == PARSER_VERSION
-            except Exception:
-                is_current_schema = False
-        if is_current_schema:
-            cached_mtimes[row_fp] = row_mt
-    
-    to_process = []
-    for fpath in all_files:
-        try:
-            mtime = os.path.getmtime(fpath)
-            if fpath in cached_mtimes and abs(cached_mtimes[fpath] - mtime) < 0.01:
-                continue
-            to_process.append((fpath, mtime, os.path.getsize(fpath)))
-        except Exception as e:
-            errors.append(f"{os.path.basename(fpath)}: {str(e)}")
+    conn = _connect(path)
+    try:
+        cur = conn.cursor()
+        all_files = list(_iter_spreadsheets(folder_path))
+        total_files = len(all_files)
+        indexed_count = 0
+        errors = []
 
-    # Se houver muitas planilhas novas (ex.: milhares de fichas na pasta da oficina),
-    # faz a indexação instantânea pelo nome do arquivo (< 0,1s) e lê o Excel sob demanda na busca!
-    use_fast_filename_index = len(to_process) > FAST_INDEX_THRESHOLD
+        cur.execute("SELECT file_path, file_mtime, file_size FROM files")
+        cached = {fp: (mt, sz) for fp, mt, sz in cur.fetchall()}
 
-    for idx, (fpath, mtime, fsize) in enumerate(to_process):
-        try:
+        to_process = []
+        for fpath, mtime, fsize in all_files:
+            prev = cached.get(fpath)
+            if prev is not None and prev[0] is not None and abs(prev[0] - mtime) < 0.01 \
+                    and (prev[1] is None or prev[1] == fsize):
+                continue
+            to_process.append((fpath, mtime, fsize))
+
+        if full_parse is None:
+            use_fast_filename_index = len(to_process) > FAST_INDEX_THRESHOLD
+        else:
+            use_fast_filename_index = not full_parse
+
+        for idx, (fpath, mtime, fsize) in enumerate(to_process):
             fname = os.path.basename(fpath)
-            if use_fast_filename_index:
-                meta = parse_filename(fname)
-                plate_raw = meta.get("plate", "")
-                plate_clean = clean_plate(plate_raw)
-                plate_display = format_plate_display(plate_raw)
-                client_name = meta.get("owner", "")
-                client_clean = remove_accents(client_name).lower()
-                car_model = meta.get("model", "")
-                car_color = meta.get("color", "")
-                visit_num = meta.get("visit_num", "")
+            try:
+                if use_fast_filename_index:
+                    row = _row_from_filename(fpath, mtime, fsize)
+                else:
+                    try:
+                        parsed = _parse_file_resilient(fpath, retries=1)
+                        row = _row_from_parsed(fpath, parsed, mtime, fsize)
+                    except FileBusyError as e:
+                        # Planilha aberta/sendo salva: entra pelo nome e fica pendente.
+                        errors.append(f"{fname}: {e}")
+                        row = _row_from_filename(fpath, mtime, fsize)
+                _upsert_file_row(cur, row)
+                indexed_count += 1
+                if progress_callback:
+                    progress_callback(idx + 1, len(to_process), fname)
+            except Exception as e:
+                log.exception("Falha ao indexar %s", fpath)
+                errors.append(f"{fname}: {e}")
 
-                cur.execute("""
-                INSERT OR REPLACE INTO files (
-                    file_path, file_name, file_mtime, file_size,
-                    plate, plate_clean, plate_display, client_name, client_clean,
-                    car_model, car_year, car_color, visit_num,
-                    entry_date, entry_date_sort, odometer, odometer_int,
-                    complaint, data_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    fpath, fname, mtime, fsize,
-                    plate_raw, plate_clean, plate_display, client_name, client_clean,
-                    car_model, "", car_color, visit_num,
-                    "", "0000-00-00", "", 0,
-                    "", ""
-                ))
-            else:
-                parsed = parse_file(fpath)
-                plate_raw = parsed.get("plate", "")
-                plate_clean = clean_plate(plate_raw)
-                plate_display = parsed.get("plate_display", "")
-                client_name = parsed.get("client_name", "")
-                client_clean = remove_accents(client_name).lower()
-                entry_date = parsed.get("entry_date", "")
-                entry_date_sort = parse_date_sortable(entry_date)
-                odometer = parsed.get("odometer", "")
-                odometer_int = parse_odometer_int(odometer)
-                data_json = json.dumps(parsed, ensure_ascii=False)
+        existing = {fp for fp, _, _ in all_files}
+        stale = [(fp,) for fp in cached if fp not in existing]
+        if stale:
+            cur.executemany("DELETE FROM files WHERE file_path = ?", stale)
+        _backfill_search_text(cur)
+        conn.commit()
 
-                cur.execute("""
-                INSERT OR REPLACE INTO files (
-                    file_path, file_name, file_mtime, file_size,
-                    plate, plate_clean, plate_display, client_name, client_clean,
-                    car_model, car_year, car_color, visit_num,
-                    entry_date, entry_date_sort, odometer, odometer_int,
-                    complaint, data_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    fpath, parsed.get("file_name", fname), mtime, fsize,
-                    plate_raw, plate_clean, plate_display, client_name, client_clean,
-                    parsed.get("car_model", ""), parsed.get("car_year", ""), parsed.get("car_color", ""), parsed.get("visit_num", ""),
-                    entry_date, entry_date_sort, odometer, odometer_int,
-                    parsed.get("complaint", ""), data_json
-                ))
+        cur.execute(f"SELECT COUNT(*) FROM files WHERE {_pending_parse_where()}", (PARSER_VERSION,))
+        pending = cur.fetchone()[0]
+    finally:
+        conn.close()
 
-            indexed_count += 1
-            if progress_callback:
-                progress_callback(idx + 1, len(to_process), fname)
-        except Exception as e:
-            errors.append(f"{os.path.basename(fpath)}: {str(e)}")
-            
-    # Clean up deleted files from database
-    existing_paths_set = set(all_files)
-    for cached_path in cached_mtimes:
-        if cached_path not in existing_paths_set:
-            cur.execute("DELETE FROM files WHERE file_path = ?", (cached_path,))
-            
-    conn.commit()
-    conn.close()
-    
     return {
         "success": True,
         "total": total_files,
         "indexed": indexed_count,
+        "removed": len(stale),
         "fast_mode": use_fast_filename_index,
+        "pending_parse": pending,
         "errors": errors
     }
+
+
+def parse_pending_rows(db_path=None, progress_callback=None, should_stop=None, batch_size=20, retries=2):
+    """
+    Lê o conteúdo das planilhas que estão no cache só pelo nome do arquivo (ou com
+    versão antiga do parser). As planilhas são lidas FORA de transação e gravadas em
+    lotes curtos, para nunca segurar o lock de escrita do banco enquanto o Excel é lido.
+    Arquivos bloqueados pelo Excel ficam pendentes para a próxima rodada.
+    """
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    parsed_count = 0
+    errors = []
+    busy = 0
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT file_path, client_name, car_model, car_year, car_color, visit_num, plate "
+            f"FROM files WHERE {_pending_parse_where()} ORDER BY file_mtime DESC",
+            (PARSER_VERSION,),
+        )
+        keys = ("file_path", "client_name", "car_model", "car_year", "car_color", "visit_num", "plate")
+        pending = [dict(zip(keys, r)) for r in cur.fetchall()]
+        total = len(pending)
+        if progress_callback:
+            progress_callback(0, total, "")
+
+        for start in range(0, total, batch_size):
+            if should_stop and should_stop():
+                break
+            rows = []
+            for i, d in enumerate(pending[start:start + batch_size], start=start):
+                fpath = d["file_path"]
+                fname = os.path.basename(fpath)
+                try:
+                    st = os.stat(fpath)
+                    parsed = _parse_file_resilient(fpath, retries=retries)
+                    rows.append(_row_from_parsed(fpath, parsed, st.st_mtime, st.st_size, fallback=d))
+                except FileNotFoundError:
+                    pass  # foi apagada; a próxima varredura remove do cache
+                except FileBusyError as e:
+                    busy += 1
+                    errors.append(f"{fname}: {e}")
+                except Exception as e:
+                    log.warning("Falha ao ler %s: %s", fpath, e)
+                    errors.append(f"{fname}: {e}")
+                if progress_callback:
+                    progress_callback(i + 1, total, fname)
+            if rows:
+                for row in rows:
+                    _upsert_file_row(cur, row)
+                conn.commit()
+                parsed_count += len(rows)
+    finally:
+        conn.close()
+    return {"parsed": parsed_count, "pending": total, "busy": busy, "errors": errors}
+
+
+# ------------------------------------------------------------------------------
+# Indexação em segundo plano (não trava a UI) com progresso consultável
+# ------------------------------------------------------------------------------
+
+_JOB_LOCK = threading.Lock()
+_job = {
+    "running": False,
+    "phase": "idle",          # idle | scan | parse | done | error
+    "folder": "",
+    "total": 0,
+    "done": 0,
+    "current_file": "",
+    "started_at": None,
+    "finished_at": None,
+    "scan_result": None,
+    "parse_result": None,
+    "error": None,
+}
+_job_rerun = {"requested": False, "scan": False, "folder": None}
+_job_thread = None
+_job_stop = threading.Event()
+
+
+def get_index_status():
+    """Retrato do progresso da indexação em segundo plano (para /api/index_status)."""
+    with _JOB_LOCK:
+        snap = dict(_job)
+    total = snap.get("total") or 0
+    if total:
+        snap["percent"] = round(100.0 * snap.get("done", 0) / total, 1)
+    else:
+        snap["percent"] = 100.0 if snap["phase"] == "done" else 0.0
+    for key in ("scan_result", "parse_result"):
+        if snap.get(key):
+            res = dict(snap[key])
+            res["errors"] = list(res.get("errors", []))[:50]
+            snap[key] = res
+    return snap
+
+
+def _job_update(**kw):
+    with _JOB_LOCK:
+        _job.update(kw)
+
+
+def _now_str():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _run_index_job(folder, db_path, do_scan):
+    global _job_thread
+    try:
+        while True:
+            _job_update(running=True, phase="scan" if do_scan else "parse", folder=folder or "",
+                        total=0, done=0, current_file="", error=None,
+                        started_at=_now_str(), finished_at=None)
+            if do_scan and folder:
+                _job_update(scan_result=scan_and_index_folder(folder, db_path, full_parse=False))
+
+            def progress(done, total, fname):
+                _job_update(phase="parse", done=done, total=total, current_file=fname)
+
+            pres = parse_pending_rows(db_path, progress_callback=progress, should_stop=_job_stop.is_set)
+            _job_update(parse_result=pres)
+            with _JOB_LOCK:
+                if _job_rerun["requested"] and not _job_stop.is_set():
+                    do_scan = _job_rerun["scan"]
+                    folder = _job_rerun["folder"] or folder
+                    _job_rerun["folder"] = None
+                    _job_rerun["requested"] = False
+                    _job_rerun["scan"] = False
+                    continue
+                _job.update(running=False, phase="done", current_file="", finished_at=_now_str())
+                _job_thread = None
+                break
+    except Exception as e:
+        log.exception("Falha na indexação em segundo plano")
+        with _JOB_LOCK:
+            _job.update(running=False, phase="error", error=str(e), finished_at=_now_str())
+            _job_thread = None
+    finally:
+        close_thread_connections()
+
+
+def start_background_index(folder=None, db_path=None, scan=True):
+    """
+    Dispara (ou reagenda) a indexação em segundo plano: varredura incremental da
+    pasta (se scan=True) seguida da leitura do conteúdo das planilhas pendentes.
+    Se já houver uma rodada em andamento, pede outra ao final dela.
+    Retorna o status atual.
+    """
+    global _job_thread
+    path = db_path or get_db_path()
+    with _JOB_LOCK:
+        if _job_thread is not None and _job_thread.is_alive():
+            _job_rerun["requested"] = True
+            _job_rerun["scan"] = _job_rerun["scan"] or bool(scan)
+            if folder:
+                _job_rerun["folder"] = folder
+        else:
+            _job_stop.clear()
+            _job.update(running=True, phase="scan" if scan else "parse", folder=folder or "")
+            _job_thread = threading.Thread(
+                target=_run_index_job, args=(folder, path, bool(scan)),
+                name="mecatronicar-indexer", daemon=True,
+            )
+            _job_thread.start()
+    return get_index_status()
+
+
+def wait_for_background_index(timeout=None):
+    """Espera a indexação em segundo plano terminar (útil em testes e scripts)."""
+    th = _job_thread
+    if th is not None:
+        th.join(timeout)
+    return get_index_status()
+
+
+def stop_background_index(timeout=5.0):
+    _job_stop.set()
+    return wait_for_background_index(timeout)
+
 
 def get_stats(db_path=None):
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     
     cur.execute("SELECT COUNT(*) FROM files")
@@ -543,7 +1050,7 @@ def get_stats(db_path=None):
 def get_all_cars(db_path=None):
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
@@ -574,7 +1081,7 @@ def search_files(query, db_path=None):
         
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
@@ -582,8 +1089,14 @@ def search_files(query, db_path=None):
     query_clean = remove_accents(query_raw).lower()
     query_plate = clean_plate(query_raw)
     
-    like_query = f"%{query_clean}%"
-    
+    def _like(s):
+        return "%" + s.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+
+    # search_text = placa + cliente + modelo + nome do arquivo + reclamação, já em
+    # minúsculas e sem acento (calculado na indexação). Linhas sem search_text (gravadas
+    # por código externo) caem no filtro antigo, campo a campo.
+    like_query = _like(query_clean)
+    plate_like = _like(query_plate) if query_plate else None
     cur.execute("""
     SELECT 
         file_path, file_name, plate, plate_clean, plate_display,
@@ -591,46 +1104,33 @@ def search_files(query, db_path=None):
         entry_date, entry_date_sort, odometer, odometer_int,
         complaint, data_json
     FROM files
-    WHERE 
-        plate_clean LIKE ? OR
-        (? != '' AND plate_clean LIKE ?) OR
-        client_clean LIKE ? OR
-        LOWER(car_model) LIKE ? OR
-        LOWER(file_name) LIKE ? OR
-        LOWER(complaint) LIKE ?
+    WHERE
+        (? IS NOT NULL AND plate_clean LIKE ? ESCAPE '!') OR
+        (search_text IS NOT NULL AND search_text LIKE ? ESCAPE '!') OR
+        (search_text IS NULL AND (
+            plate_clean LIKE ? ESCAPE '!' OR
+            client_clean LIKE ? ESCAPE '!' OR
+            LOWER(car_model) LIKE ? ESCAPE '!' OR
+            LOWER(file_name) LIKE ? ESCAPE '!' OR
+            LOWER(complaint) LIKE ? ESCAPE '!'
+        ))
     ORDER BY entry_date_sort DESC, odometer_int DESC, CAST(visit_num AS INTEGER) DESC
     LIMIT 60
     """, (
-        f"%{query_clean.upper()}%",
-        query_plate, f"%{query_plate}%" if query_plate else "%",
-        like_query, like_query, like_query, like_query
+        plate_like, plate_like,
+        like_query,
+        _like(query_clean.upper()), like_query, like_query, like_query, like_query
     ))
-    
+
     rows = [dict(r) for r in cur.fetchall()]
     unique_plates = {r.get("plate_clean") for r in rows if r.get("plate_clean")}
 
     # Se a busca já filtrou um único veículo (ou poucos arquivos), lê sob demanda as planilhas encontradas
     max_lazy_parse = len(rows) if len(unique_plates) <= 1 else min(len(rows), 20)
-    dirty = False
-    results = []
-    for idx, d in enumerate(rows):
-        if idx < max_lazy_parse:
-            d, updated = _ensure_row_parsed(conn, cur, d)
-            if updated:
-                dirty = True
-        else:
-            if d.get("data_json"):
-                try:
-                    d["details"] = json.loads(d["data_json"])
-                except Exception:
-                    d["details"] = None
-            else:
-                d["details"] = None
-        results.append(d)
-
-    if dirty:
-        conn.commit()
-    conn.close()
+    try:
+        results = _ensure_rows_parsed(conn, cur, rows, max_parse=max_lazy_parse)
+    finally:
+        conn.close()
 
     results.sort(
         key=lambda x: (
@@ -642,18 +1142,95 @@ def search_files(query, db_path=None):
     )
     return results
 
+def _ensure_rows_parsed(conn, cur, rows, max_parse=None):
+    """
+    Versão em lote de _ensure_row_parsed: decodifica o data_json de cada linha e, para
+    as que ainda não têm conteúdo lido (até max_parse), lê a planilha FORA de transação
+    e grava tudo de uma vez no final.
+    """
+    to_write = []
+    parsed_budget = len(rows) if max_parse is None else max_parse
+    for d in rows:
+        dj = d.get("data_json")
+        if dj:
+            try:
+                loaded = json.loads(dj)
+                if loaded.get("parser_version") == PARSER_VERSION and "servicos_items" in loaded:
+                    d["details"] = loaded
+                    continue
+            except ValueError:
+                log.warning("data_json inválido no cache para %s", d.get("file_path"))
+            if parsed_budget <= 0:
+                try:
+                    d["details"] = json.loads(dj)
+                except ValueError:
+                    d["details"] = None
+                continue
+        if parsed_budget <= 0:
+            d["details"] = None
+            continue
+        fpath = d.get("file_path", "")
+        if not fpath or not os.path.exists(fpath):
+            d["details"] = None
+            continue
+        parsed_budget -= 1
+        try:
+            st = os.stat(fpath)
+            parsed = _parse_file_resilient(fpath)
+        except FileBusyError as e:
+            log.info("Leitura sob demanda adiada (%s): %s", os.path.basename(fpath), e)
+            d["details"] = None
+            continue
+        except Exception:
+            log.exception("Falha ao ler a planilha %s", fpath)
+            d["details"] = None
+            continue
+        row = _row_from_parsed(fpath, parsed, st.st_mtime, st.st_size, fallback=d)
+        to_write.append(row)
+        d.update(row)
+        d["details"] = parsed
+    if to_write:
+        for row in to_write:
+            _upsert_file_row(cur, row)
+            row.pop("search_text", None)
+        conn.commit()
+    for d in rows:
+        d.pop("search_text", None)
+    return rows
+
+
+def _nf_controls_by_file_path(cur, file_paths):
+    """{file_path: linha de nf_control (a primeira, como get_nf_control)} em lote."""
+    paths = [p for p in dict.fromkeys(file_paths) if p]
+    found = {}
+    for i in range(0, len(paths), 500):
+        chunk = paths[i:i + 500]
+        cur.execute(
+            f"SELECT * FROM nf_control WHERE file_path IN ({','.join('?' * len(chunk))}) ORDER BY id",
+            chunk,
+        )
+        cols = [c[0] for c in cur.description]
+        for r in cur.fetchall():
+            rd = dict(zip(cols, r))
+            found.setdefault(rd["file_path"], rd)
+    return found
+
+
 def get_car_history(plate, db_path=None):
     if not plate:
         return []
         
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
     p_clean = clean_plate(plate)
-    
+    if not p_clean:
+        conn.close()
+        return []
+
     cur.execute("""
     SELECT 
         file_path, file_name, plate, plate_clean, plate_display,
@@ -666,17 +1243,11 @@ def get_car_history(plate, db_path=None):
     """, (p_clean, f"%{p_clean}%"))
     
     rows = [dict(r) for r in cur.fetchall()]
-    results = []
-    dirty = False
-    for d in rows:
-        d, updated = _ensure_row_parsed(conn, cur, d)
-        if updated:
-            dirty = True
-        results.append(d)
-        
-    if dirty:
-        conn.commit()
-    conn.close()
+    try:
+        results = _ensure_rows_parsed(conn, cur, rows)
+        nf_map = _nf_controls_by_file_path(cur, [d.get("file_path") for d in results])
+    finally:
+        conn.close()
 
     results.sort(
         key=lambda x: (
@@ -687,8 +1258,15 @@ def get_car_history(plate, db_path=None):
         reverse=True
     )
 
+    # Equivalente a get_nf_control(file_path=...) por visita, mas numa única consulta.
     for d in results:
-        d["nf_control"] = get_nf_control(file_path=d.get("file_path"), plate_clean=d.get("plate_clean"), visit_num=d.get("visit_num"), db_path=path)
+        nf = nf_map.get(d.get("file_path"))
+        if nf is not None:
+            nf = dict(nf)
+            for k in ("client_name", "car_model", "car_year", "car_color", "plate_display", "entry_date"):
+                nf.setdefault(k, d.get(k))
+            nf = _format_nf_dict(nf)
+        d["nf_control"] = nf
 
     return results
 
@@ -723,7 +1301,7 @@ def list_patio_status(status=None, db_path=None):
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -792,7 +1370,7 @@ def get_patio_status(id=None, file_path=None, plate=None, db_path=None):
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -871,7 +1449,7 @@ def update_patio_status(
 
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -957,7 +1535,7 @@ def delete_patio_status(record_id=None, file_path=None, plate=None, id=None, db_
     rec_id = record_id if record_id is not None else id
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     deleted = 0
     if rec_id is not None:
@@ -1071,7 +1649,7 @@ def list_nf_control(pending_only=False, nfse_status=None, nfe_status=None, plate
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -1144,7 +1722,7 @@ def get_nf_control(id=None, file_path=None, plate_clean=None, visit_num=None, db
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -1224,7 +1802,7 @@ def update_nf_control(
 
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -1349,7 +1927,7 @@ def delete_nf_control(record_id=None, file_path=None, id=None, db_path=None):
     rec_id = record_id if record_id is not None else id
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     deleted = 0
     if rec_id is not None:
@@ -1364,12 +1942,22 @@ def delete_nf_control(record_id=None, file_path=None, id=None, db_path=None):
 
 def get_nf_queue(filter_type='pending', query='', db_path=None):
     """
+    Fila de notas fiscais. O resultado fica em cache até alguma planilha ou registro
+    fiscal mudar (contadores de mudança do banco). Não modifique o dict retornado.
+    """
+    path = db_path or get_db_path()
+    return _cached_result("nf_queue", path, (filter_type, query or ""), ("files", "nf_control"),
+                          lambda: _compute_nf_queue(filter_type, query, path))
+
+
+def _compute_nf_queue(filter_type='pending', query='', db_path=None):
+    """
     Retorna a fila de notas fiscais da oficina (pendentes, emitidas ou todas),
     cruzando dados de files com nf_control para garantir que nenhuma visita fique esquecida.
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -1606,56 +2194,22 @@ def index_single_file(fpath, db_path=None, old_fpath=None):
         
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     
-    if old_fpath and old_fpath != fpath:
-        cur.execute("DELETE FROM files WHERE file_path = ?", (old_fpath,))
-        
+    # Lê a planilha antes de abrir a transação (não segura o lock de escrita no parse).
+    st = os.stat(fpath)
+    parsed = parse_file(fpath)
+    row = _row_from_parsed(fpath, parsed, st.st_mtime, st.st_size)
+    row["file_name"] = os.path.basename(fpath)
     try:
-        mtime = os.path.getmtime(fpath)
-        fsize = os.path.getsize(fpath)
-        parsed = parse_file(fpath)
-        
-        fname = os.path.basename(fpath)
-        plate_raw = parsed.get("plate", "")
-        plate_clean = clean_plate(plate_raw)
-        plate_display = parsed.get("plate_display", "") or format_plate_display(plate_raw)
-        client_name = parsed.get("client_name", "")
-        client_clean = remove_accents(client_name).lower()
-        car_model = parsed.get("car_model", "")
-        car_year = parsed.get("car_year", "")
-        car_color = parsed.get("car_color", "")
-        visit_num = parsed.get("visit_num", "")
-        entry_date = parsed.get("entry_date", "")
-        entry_date_sort = parse_date_sortable(entry_date)
-        odometer = parsed.get("odometer", "")
-        odometer_int = parse_odometer_int(odometer)
-        complaint = parsed.get("complaint", "")
-        data_json = json.dumps(parsed, ensure_ascii=False)
-        
-        cur.execute("""
-        INSERT OR REPLACE INTO files (
-            file_path, file_name, file_mtime, file_size,
-            plate, plate_clean, plate_display, client_name, client_clean,
-            car_model, car_year, car_color, visit_num,
-            entry_date, entry_date_sort, odometer, odometer_int,
-            complaint, data_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            fpath, fname, mtime, fsize,
-            plate_raw, plate_clean, plate_display, client_name, client_clean,
-            car_model, car_year, car_color, visit_num,
-            entry_date, entry_date_sort, odometer, odometer_int,
-            complaint, data_json
-        ))
-        
+        if old_fpath and old_fpath != fpath:
+            cur.execute("DELETE FROM files WHERE file_path = ?", (old_fpath,))
+        _upsert_file_row(cur, row)
         conn.commit()
+    finally:
         conn.close()
-        return parsed
-    except Exception as e:
-        conn.close()
-        raise e
+    return parsed
 
 def get_car_lookup(plate, db_path=None):
     """
@@ -1789,7 +2343,7 @@ def get_quick_suggestions(db_path=None):
     pecas_db = []
     servicos_db = []
     try:
-        conn = sqlite3.connect(path)
+        conn = _connect(path)
         cur = conn.cursor()
         cur.execute("SELECT data_json FROM files WHERE data_json IS NOT NULL AND data_json != ''")
         for (dj,) in cur.fetchall():
@@ -1854,6 +2408,17 @@ def parse_any_date(date_val):
 
 def get_analytics(period='30', db_path=None, ref_date=None):
     """
+    Métricas da oficina (ver _compute_analytics). O resultado fica em cache até alguma
+    planilha ou registro fiscal mudar, ou o dia virar. Não modifique o dict retornado.
+    """
+    path = db_path or get_db_path()
+    key = (str(period), ref_date or "", datetime.date.today().isoformat())
+    return _cached_result("analytics", path, key, ("files", "nf_control"),
+                          lambda: _compute_analytics(period, path, ref_date))
+
+
+def _compute_analytics(period='30', db_path=None, ref_date=None):
+    """
     Agregação e cálculo de métricas analíticas da oficina mecânica (Issue #16):
     - Volume de carros atendidos (total e médias por dia, semana e mês)
     - Tempo médio de permanência (dias desde a data de entrada até a saída/entrega)
@@ -1869,7 +2434,7 @@ def get_analytics(period='30', db_path=None, ref_date=None):
     else:
         today = datetime.date.today()
         
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
@@ -2282,7 +2847,7 @@ def create_agendamento(data, db_path=None):
 
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -2313,7 +2878,7 @@ def get_agendamento(agendamento_id, db_path=None):
     Retorna um agendamento pelo ID.
     """
     path = db_path or get_db_path()
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM agendamentos WHERE id = ?", (agendamento_id,))
@@ -2329,7 +2894,7 @@ def list_agendamentos(date_from=None, date_to=None, date=None, status=None, quer
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -2390,7 +2955,7 @@ def update_agendamento(agendamento_id, data, db_path=None):
         return None
     
     path = db_path or get_db_path()
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -2461,7 +3026,7 @@ def delete_agendamento(agendamento_id, db_path=None):
     if not agendamento_id:
         return False
     path = db_path or get_db_path()
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     cur.execute("DELETE FROM agendamentos WHERE id = ?", (agendamento_id,))
     deleted = cur.rowcount > 0
@@ -2479,7 +3044,7 @@ def list_agenda_events(start_date=None, end_date=None, status=None, db_path=None
     """
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -2504,7 +3069,7 @@ def list_agenda_events(start_date=None, end_date=None, status=None, db_path=None
 def get_agenda_event(event_id, db_path=None):
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM agenda_events WHERE id = ?", (event_id,))
@@ -2515,7 +3080,7 @@ def get_agenda_event(event_id, db_path=None):
 def save_agenda_event(data, db_path=None):
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
 
     rec_id = data.get("id")
@@ -2579,7 +3144,7 @@ def save_agenda_event(data, db_path=None):
 def update_agenda_event_status(event_id, status, db_path=None):
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     cur.execute("UPDATE agenda_events SET status = ? WHERE id = ?", (status, event_id))
     conn.commit()
@@ -2589,7 +3154,7 @@ def update_agenda_event_status(event_id, status, db_path=None):
 def delete_agenda_event(event_id, db_path=None):
     path = db_path or get_db_path()
     init_db(path)
-    conn = sqlite3.connect(path)
+    conn = _connect(path)
     cur = conn.cursor()
     cur.execute("DELETE FROM agenda_events WHERE id = ?", (event_id,))
     deleted = cur.rowcount
