@@ -1,1580 +1,739 @@
-/* ==========================================================================
-   MecatroniCar v2.0 - Painel de TV (tv.css)
-   Monitoramento do Pátio ao Vivo em Grade Dinâmica Auto-Fit (1080p / 4K)
-   Identidade Visual MecatroniCar: Amarelo #f9cc01 e Fundo Automotivo #111827
-   ========================================================================== */
+/**
+ * MecatroniCar v3 - tv.css
+ * Painel de TV do pátio. Sempre escuro, sem rolagem, legível a ~5 m.
+ *
+ * Tokens: seguem a seção 3 de docs/REPAGINACAO_V3.md. Quando static/css/tokens.css
+ * (tarefa T2) for integrado, estes valores devem ser trocados pelos tokens oficiais
+ * mantendo os mesmos nomes de cor de status (--status-*).
+ */
 
 :root {
-    /* Cores Oficiais MecatroniCar */
-    --mec-yellow: #f9cc01;
-    --mec-yellow-hover: #e5b800;
-    --mec-yellow-light: #fefce8;
-    --mec-dark: #111827;
-    --mec-charcoal: #0f172a;
-    --mec-card-bg: #1e293b;
-    --mec-card-border: #334155;
-    --mec-text-light: #f8fafc;
-    --mec-text-muted: #94a3b8;
+    color-scheme: dark;
 
-    /* Semânticas Operacionais de Fases */
-    --phase-diag: #38bdf8;
-    --phase-orc: #fbbf24;
-    --phase-aprov: #fb923c;
-    --phase-pecas: #c084fc;
-    --phase-exec: #34d399;
-    --phase-pronto: #10b981;
-    --phase-terceiro: #a855f7;
-    --phase-gold: #f9cc01;
+    /* Marca */
+    --mec-yellow: #F9CC01;
+    --mec-charcoal: #111827;
 
-    /* Grid dinâmico */
-    --grid-cols: 3;
-    --grid-rows: 2;
+    /* Neutros frios (slate) */
+    --tv-bg: #0A0E15;
+    --tv-surface: #111827;
+    --tv-surface-2: #182133;
+    --tv-surface-3: #1F2A40;
+    --tv-border: #243049;
+    --tv-border-strong: #33415C;
+    --tv-text: #F1F5F9;
+    --tv-text-muted: #9AA7BC;
+    --tv-text-dim: #66748B;
+
+    /* Status do pátio (iguais no app e na TV) */
+    --status-diagnostico: #60A5FA;   /* azul */
+    --status-orcamento: #FBBF24;     /* âmbar */
+    --status-aprovacao: #FB923C;     /* laranja */
+    --status-pecas: #A78BFA;         /* violeta */
+    --status-execucao: #2DD4BF;      /* ciano/teal */
+    --status-pronto: #4ADE80;        /* verde */
+    --status-terceiro: #F472B6;      /* rosa/magenta */
+
+    --tv-ok: #4ADE80;
+    --tv-warn: #FBBF24;
+    --tv-danger: #F87171;
+
+    /* Tipografia: pilha do sistema (zero download) */
+    --tv-font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* Escala fluida: 12px em 720p, ~18px em 1080p, ~35px em 4K */
+    --ui: clamp(12px, min(1.7vh, 1.05vw), 44px);
+    --gap: clamp(6px, 1.1vh, 26px);
+    --pad-x: clamp(12px, 1.6vw, 56px);
+    --collapsed-w: clamp(40px, 3.6vw, 120px);
+    --ease: cubic-bezier(.2, .7, .2, 1);
 }
 
-* {
+*, *::before, *::after { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html, body {
     margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+    height: 100%;
+    overflow: hidden;
+    background: var(--tv-bg);
 }
 
-body.tv-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--mec-dark);
-    color: var(--mec-text-light);
+.tv-body {
+    font-family: var(--tv-font);
+    color: var(--tv-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    cursor: default;
+}
+
+.tv-icon {
+    width: 1.15em;
+    height: 1.15em;
+    flex: none;
+    display: block;
+}
+
+i[data-icon] { display: inline-flex; font-style: normal; }
+
+/* ---------- Estrutura ---------- */
+.tv-app {
     height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-/* ==========================================================================
-   HEADER TV
-   ========================================================================== */
-.tv-header {
-    background-color: #0b0f19;
-    border-bottom: 3px solid var(--mec-yellow);
-    padding: 8px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 68px;
-    flex-shrink: 0;
-}
-
-.tv-header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.tv-logo {
-    height: 44px;
-    width: auto;
-    object-fit: contain;
-}
-
-.tv-brand-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.tv-brand-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.tv-brand-name {
-    font-size: 22px;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: -0.5px;
-}
-
-.tv-badge-live {
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    color: #ef4444;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    letter-spacing: 0.5px;
-}
-
-.pulse-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #ef4444;
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(0.95); opacity: 0.8; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(0.95); opacity: 0.8; }
-}
-
-.tv-brand-subtitle {
-    font-size: 12px;
-    color: var(--mec-text-muted);
-}
-
-.tv-header-center {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.tv-clock-time {
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--mec-yellow);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 1px;
-    line-height: 1;
-}
-
-.tv-clock-date {
-    font-size: 12px;
-    color: var(--mec-text-muted);
-    margin-top: 3px;
-    text-transform: capitalize;
-}
-
-.tv-header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.tv-counter-pill {
-    background: #1e293b;
-    border: 1px solid #334155;
-    padding: 6px 14px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tv-counter-icon {
-    font-size: 18px;
-}
-
-.tv-counter-val {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--mec-yellow);
-}
-
-.tv-counter-label {
-    font-size: 12px;
-    color: var(--mec-text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.tv-btn {
-    background: #1e293b;
-    color: #ffffff;
-    border: 1px solid #334155;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-}
-
-.tv-btn:hover {
-    background: #334155;
-}
-
-.tv-btn-primary {
-    background: var(--mec-yellow);
-    color: #111827;
-    border: none;
-    font-weight: 700;
-}
-
-.tv-btn-primary:hover {
-    background: var(--mec-yellow-hover);
-}
-
-.tv-btn-secondary {
-    background: transparent;
-    color: #94a3b8;
-    border: 1px solid #334155;
-}
-
-.tv-btn-danger {
-    background: #dc2626;
-    color: #ffffff;
-    border: none;
-}
-
-/* ==========================================================================
-   BOARD CONTAINER & BARRA DE FASES
-   ========================================================================== */
-.tv-board-container {
-    flex: 1;
-    padding: 12px 18px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.tv-phase-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    flex-shrink: 0;
-    overflow-x: auto;
-}
-
-.tv-phase-pill {
-    flex: 1;
-    min-width: 135px;
-    background: #141d2e;
-    border: 1px solid #1f293d;
-    border-radius: 8px;
-    padding: 7px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 12px;
-    color: #64748b;
-    transition: all 0.25s ease;
-}
-
-.tv-phase-pill-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-}
-
-.tv-phase-icon {
-    font-size: 15px;
-    flex-shrink: 0;
-}
-
-.tv-phase-name {
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tv-phase-count {
-    background: #0f172a;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 10px;
-    min-width: 22px;
-    text-align: center;
-}
-
-/* Fases ativas no topo (quando há carros nessa fase) */
-.tv-phase-pill.has-cars {
-    background: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.tv-phase-pill.has-cars .tv-phase-count {
-    background: var(--mec-yellow);
-    color: #111827;
-}
-
-.tv-phase-pill[data-phase="diagnostico"].has-cars { border-bottom: 3px solid var(--phase-diag); }
-.tv-phase-pill[data-phase="orcamento"].has-cars { border-bottom: 3px solid var(--phase-orc); }
-.tv-phase-pill[data-phase="aprovacao"].has-cars { border-bottom: 3px solid var(--phase-aprov); }
-.tv-phase-pill[data-phase="pecas"].has-cars { border-bottom: 3px solid var(--phase-pecas); }
-.tv-phase-pill[data-phase="execucao"].has-cars { border-bottom: 3px solid var(--phase-exec); }
-.tv-phase-pill[data-phase="pronto"].has-cars { border-bottom: 3px solid var(--phase-pronto); }
-.tv-phase-pill[data-phase="terceiro"].has-cars {
-    border-bottom: 3px solid var(--phase-gold);
-    background: #25133d;
-    border-color: #7c3aed;
-}
-
-/* ==========================================================================
-   GRADE DINÂMICA AUTO-FIT (PREENCHIMENTO 100% DA TELA)
-   ========================================================================== */
-.tv-grid-wrapper {
-    flex: 1;
-    width: 100%;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    position: relative;
-}
-
-.tv-cars-grid {
     display: grid;
-    grid-template-columns: repeat(var(--grid-cols, 3), minmax(0, 1fr));
-    grid-template-rows: repeat(var(--grid-rows, 2), minmax(0, 1fr));
-    gap: 12px;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    font-size: var(--ui);
+    line-height: 1.25;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(249, 204, 1, .035), transparent 70%),
+        var(--tv-bg);
 }
 
-/* Estado Vazio */
-.tv-empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+/* ---------- Cabeçalho ---------- */
+.tv-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1em;
+    padding: .55em var(--pad-x);
+    border-bottom: 1px solid var(--tv-border);
+    background: rgba(17, 24, 39, .72);
+}
+
+.tv-brand { display: flex; align-items: center; gap: .8em; min-width: 0; }
+.tv-logo { height: 2.7em; width: auto; flex: none; }
+.tv-brand-text { display: flex; flex-direction: column; min-width: 0; }
+.tv-brand-name { font-size: 1.2em; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
+.tv-brand-sub { font-size: .8em; color: var(--tv-text-muted); letter-spacing: .08em; text-transform: uppercase; }
+
+.tv-clock { display: flex; align-items: baseline; gap: .9em; justify-content: center; white-space: nowrap; }
+.tv-clock-time {
+    font-size: 2.9em;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.tv-clock-sec { font-size: .5em; color: var(--tv-text-dim); font-weight: 500; letter-spacing: 0; margin-left: .1em; }
+.tv-clock-date { font-size: 1em; color: var(--tv-text-muted); }
+
+.tv-header-right { display: flex; align-items: center; justify-content: flex-end; gap: 1.1em; min-width: 0; }
+
+.tv-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: .55em;
+    padding: .4em .95em;
+    border: 1px solid var(--tv-border-strong);
+    border-radius: 999px;
+    background: var(--tv-surface);
+    white-space: nowrap;
+}
+.tv-counter .tv-icon { color: var(--tv-text-muted); }
+.tv-counter-val { font-size: 1.5em; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.tv-counter-label { color: var(--tv-text-muted); font-size: .9em; }
+
+.tv-tools { display: flex; gap: .45em; opacity: .3; transition: opacity 180ms ease-out; }
+.tv-tools:hover, .tv-tools:focus-within { opacity: 1; }
+
+.tv-tool {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #141d2e;
-    border: 2px dashed #334155;
-    border-radius: 12px;
-    padding: 40px;
-    text-align: center;
-    gap: 14px;
-}
-
-.tv-empty-icon {
-    font-size: 64px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
-}
-
-.tv-empty-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: #ffffff;
-}
-
-.tv-empty-sub {
-    font-size: 16px;
-    color: var(--mec-text-muted);
-    max-width: 500px;
-}
-
-/* ==========================================================================
-   CARDS DE VEÍCULOS NO PÁTIO (FLEXÍVEL & AUTO-AJUSTÁVEL)
-   ========================================================================== */
-.tv-card {
-    background: var(--mec-card-bg);
-    border: 1.5px solid var(--mec-card-border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    width: 2.4em;
+    height: 2.4em;
+    padding: 0;
+    border: 1px solid var(--tv-border-strong);
+    border-radius: .55em;
+    background: var(--tv-surface);
+    color: var(--tv-text-muted);
+    font: inherit;
     cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
-    position: relative;
-    overflow: hidden;
+    transition: background 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
+}
+.tv-tool:hover { background: var(--tv-surface-3); color: var(--tv-text); }
+.tv-tool.is-on { color: var(--mec-yellow); border-color: rgba(249, 204, 1, .5); }
+.tv-tool-primary { background: var(--mec-yellow); border-color: var(--mec-yellow); color: var(--mec-charcoal); }
+.tv-tool-primary:hover { background: #ffd92e; color: var(--mec-charcoal); }
+
+button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-visible, .tv-agenda-item:focus-visible {
+    outline: 2px solid var(--mec-yellow);
+    outline-offset: 2px;
+}
+
+/* ---------- Corpo ---------- */
+.tv-main {
+    display: flex;
+    gap: var(--gap);
+    padding: var(--gap) var(--pad-x);
     min-height: 0;
-    height: 100%;
-}
-
-.tv-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-    border-color: var(--mec-yellow);
-}
-
-/* Bordas superiores de fase */
-.tv-card.phase-diagnostico { border-top: 5px solid var(--phase-diag); }
-.tv-card.phase-orcamento { border-top: 5px solid var(--phase-orc); }
-.tv-card.phase-aprovacao { border-top: 5px solid var(--phase-aprov); }
-.tv-card.phase-pecas { border-top: 5px solid var(--phase-pecas); }
-.tv-card.phase-execucao { border-top: 5px solid var(--phase-exec); }
-.tv-card.phase-pronto { border-top: 5px solid var(--phase-pronto); }
-.tv-card.phase-terceiro {
-    border-top: 5px solid var(--phase-gold);
-    border-color: #7c3aed;
-    background: #1f1433;
-}
-
-/* Linha Superior: Badge de Fase & Box/Elevador */
-.tv-card-top-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-    flex-shrink: 0;
-}
-
-/* Badge Nítido de Fase */
-.tv-phase-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
-
-.tv-phase-badge-diagnostico {
-    background: rgba(56, 189, 248, 0.18);
-    border: 1px solid var(--phase-diag);
-    color: var(--phase-diag);
-}
-
-.tv-phase-badge-orcamento {
-    background: rgba(251, 191, 36, 0.18);
-    border: 1px solid var(--phase-orc);
-    color: var(--phase-orc);
-}
-
-.tv-phase-badge-aprovacao {
-    background: rgba(251, 146, 60, 0.18);
-    border: 1px solid var(--phase-aprov);
-    color: var(--phase-aprov);
-}
-
-.tv-phase-badge-pecas {
-    background: rgba(192, 132, 252, 0.18);
-    border: 1px solid var(--phase-pecas);
-    color: var(--phase-pecas);
-}
-
-.tv-phase-badge-execucao {
-    background: rgba(52, 211, 153, 0.18);
-    border: 1px solid var(--phase-exec);
-    color: var(--phase-exec);
-}
-
-.tv-phase-badge-pronto {
-    background: rgba(16, 185, 129, 0.22);
-    border: 1px solid var(--phase-pronto);
-    color: #6ee7b7;
-}
-
-.tv-phase-badge-terceiro {
-    background: #6b21a8;
-    border: 1.5px solid var(--phase-gold);
-    color: #ffffff;
-    box-shadow: 0 0 10px rgba(249, 204, 1, 0.3);
-}
-
-.tv-card-box-badge {
-    background: #0f172a;
-    border: 1px solid #334155;
-    color: var(--mec-yellow);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-
-/* Linha do Veículo: Placa + Modelo */
-.tv-card-vehicle-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 6px;
-    flex-shrink: 0;
-}
-
-/* Placa Mercosul / Padrão Brasil de Alto Contraste */
-.tv-plate-tag {
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    border-radius: 5px;
-    font-weight: 900;
-    letter-spacing: 1.5px;
-    font-family: "Courier New", Consolas, monospace, sans-serif;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    text-transform: uppercase;
-    white-space: nowrap;
-    line-height: 1.1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tv-vehicle-info {
     min-width: 0;
-    flex: 1;
 }
 
-.tv-card-model {
-    font-size: 18px;
-    font-weight: 800;
-    color: #ffffff;
+.tv-board {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--gap);
+}
+
+.tv-board[data-empty="true"] .tv-col,
+.tv-board[data-empty="loading"] .tv-col { display: none; }
+
+/* ---------- Colunas de status ---------- */
+.tv-col {
+    --st: var(--tv-text-muted);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-border);
+    border-radius: .75em;
+}
+.tv-col[data-phase="diagnostico"] { --st: var(--status-diagnostico); }
+.tv-col[data-phase="orcamento"]   { --st: var(--status-orcamento); }
+.tv-col[data-phase="aprovacao"]   { --st: var(--status-aprovacao); }
+.tv-col[data-phase="pecas"]       { --st: var(--status-pecas); }
+.tv-col[data-phase="execucao"]    { --st: var(--status-execucao); }
+.tv-col[data-phase="pronto"]      { --st: var(--status-pronto); }
+.tv-col[data-phase="terceiro"]    { --st: var(--status-terceiro); }
+
+.tv-col-head {
+    display: flex;
+    align-items: center;
+    gap: .6em;
+    padding: .75em .95em .7em;
+    border-top: 3px solid var(--st);
+    border-radius: .75em .75em 0 0;
+    min-width: 0;
+}
+.tv-col-icon { color: var(--st); }
+.tv-col[data-narrow="1"]:not([data-empty="true"]) .tv-col-head { flex-wrap: wrap; align-content: flex-start; row-gap: .25em; min-height: 5.2em; }
+.tv-col[data-narrow="1"]:not([data-empty="true"]) .tv-col-count { order: 2; margin-left: auto; }
+.tv-col[data-narrow="1"]:not([data-empty="true"]) .tv-col-name { order: 3; flex: 1 0 100%; white-space: normal; font-size: 1em; line-height: 1.15; }
+.tv-col-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.05em;
+    font-weight: 600;
+    letter-spacing: .005em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: -0.3px;
+}
+.tv-col-count {
+    min-width: 1.9em;
+    padding: .1em .55em;
+    border-radius: 999px;
+    background: var(--tv-surface-2);
+    border: 1px solid var(--tv-border-strong);
+    color: var(--st);
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
 }
 
-.tv-card-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--mec-text-muted);
+.tv-col-body {
+    --u: 14px;
+    --c: 1;
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--c), var(--trackw, minmax(0, 1fr)));
+    grid-auto-rows: var(--rowh, auto);
+    align-content: start;
+    justify-content: start;
+    gap: var(--gap);
+    padding: 0 var(--gap) var(--gap);
+    font-size: var(--u);
 }
 
-/* Corpo e Detalhes */
-.tv-card-body {
+/* Coluna vazia: vira uma faixa estreita com o contador */
+.tv-col[data-empty="true"] { background: transparent; border-style: dashed; border-color: var(--tv-border); }
+.tv-col[data-empty="true"] .tv-col-body { display: none; }
+.tv-col[data-empty="true"] .tv-col-head {
     flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .55em;
+    padding: .9em 0;
+    opacity: .6;
+    border-top-width: 3px;
+}
+.tv-col[data-empty="true"] .tv-col-name {
+    flex: 1;
+    writing-mode: vertical-rl;
+    text-overflow: clip;
+    font-size: .95em;
+    font-weight: 500;
+    color: var(--tv-text-muted);
+}
+.tv-col[data-empty="true"] .tv-col-count { order: 2; background: transparent; border-color: transparent; color: var(--tv-text-dim); padding: 0; }
+
+/* Retirada por terceiro: destaque elegante */
+.tv-col[data-phase="terceiro"]:not([data-empty="true"]) {
+    border-color: rgba(244, 114, 182, .5);
+    background: linear-gradient(180deg, rgba(244, 114, 182, .09), rgba(244, 114, 182, 0) 38%), var(--tv-surface);
+}
+
+/* ---------- Card do carro ---------- */
+.tv-card {
+    --st: var(--tv-text-muted);
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    justify-content: flex-start;
+    gap: .45em;
+    min-width: 0;
     min-height: 0;
     overflow: hidden;
-    justify-content: center;
+    padding: .65em .8em .65em 1.05em;
+    background: var(--tv-surface-2);
+    border: 1px solid var(--tv-border);
+    border-radius: .7em;
+    cursor: pointer;
+    font-size: 1em;
+    line-height: 1.2;
+    transition: border-color 150ms ease-out, background 150ms ease-out;
 }
+.tv-card:hover { background: var(--tv-surface-3); border-color: var(--tv-border-strong); }
+.tv-card[data-phase="diagnostico"] { --st: var(--status-diagnostico); }
+.tv-card[data-phase="orcamento"]   { --st: var(--status-orcamento); }
+.tv-card[data-phase="aprovacao"]   { --st: var(--status-aprovacao); }
+.tv-card[data-phase="pecas"]       { --st: var(--status-pecas); }
+.tv-card[data-phase="execucao"]    { --st: var(--status-execucao); }
+.tv-card[data-phase="pronto"]      { --st: var(--status-pronto); }
+.tv-card[data-phase="terceiro"]    { --st: var(--status-terceiro); }
+
+.tv-card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: .32em; background: var(--st); }
+
+.tv-card-top { display: flex; align-items: center; gap: .55em; min-width: 0; }
+.tv-card-model {
+    flex: 1;
+    min-width: 0;
+    font-size: 1.35em;
+    font-weight: 600;
+    letter-spacing: -.005em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.brand-logo-container {
+    flex: none;
+    width: 2.1em;
+    height: 2.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .45em;
+    overflow: hidden;
+    background: var(--tv-surface-3);
+    color: var(--tv-text-muted);
+}
+.brand-logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.tv-card-mid { display: flex; align-items: center; justify-content: space-between; gap: .6em; min-width: 0; }
+
+.tv-since {
+    display: inline-flex;
+    align-items: center;
+    gap: .3em;
+    flex: none;
+    font-size: .95em;
+    color: var(--tv-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.tv-since .tv-icon { width: 1em; height: 1em; }
+.tv-since.is-stale { color: var(--tv-warn); }
 
 .tv-card-client {
-    font-size: 13px;
-    color: #cbd5e1;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: space-between;
+    gap: .6em;
+    min-width: 0;
+    font-size: 1.08em;
+    color: #CBD5E1;
 }
+.tv-who { display: flex; align-items: center; gap: .4em; min-width: 0; max-width: 100%; }
+.tv-who .tv-icon { width: 1em; height: 1em; color: var(--tv-text-dim); }
+.tv-who span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tv-card-box { flex: none; max-width: 45%; font-size: .78em; color: var(--tv-text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 .tv-card-notes {
-    font-size: 11px;
-    color: #94a3b8;
-    background: #0f172a;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-style: italic;
-    border-left: 3px solid var(--mec-yellow);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Alerta de Retirada por Terceiro */
-.tv-third-party-alert {
-    background: #4c1d95;
-    border: 1.5px solid var(--phase-gold);
-    border-radius: 6px;
-    padding: 6px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.tv-third-party-header {
-    font-size: 10px;
-    font-weight: 800;
-    color: var(--mec-yellow);
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    letter-spacing: 0.5px;
-}
-
-.tv-third-party-name {
-    font-size: 14px;
-    font-weight: 800;
-    color: #ffffff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tv-third-party-doc {
-    font-size: 11px;
-    color: #e2e8f0;
-}
-
-/* Rodapé do Card */
-.tv-card-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 4px;
-    font-size: 11px;
-    color: #64748b;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding-top: 4px;
-    flex-shrink: 0;
-}
-
-.tv-card-edit-hint {
-    color: #94a3b8;
-    font-weight: 600;
-}
-
-/* ==========================================================================
-   ESCALAS DE TAMANHO DINÂMICAS CONFORME A QUANTIDADE DE CARROS (AUTO-FIT)
-   ========================================================================== */
-
-/* Densidade Baixa (1 a 3 carros - Ocupam a tela inteira em cards gigantes!) */
-.tv-cars-grid[data-density="xlarge"] .tv-card {
-    padding: 24px;
-    gap: 12px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-plate-tag {
-    font-size: 32px;
-    padding: 8px 18px;
-    border-width: 2.5px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-card-model {
-    font-size: 28px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-phase-badge {
-    font-size: 15px;
-    padding: 6px 14px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-card-box-badge {
-    font-size: 14px;
-    padding: 4px 12px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-card-client {
-    font-size: 18px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-card-notes {
-    font-size: 14px;
-    padding: 8px 12px;
-}
-
-.tv-cars-grid[data-density="xlarge"] .tv-third-party-name {
-    font-size: 18px;
-}
-
-/* Densidade Média (4 a 8 carros - 2x2 ou 4x2) */
-.tv-cars-grid[data-density="large"] .tv-card {
-    padding: 16px;
-    gap: 8px;
-}
-
-.tv-cars-grid[data-density="large"] .tv-plate-tag {
-    font-size: 22px;
-    padding: 5px 12px;
-}
-
-.tv-cars-grid[data-density="large"] .tv-card-model {
-    font-size: 20px;
-}
-
-.tv-cars-grid[data-density="large"] .tv-phase-badge {
-    font-size: 13px;
-    padding: 4px 10px;
-}
-
-.tv-cars-grid[data-density="large"] .tv-card-box-badge {
-    font-size: 12px;
-}
-
-.tv-cars-grid[data-density="large"] .tv-card-client {
-    font-size: 14px;
-}
-
-.tv-cars-grid[data-density="large"] .tv-card-notes {
-    font-size: 12px;
-    padding: 5px 10px;
-}
-
-/* Densidade Alta (9 a 15 carros - 4x3 ou 5x3) */
-.tv-cars-grid[data-density="medium"] .tv-card {
-    padding: 10px 12px;
-    gap: 6px;
-}
-
-.tv-cars-grid[data-density="medium"] .tv-plate-tag {
-    font-size: 16px;
-    padding: 3px 8px;
-}
-
-.tv-cars-grid[data-density="medium"] .tv-card-model {
-    font-size: 16px;
-}
-
-.tv-cars-grid[data-density="medium"] .tv-phase-badge {
-    font-size: 11px;
-    padding: 3px 7px;
-}
-
-.tv-cars-grid[data-density="medium"] .tv-card-client {
-    font-size: 12px;
-}
-
-.tv-cars-grid[data-density="medium"] .tv-card-notes {
-    font-size: 11px;
-}
-
-/* Densidade Ultra-Alta (16+ carros - 5x4 ou 6x4) */
-.tv-cars-grid[data-density="compact"] .tv-card {
-    padding: 8px 10px;
-    gap: 4px;
-}
-
-.tv-cars-grid[data-density="compact"] .tv-plate-tag {
-    font-size: 13px;
-    padding: 2px 6px;
-}
-
-.tv-cars-grid[data-density="compact"] .tv-card-model {
-    font-size: 14px;
-}
-
-.tv-cars-grid[data-density="compact"] .tv-phase-badge {
-    font-size: 10px;
-    padding: 2px 6px;
-}
-
-.tv-cars-grid[data-density="compact"] .tv-card-client {
-    font-size: 11px;
-}
-
-.tv-cars-grid[data-density="compact"] .tv-card-notes {
-    font-size: 10px;
-    padding: 2px 6px;
-}
-
-.tv-cars-grid[data-density="compact"] .tv-card-footer {
-    display: none; /* economiza espaço em telas muito cheias */
-}
-
-/* ==========================================================================
-   RODAPÉ TV
-   ========================================================================== */
-.tv-footer {
-    background: #0b0f19;
-    border-top: 1px solid #1f2937;
-    padding: 8px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--mec-text-muted);
-    min-height: 38px;
-    flex-shrink: 0;
-}
-
-.tv-footer-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tv-connection-dot {
-    width: 8px;
-    height: 8px;
-    background-color: var(--phase-exec);
-    border-radius: 50%;
-}
-
-.tv-footer-sep {
-    color: #475569;
-}
-
-.tv-footer-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.tv-lan-address {
-    color: var(--mec-yellow);
-    font-family: Consolas, monospace;
-    font-size: 13px;
-}
-
-/* ==========================================================================
-   MODAL DE GERENCIAMENTO
-   ========================================================================== */
-.tv-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-}
-
-.tv-modal-dialog {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 620px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-}
-
-.tv-modal-header {
-    padding: 16px 20px;
-    background: #0f172a;
-    border-bottom: 2px solid var(--mec-yellow);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.tv-modal-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.tv-modal-close {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.tv-modal-close:hover {
-    color: #ffffff;
-}
-
-.tv-modal-form {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.tv-form-row {
-    display: flex;
-    gap: 12px;
-}
-
-.tv-form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-
-.flex-2 { flex: 2; }
-.flex-3 { flex: 3; }
-
-.tv-form-group label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #cbd5e1;
-}
-
-.tv-input, .tv-select {
-    background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 6px;
-    padding: 8px 12px;
-    color: #ffffff;
-    font-size: 14px;
-    outline: none;
-}
-
-.tv-input:focus, .tv-select:focus {
-    border-color: var(--mec-yellow);
-}
-
-.tv-input.uppercase {
-    text-transform: uppercase;
-}
-
-.third-party-box {
-    background: #2e1065;
-    border: 1px solid #6b21a8;
-    border-radius: 8px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.third-party-title {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #e9d5ff;
-}
-
-.third-party-sub {
-    font-size: 11px;
-    color: #cbd5e1;
-    font-weight: normal;
-}
-
-.tv-modal-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    padding-top: 14px;
-    border-top: 1px solid #334155;
-}
-
-.tv-actions-right {
-    display: flex;
-    gap: 10px;
-    margin-left: auto;
-}
-
-/* Toast */
-.tv-toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: #0f172a;
-    border-left: 4px solid var(--mec-yellow);
-    padding: 12px 20px;
-    border-radius: 6px;
-    color: #ffffff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-    z-index: 2000;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-/* ==========================================================================
-   TV TABS NAVIGATION (Issue #15)
-   ========================================================================== */
-.tv-tabs-nav {
-    display: inline-flex;
-    align-items: center;
-    background: #1e293b;
-    padding: 4px;
-    border-radius: 10px;
-    border: 1px solid #334155;
-    gap: 6px;
-    margin-left: 20px;
-}
-
-.tv-tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.tv-tab-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.tv-tab-btn.active {
-    background: var(--mec-yellow);
-    color: #111827;
-    box-shadow: 0 2px 8px rgba(249, 204, 1, 0.35);
-}
-
-.tv-tab-pill {
-    background: rgba(0, 0, 0, 0.2);
-    color: inherit;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 12px;
-}
-
-.tv-tab-btn.active .tv-tab-pill {
-    background: #111827;
-    color: var(--mec-yellow);
-}
-
-/* ==========================================================================
-   TV CALENDAR VIEW (Issue #15)
-   ========================================================================== */
-.tv-calendar-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 16px 24px;
-    overflow-y: auto;
-    background: #0b0f19;
-}
-
-.tv-cal-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-bottom: 2px solid var(--mec-yellow);
-    border-radius: 12px;
-    padding: 12px 20px;
-    margin-bottom: 18px;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.tv-cal-nav {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.tv-cal-date-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #1e293b;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid #334155;
-    margin-left: 8px;
-}
-
-.tv-cal-indicator-icon {
-    font-size: 18px;
-}
-
-.tv-cal-current-label {
-    font-size: 16px;
-    font-weight: 700;
-    color: #f8fafc;
-    letter-spacing: -0.3px;
-}
-
-.tv-cal-filters {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #1e293b;
-    padding: 4px;
-    border-radius: 8px;
-    border: 1px solid #334155;
-}
-
-.tv-filter-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.15s ease;
-}
-
-.tv-filter-btn:hover {
-    color: #ffffff;
-}
-
-.tv-filter-btn.active {
-    background: #334155;
-    color: #ffffff;
-    font-weight: 700;
-}
-
-.tv-filter-count {
-    background: #0f172a;
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    color: var(--mec-yellow);
-}
-
-.tv-cal-content {
-    flex: 1;
-    overflow-y: auto;
-}
-
-.tv-cal-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 16px;
-}
-
-/* Card de Agendamento na TV */
-.tv-agenda-card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-left: 5px solid var(--mec-yellow);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.tv-agenda-card:hover {
-    border-color: #475569;
-    transform: translateY(-2px);
-}
-
-.tv-agenda-card.status-confirmado {
-    border-left-color: #0284c7;
-}
-
-.tv-agenda-card.status-concluido {
-    border-left-color: #10b981;
-    opacity: 0.85;
-}
-
-.tv-agenda-card.status-cancelado {
-    border-left-color: #ef4444;
-    opacity: 0.65;
-}
-
-.tv-card-top-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #334155;
-    padding-bottom: 10px;
-}
-
-.tv-card-time-box {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tv-card-time {
-    font-size: 20px;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: -0.5px;
-}
-
-.tv-card-date-badge {
-    background: #0f172a;
-    color: #94a3b8;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 6px;
-}
-
-.tv-card-status-badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.tv-badge-agendado {
-    background: rgba(249, 204, 1, 0.15);
-    color: var(--mec-yellow);
-    border: 1px solid rgba(249, 204, 1, 0.4);
-}
-
-.tv-badge-confirmado {
-    background: rgba(2, 132, 199, 0.15);
-    color: #38bdf8;
-    border: 1px solid rgba(2, 132, 199, 0.4);
-}
-
-.tv-badge-concluido {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-}
-
-.tv-badge-cancelado {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.4);
-}
-
-.tv-card-vehicle-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.tv-card-plate-badge {
-    background: #ffffff;
-    color: #000000;
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 4px;
-    border: 2px solid #000000;
-    letter-spacing: 1px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-
-.tv-card-model {
-    font-size: 16px;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.tv-card-client-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 13px;
-    color: #cbd5e1;
-}
-
-.tv-card-client-name {
-    font-weight: 600;
-}
-
-.tv-card-client-phone {
-    color: #94a3b8;
-}
-
-.tv-card-issue-box {
-    background: #0f172a;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid #1e293b;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.tv-card-issue-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--mec-yellow);
-}
-
-.tv-card-issue-desc {
-    font-size: 12px;
-    color: #94a3b8;
-    line-height: 1.4;
-    max-height: 48px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tv-card-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
+    display: none;
     margin-top: auto;
-    padding-top: 8px;
-    border-top: 1px solid #334155;
+    font-size: .88em;
+    color: var(--tv-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tv-col-body[data-notes="1"] .tv-card-notes { display: block; }
+.tv-col-body[data-size="s"] .tv-card-client,
+.tv-col-body[data-size="s"] .tv-card-notes { display: none; }
+
+/* Formato empilhado (colunas estreitas) */
+.tv-col-body[data-layout="tall"] .tv-pickup > .tv-icon { display: none; }
+.tv-col-body[data-layout="tall"] .tv-card-model {
+    white-space: normal;
+    line-height: 1.12;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 1.25em;
+}
+.tv-col-body[data-layout="tall"] .tv-card-mid { flex-direction: column; align-items: flex-start; gap: .4em; }
+.tv-col-body[data-layout="tall"] .tv-card-client { flex-direction: column; align-items: stretch; gap: .15em; }
+.tv-col-body[data-layout="tall"] .tv-card-box { max-width: 100%; }
+.tv-col-body[data-layout="tall"] .tv-pickup-name { -webkit-line-clamp: 3; }
+.tv-col-body[data-layout="tall"] .tv-who { align-items: flex-start; }
+.tv-col-body[data-layout="tall"] .tv-who > span {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.15;
 }
 
-.tv-card-btn {
-    background: #334155;
-    border: none;
-    color: #ffffff;
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.tv-card-btn:hover {
-    background: #475569;
-}
-
-.tv-card-btn-confirm {
-    background: #0284c7;
-}
-
-.tv-card-btn-confirm:hover {
-    background: #0369a1;
-}
-
-.tv-card-btn-edit {
-    background: #334155;
-}
-
-.tv-card-btn-edit:hover {
-    background: #475569;
-}
-
-/* Empty State do Calendário na TV */
-.tv-cal-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    background: #111827;
-    border: 2px dashed #1f2937;
-    border-radius: 16px;
-    margin-top: 20px;
-}
-
-.tv-empty-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-}
-
-.tv-empty-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 6px;
-}
-
-.tv-empty-sub {
-    font-size: 14px;
-    color: #94a3b8;
-    max-width: 450px;
-}
-
-.tv-textarea {
-    resize: vertical;
-    font-family: inherit;
-}
-
-
-
-/* MERCOSUL PLATE STYLES */
+/* Placa Mercosul */
 .mercosul-plate {
     display: inline-flex;
     flex-direction: column;
-    background: #ffffff;
-    border: 2px solid #000000;
-    border-radius: 5px;
+    flex: none;
+    width: max-content;
     overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
-    user-select: none;
-    box-sizing: border-box;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    flex-shrink: 0;
+    border-radius: .3em;
+    background: #fff;
+    border: .07em solid #0B1220;
+    box-shadow: 0 0 0 .05em rgba(255, 255, 255, .12);
 }
-
 .mercosul-top-bar {
-    background: #003399; /* Azul Oficial Mercosul */
-    color: #ffffff;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    padding: 1px 5px;
-    line-height: 1;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    height: 13px;
-    box-sizing: border-box;
+    gap: .6em;
+    padding: .08em .45em;
+    background: #0B3A9E;
+    color: #fff;
+    font-size: .46em;
+    font-weight: 700;
+    letter-spacing: .14em;
+    line-height: 1.15;
 }
-
-.mercosul-country {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 7px;
-    font-weight: 900;
-    letter-spacing: 0.8px;
-    color: #ffffff;
-    text-transform: uppercase;
-}
-
-.mercosul-br-box {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-}
-
-.mercosul-br-text {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 6.5px;
-    font-weight: 900;
-    color: #ffffff;
-    letter-spacing: 0.5px;
-}
-
-.mercosul-mini-flag {
-    display: inline-block;
-    vertical-align: middle;
-    border-radius: 1px;
-}
-
-.mercosul-body-area {
-    background: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    padding: 0 4px;
-}
-
+.mercosul-flag { width: 1.4em; height: 1em; display: block; }
+.mercosul-body-area { display: flex; align-items: center; justify-content: center; padding: .06em .5em .1em; }
 .mercosul-number {
-    font-family: "Arial Black", Impact, "Segoe UI", -apple-system, sans-serif;
-    color: #000000;
-    font-size: 14.5px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    line-height: 1.1;
+    font-size: 1.4em;
+    font-weight: 800;
+    letter-spacing: .07em;
+    line-height: 1.12;
+    color: #0B1220;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
-.mercosul-plate-sm {
-    width: 104px;
-    height: 42px;
-}
-
-.tv-plate-tag {
-    display: none;
-}
-
-/* Logo da Montadora na TV */
-.brand-logo-container {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    border: 1px solid #334155;
-    border-radius: 6px;
-    padding: 3px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    flex-shrink: 0;
-}
-.brand-logo-img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-
-/* Silhueta do Carro na TV */
+/* Marca d'água da silhueta (só em cards largos) */
 .car-silhouette-container {
+    display: none;
+    position: absolute;
+    right: .6em;
+    bottom: .4em;
+    width: 46%;
+    max-height: 62%;
+    opacity: .09;
+    pointer-events: none;
+}
+.car-silhouette-img { width: 100%; height: 100%; object-fit: contain; object-position: right bottom; filter: grayscale(1) brightness(2.4); display: block; }
+.tv-col-body[data-sil="1"] .car-silhouette-container { display: block; }
+
+/* Liberado p/ retirada por terceiro */
+.tv-card[data-phase="terceiro"] {
+    border-color: rgba(244, 114, 182, .55);
+    background: linear-gradient(135deg, rgba(244, 114, 182, .13), rgba(244, 114, 182, .02) 60%), var(--tv-surface-2);
+}
+.tv-pickup {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 100%;
-    background: #0f172a;
-    border-radius: 6px;
-    padding: 4px;
-    border: 1px solid #1e293b;
-    overflow: hidden;
+    gap: .7em;
+    min-width: 0;
+    padding: .5em .7em;
+    border-radius: .55em;
+    background: rgba(244, 114, 182, .16);
+    border: 1px solid rgba(244, 114, 182, .5);
 }
-.car-silhouette-img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-}
-
-.tv-card-box-badge {
-    background: #0f172a;
-    border: 1px solid #334155;
-    color: var(--mec-yellow);
-    font-size: 11px;
+.tv-pickup > .tv-icon { width: 1.9em; height: 1.9em; color: var(--status-terceiro); }
+.tv-pickup-text { display: flex; flex-direction: column; min-width: 0; }
+.tv-pickup-label { font-size: .7em; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--status-terceiro); }
+.tv-pickup-name {
+    font-size: 1.4em;
     font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: auto;
-}
-
-.app-icon {
-    display: inline-block;
-    vertical-align: -2px;
-    stroke: currentColor;
-    fill: none;
-    flex-shrink: 0;
-}
-
-.tv-card-car-model {
-    font-size: 14px;
-    font-weight: 700;
-    color: #ffffff;
-    white-space: nowrap;
-
+    line-height: 1.15;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
 }
+.tv-pickup-doc { font-size: .85em; color: var(--tv-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.tv-card-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--mec-text-muted);
+/* ---------- Animações de mudança ---------- */
+.tv-card.is-moving { z-index: 5; }
+.tv-card.is-changed { animation: tv-flash 3.2s ease-out 1; }
+.tv-card.is-leaving { position: fixed; z-index: 6; margin: 0; pointer-events: none; }
+
+@keyframes tv-flash {
+    0%   { box-shadow: 0 0 0 .14em var(--st), 0 0 2.2em -.2em var(--st); border-color: var(--st); }
+    100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
 }
-
-.tv-card-client {
-    font-size: 12px;
-    color: #cbd5e1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+@keyframes tv-breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(244, 114, 182, 0); }
+    50%      { box-shadow: 0 0 1.4em -.1em rgba(244, 114, 182, .4); }
 }
-
-.tv-card-notes {
-    font-size: 11px;
-    color: #94a3b8;
-    background: #0f172a;
-    padding: 4px 6px;
-    border-radius: 4px;
-    font-style: italic;
-    border-left: 2px solid var(--mec-yellow);
+@keyframes tv-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .35; }
 }
+.tv-col[data-phase="terceiro"] .tv-pickup { animation: tv-breathe 4.5s ease-in-out infinite; }
 
-/* Destaque Gigante para Retirada por Terceiro */
-.tv-third-party-alert {
-    background: #4c1d95;
-    border: 1px solid #7c3aed;
-    border-radius: 6px;
-    padding: 6px 8px;
-    margin-top: 4px;
+/* ---------- Estado vazio ---------- */
+.tv-empty {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    justify-content: center;
+    gap: .6em;
+    text-align: center;
+    color: var(--tv-text-muted);
 }
+.tv-empty-icon .tv-icon { width: 4.5em; height: 4.5em; color: var(--tv-text-dim); stroke-width: 1.25; }
+.tv-empty-title { margin: 0; font-size: 2em; font-weight: 600; color: var(--tv-text); }
+.tv-empty-sub { margin: 0; font-size: 1.15em; }
 
-.tv-third-party-label {
-    font-size: 10px;
-    font-weight: 800;
-    color: #e9d5ff;
-    text-transform: uppercase;
+/* ---------- Agenda do dia ---------- */
+.tv-agenda {
+    flex: 0 0 clamp(220px, 19vw, 640px);
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-border);
+    border-radius: .75em;
+}
+.tv-agenda-head {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: .6em;
+    padding: .75em .95em .7em;
+    border-top: 3px solid var(--tv-border-strong);
+    border-radius: .75em .75em 0 0;
+    color: var(--tv-text-muted);
+}
+.tv-agenda-title { flex: 1; margin: 0; font-size: 1.05em; font-weight: 600; color: var(--tv-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-agenda-count {
+    min-width: 1.9em;
+    padding: .1em .55em;
+    border-radius: 999px;
+    background: var(--tv-surface-2);
+    border: 1px solid var(--tv-border-strong);
+    color: var(--tv-text);
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
 }
 
-.tv-third-party-name {
-    font-size: 13px;
-    font-weight: 800;
-    color: #ffffff;
+.tv-agenda-list {
+    flex: 1 1 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0 var(--gap);
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: .5em;
+    overflow: hidden;
 }
 
-.tv-third-party-doc {
-    font-size: 11px;
-    color: #cbd5e1;
+.tv-agenda-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: .8em;
+    row-gap: .15em;
+    align-items: center;
+    flex: none;
+    padding: .55em .7em;
+    background: var(--tv-surface-2);
+    border: 1px solid var(--tv-border);
+    border-radius: .6em;
+    cursor: pointer;
+}
+.tv-agenda-item:hover { background: var(--tv-surface-3); }
+.tv-ag-time {
+    grid-row: 1 / span 3;
+    font-size: 1.45em;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.tv-ag-main { min-width: 0; display: flex; align-items: center; gap: .5em; font-weight: 600; }
+.tv-ag-model { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tv-ag-plate { flex: none; font-size: .8em; font-weight: 700; letter-spacing: .06em; padding: .05em .45em; border-radius: .3em; background: var(--tv-surface-3); border: 1px solid var(--tv-border-strong); color: var(--tv-text-muted); font-variant-numeric: tabular-nums; }
+.tv-ag-sub { min-width: 0; font-size: .92em; color: var(--tv-text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tv-ag-state { min-width: 0; display: flex; align-items: center; gap: .4em; font-size: .78em; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tv-text-dim); }
+.tv-ag-state::before { content: ""; width: .55em; height: .55em; border-radius: 50%; background: var(--tv-text-dim); }
+.tv-agenda-item[data-status="confirmado"] .tv-ag-state { color: var(--tv-ok); }
+.tv-agenda-item[data-status="confirmado"] .tv-ag-state::before { background: var(--tv-ok); }
+.tv-agenda-item[data-status="agendado"] .tv-ag-state { color: var(--tv-warn); }
+.tv-agenda-item[data-status="agendado"] .tv-ag-state::before { background: var(--tv-warn); }
+.tv-agenda-item.is-done { opacity: .45; }
+.tv-agenda-item.is-next { border-color: rgba(249, 204, 1, .6); background: linear-gradient(90deg, rgba(249, 204, 1, .1), rgba(249, 204, 1, 0) 70%), var(--tv-surface-2); }
+.tv-agenda-item.is-next .tv-ag-time { color: var(--mec-yellow); }
+
+.tv-agenda-more { padding: .55em .95em .8em; text-align: center; font-size: .9em; color: var(--tv-text-muted); }
+
+/* ---------- Rodapé ---------- */
+.tv-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5em;
+    padding: .5em var(--pad-x);
+    border-top: 1px solid var(--tv-border);
+    background: rgba(17, 24, 39, .72);
+    font-size: .85em;
+    color: var(--tv-text-muted);
+}
+.tv-conn { display: inline-flex; align-items: center; gap: .6em; white-space: nowrap; }
+.tv-conn-dot { width: .6em; height: .6em; border-radius: 50%; background: var(--tv-text-dim); }
+.tv-conn[data-state="ok"] .tv-conn-dot { background: var(--tv-ok); }
+.tv-conn[data-state="retry"] { color: var(--tv-warn); }
+.tv-conn[data-state="retry"] .tv-conn-dot { background: var(--tv-warn); animation: tv-pulse 1.4s ease-in-out infinite; }
+.tv-conn[data-state="connecting"] .tv-conn-dot { animation: tv-pulse 1.4s ease-in-out infinite; }
+.tv-footer-sep { width: 1px; height: 1em; background: var(--tv-border-strong); }
+#tv-last-sync { font-variant-numeric: tabular-nums; }
+.tv-footer-right { display: inline-flex; align-items: baseline; gap: .8em; min-width: 0; white-space: nowrap; }
+.tv-lan-address { color: var(--tv-text); font-weight: 600; letter-spacing: .01em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Toast ---------- */
+.tv-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 4.2em;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    padding: .7em 1.3em;
+    border: 1px solid var(--tv-border-strong);
+    border-radius: .7em;
+    background: var(--tv-surface-3);
+    color: var(--tv-text);
+    font-size: var(--ui);
+    font-weight: 500;
+    box-shadow: 0 .6em 2em rgba(0, 0, 0, .5);
+    z-index: 50;
+    animation: tv-toast-in 180ms var(--ease);
+}
+@keyframes tv-toast-in { from { opacity: 0; transform: translate(-50%, .5em); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ---------- Modais (gestão feita na própria TV) ---------- */
+.tv-modal-backdrop {
+    position: fixed;
+    left: 0; right: 0; top: 0; bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2vh 2vw;
+    background: rgba(5, 8, 14, .78);
+    font-size: max(14px, var(--ui));
+}
+.tv-modal-dialog {
+    width: min(46em, 100%);
+    max-height: 96vh;
+    overflow: auto;
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-border-strong);
+    border-radius: 14px;
+    box-shadow: 0 1.5em 4em rgba(0, 0, 0, .6);
+}
+.tv-modal-narrow { width: min(34em, 100%); }
+.tv-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 1em; padding: 1em 1.3em; border-bottom: 1px solid var(--tv-border); }
+.tv-modal-title { margin: 0; font-size: 1.2em; font-weight: 600; }
+.tv-modal-close { display: inline-flex; padding: .4em; border: 0; border-radius: 6px; background: transparent; color: var(--tv-text-muted); cursor: pointer; }
+.tv-modal-close:hover { background: var(--tv-surface-3); color: var(--tv-text); }
+.tv-modal-form { display: flex; flex-direction: column; gap: .9em; padding: 1.2em 1.3em 1.3em; }
+.tv-form-row { display: flex; gap: .9em; }
+.tv-form-group { display: flex; flex-direction: column; gap: .35em; min-width: 0; }
+.flex-1 { flex: 1; } .flex-2 { flex: 2; } .flex-3 { flex: 3; }
+.tv-form-group label { font-size: .85em; font-weight: 500; color: var(--tv-text-muted); }
+.tv-input, .tv-select {
+    width: 100%;
+    min-height: 2.5em;
+    padding: .5em .75em;
+    border: 1px solid var(--tv-border-strong);
+    border-radius: 6px;
+    background: var(--tv-bg);
+    color: var(--tv-text);
+    font: inherit;
+}
+.tv-input::placeholder { color: var(--tv-text-dim); }
+.tv-input.uppercase { text-transform: uppercase; }
+.third-party-box { display: flex; flex-direction: column; gap: .8em; padding: 1em; border: 1px solid rgba(244, 114, 182, .45); border-radius: 10px; background: rgba(244, 114, 182, .07); }
+.third-party-title { display: flex; flex-direction: column; gap: .15em; font-weight: 600; color: var(--status-terceiro); }
+.third-party-sub { font-size: .82em; font-weight: 400; color: var(--tv-text-muted); }
+.tv-modal-actions { display: flex; align-items: center; justify-content: space-between; gap: .8em; margin-top: .3em; flex-wrap: wrap; }
+.tv-actions-right { display: flex; gap: .6em; margin-left: auto; }
+.tv-actions-wide { flex-wrap: wrap; justify-content: flex-end; }
+.tv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5em;
+    min-height: 2.5em;
+    padding: .5em 1.1em;
+    border: 1px solid var(--tv-border-strong);
+    border-radius: 6px;
+    background: var(--tv-surface-2);
+    color: var(--tv-text);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+}
+.tv-btn:hover { background: var(--tv-surface-3); }
+.tv-btn-primary { background: var(--mec-yellow); border-color: var(--mec-yellow); color: var(--mec-charcoal); font-weight: 600; }
+.tv-btn-primary:hover { background: #ffd92e; }
+.tv-btn-danger { color: var(--tv-danger); border-color: rgba(248, 113, 113, .45); background: transparent; }
+.tv-btn-danger:hover { background: rgba(248, 113, 113, .12); }
+
+.tv-agenda-detail { display: grid; grid-template-columns: auto 1fr; gap: .5em 1em; font-size: 1em; }
+.tv-agenda-detail dt { color: var(--tv-text-muted); font-size: .88em; }
+.tv-agenda-detail dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .tv-card.is-changed { animation: none; box-shadow: 0 0 0 .14em var(--st); }
+    .tv-col[data-phase="terceiro"] .tv-pickup,
+    .tv-conn[data-state="retry"] .tv-conn-dot,
+    .tv-conn[data-state="connecting"] .tv-conn-dot,
+    .tv-toast { animation: none; }
+    .tv-card, .tv-tool, .tv-tools { transition: none; }
+}
+
+/* Telas muito baixas/estreitas (ex.: 1280x720 em celular de lado): cabeçalho mais enxuto */
+@media (max-width: 900px) {
+    .tv-brand-sub, .tv-clock-date, .tv-counter-label { display: none; }
 }
