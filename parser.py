@@ -4,9 +4,10 @@ import re
 import datetime
 import threading
 import unicodedata
-import openpyxl
 import xlrd
-from openpyxl.utils.cell import range_boundaries
+
+# openpyxl é importado sob demanda (_openpyxl()): o import custa ~0,5 s e atrasava a
+# subida do servidor/abertura da janela, mesmo sem nenhuma planilha para ler ainda.
 
 # ------------------------------------------------------------------------------
 # Leitura rápida de .xlsx: células mescladas
@@ -20,14 +21,23 @@ from openpyxl.utils.cell import range_boundaries
 # É ligada só dentro de parse_xlsx e por thread, então o excel_writer (que salva as
 # planilhas e precisa dos intervalos mesclados) continua usando o caminho original.
 _fast_merge_tls = threading.local()
+_openpyxl_lock = threading.Lock()
+_openpyxl_mod = None
 
-try:
-    from openpyxl.worksheet import _reader as _ox_reader
-    _orig_bind_merged_cells = _ox_reader.WorksheetReader.bind_merged_cells
+
+def _install_fast_merge_patch():
+    try:
+        from openpyxl.worksheet import _reader as ox_reader
+        from openpyxl.utils.cell import range_boundaries
+    except Exception:  # versão do openpyxl sem esse ponto interno: segue no caminho padrão
+        return
+    orig = ox_reader.WorksheetReader.bind_merged_cells
+    if getattr(orig, "_mecatronicar_fast", False):
+        return
 
     def _bind_merged_cells_fast(self):
         if not getattr(_fast_merge_tls, "on", False):
-            return _orig_bind_merged_cells(self)
+            return orig(self)
         merged = getattr(self.parser, "merged_cells", None)
         if not merged:
             return
@@ -39,12 +49,23 @@ try:
                     if r != min_row or c != min_col:
                         cells.pop((r, c), None)
 
-    _ox_reader.WorksheetReader.bind_merged_cells = _bind_merged_cells_fast
-except Exception:  # versão do openpyxl sem esse ponto interno: segue no caminho padrão
-    _ox_reader = None
+    _bind_merged_cells_fast._mecatronicar_fast = True
+    ox_reader.WorksheetReader.bind_merged_cells = _bind_merged_cells_fast
+
+
+def _openpyxl():
+    global _openpyxl_mod
+    if _openpyxl_mod is None:
+        with _openpyxl_lock:
+            if _openpyxl_mod is None:
+                import openpyxl
+                _install_fast_merge_patch()
+                _openpyxl_mod = openpyxl
+    return _openpyxl_mod
 
 
 def _load_workbook_for_reading(filepath):
+    openpyxl = _openpyxl()
     _fast_merge_tls.on = True
     try:
         return openpyxl.load_workbook(filepath, data_only=True)
