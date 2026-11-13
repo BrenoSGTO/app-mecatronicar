@@ -1,0 +1,145 @@
+{
+  "label": "antes",
+  "files": 2000,
+  "queries": {
+    "plate": "BRA2E19",
+    "plate_visits": 24,
+    "plate_partial": "BRA 2E",
+    "name_noaccent": "guimaraes",
+    "model": "civic"
+  },
+  "python": "3.13.14",
+  "index_cold_ms": 862.4,
+  "index_cold_mode": "rápido (nome do arquivo)",
+  "search_first_after_cold": {
+    "first_ms": 2207.24,
+    "median_ms": 18.17,
+    "p95_ms": 18.17,
+    "status": 200,
+    "bytes": 256685,
+    "bytes_gzip": 14327,
+    "served_gzip": false,
+    "etag": null
+  },
+  "history_first_after_cold": {
+    "first_ms": 249.36,
+    "median_ms": 232.1,
+    "p95_ms": 232.1,
+    "status": 200,
+    "bytes": 257134,
+    "bytes_gzip": 14412,
+    "served_gzip": false,
+    "etag": null
+  },
+  "full_content_parse_ms": 260311.4,
+  "reindex_noop_ms": 450.4,
+  "reindex_incremental_ms": 459.0,
+  "reindex_incremental_indexed": 30,
+  "endpoints": {
+    "search_plate": {
+      "first_ms": 20.96,
+      "median_ms": 21.05,
+      "p95_ms": 21.65,
+      "status": 200,
+      "bytes": 256685,
+      "bytes_gzip": 14331,
+      "served_gzip": false,
+      "etag": null
+    },
+    "search_name_sem_acento": {
+      "first_ms": 24.82,
+      "median_ms": 25.62,
+      "p95_ms": 27.08,
+      "status": 200,
+      "bytes": 532165,
+      "bytes_gzip": 11888,
+      "served_gzip": false,
+      "etag": null
+    },
+    "search_model": {
+      "first_ms": 28.7,
+      "median_ms": 27.92,
+      "p95_ms": 29.37,
+      "status": 200,
+      "bytes": 613944,
+      "bytes_gzip": 14072,
+      "served_gzip": false,
+      "etag": null
+    },
+    "car_history": {
+      "first_ms": 232.32,
+      "median_ms": 228.15,
+      "p95_ms": 235.93,
+      "status": 200,
+      "bytes": 257134,
+      "bytes_gzip": 14415,
+      "served_gzip": false,
+      "etag": null
+    },
+    "patio": {
+      "first_ms": 224.41,
+      "median_ms": 24.91,
+      "p95_ms": 275.47,
+      "status": 200,
+      "bytes": 7321,
+      "bytes_gzip": 1214,
+      "served_gzip": false,
+      "etag": null
+    },
+    "analytics_all": {
+      "first_ms": 435.91,
+      "median_ms": 247.18,
+      "p95_ms": 313.26,
+      "status": 200,
+      "bytes": 10540,
+      "bytes_gzip": 1890,
+      "served_gzip": false,
+      "etag": null
+    },
+    "analytics_30": {
+      "first_ms": 230.28,
+      "median_ms": 235.46,
+      "p95_ms": 239.81,
+      "status": 200,
+      "bytes": 5428,
+      "bytes_gzip": 948,
+      "served_gzip": false,
+      "etag": null
+    },
+    "nf_queue": {
+      "first_ms": 267.95,
+      "median_ms": 269.16,
+      "p95_ms": 277.13,
+      "status": 200,
+      "bytes": 4762391,
+      "bytes_gzip": 147097,
+      "served_gzip": false,
+      "etag": null
+    },
+    "static_app_js": {
+      "first_ms": 2.54,
+      "median_ms": 2.1,
+      "p95_ms": 2.26,
+      "status": 200,
+      "bytes": 256615,
+      "bytes_gzip": 45953,
+      "served_gzip": false,
+      "etag": "\"1794610126.03518-256615-3733137016\""
+    }
+  },
+  "http_server": "werkzeug",
+  "http_mixed": {
+    "requests": 240,
+    "errors": 40,
+    "rps": 18.1,
+    "p50_ms": 88.01,
+    "p95_ms": 1352.67
+  },
+  "http_patio_only": {
+    "requests": 400,
+    "errors": 0,
+    "rps": 56.3,
+    "p50_ms": 119.95,
+    "p95_ms": 239.34
+  }
+}

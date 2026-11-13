@@ -1,0 +1,94 @@
+         335349946 function calls (324674840 primitive calls) in 321.673 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1380 to 45 due to restriction <45>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      609    0.112    0.000  305.081    0.501 cache.py:645(get_car_history)
+        2    0.040    0.020  301.036  150.518 benchmark.py:223(full_content_parse)
+      132    0.001    0.000  280.746    2.127 benchmark.py:119(timed)
+     5508    0.060    0.000  234.415    0.043 cache.py:311(_ensure_row_parsed)
+     2030    0.010    0.000  231.366    0.114 parser.py:211(parse_file)
+     2000    8.053    0.004  228.775    0.114 parser.py:220(parse_xlsx)
+     2000    0.017    0.000  206.399    0.103 excel.py:316(load_workbook)
+     2000    0.281    0.000  176.094    0.088 excel.py:286(read)
+     2000    0.297    0.000  140.240    0.070 excel.py:212(read_worksheets)
+     2060    0.022    0.000  136.204    0.066 _reader.py:464(bind_all)
+     2060    0.385    0.000  108.236    0.053 _reader.py:394(bind_merged_cells)
+    90840    0.681    0.000   98.171    0.001 worksheet.py:605(_clean_merge_range)
+    90840    2.271    0.000   96.590    0.001 merge.py:93(format)
+   919764    1.240    0.000   69.222    0.000 indexed_list.py:47(add)
+   852568    1.691    0.000   67.829    0.000 styleable.py:22(__set__)
+   133897   63.073    0.000   63.073    0.000 {method 'execute' of 'sqlite3.Cursor' objects}
+     4436    0.058    0.000   57.800    0.013 cache.py:1141(get_nf_control)
+     5185    0.219    0.000   57.589    0.011 cache.py:233(init_db)
+4079018/1695758   12.546    0.000   40.117    0.000 serialisable.py:173(__eq__)
+866736/264226    7.828    0.000   36.566    0.000 serialisable.py:46(from_tree)
+   919764    1.227    0.000   36.549    0.000 indexed_list.py:42(append)
+     2086   30.809    0.015   30.809    0.015 {built-in method _io.open}
+     2000    0.006    0.000   30.288    0.015 excel.py:121(__init__)
+     2000    0.015    0.000   30.279    0.015 excel.py:66(_validate_archive)
+     2020    0.029    0.000   30.262    0.015 __init__.py:1350(__init__)
+5263182/1995656   16.033    0.000   28.308    0.000 serialisable.py:204(__hash__)
+     2060    1.049    0.001   26.301    0.013 _reader.py:367(bind_cells)
+     2000    0.431    0.000   24.546    0.012 stylesheet.py:199(apply_stylesheet)
+   103780    0.697    0.000   23.771    0.000 _reader.py:125(parse)
+ 13110540    9.451    0.000   22.234    0.000 serialisable.py:160(__iter__)
+     2000    0.015    0.000   21.657    0.011 stylesheet.py:99(from_tree)
+       11    0.008    0.001   18.806    1.710 benchmark.py:125(bench_get)
+      128    0.000    0.000   18.662    0.146 test.py:1163(get)
+      128    0.001    0.000   18.661    0.146 testing.py:204(open)
+      128    0.001    0.000   18.625    0.146 test.py:1062(open)
+      128    0.001    0.000   18.620    0.145 test.py:984(run_wsgi_app)
+      128    0.001    0.000   18.592    0.145 test.py:1230(run_wsgi_app)
+      128    0.001    0.000   18.586    0.145 app.py:1529(__call__)
+      128    0.001    0.000   18.586    0.145 app.py:1479(wsgi_app)
+      128    0.001    0.000   18.510    0.145 app.py:904(full_dispatch_request)
+      128    0.023    0.000   18.483    0.144 app.py:879(dispatch_request)
+ 10246030   10.990    0.000   16.090    0.000 base.py:39(__set__)
+   298768    0.228    0.000   16.071    0.000 proxy.py:41(__add__)
+552654/298768    3.558    0.000   15.843    0.000 serialisable.py:215(__add__)
+2383260/2370340    0.924    0.000   15.378    0.000 serialisable.py:184(__ne__)
+
+
+
+
+==== tottime ====
+         335349946 function calls (324674840 primitive calls) in 321.673 seconds
+
+   Ordered by: internal time
+   List reduced from 1380 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   133897   63.073    0.000   63.073    0.000 {method 'execute' of 'sqlite3.Cursor' objects}
+     2086   30.809    0.015   30.809    0.015 {built-in method _io.open}
+5263182/1995656   16.033    0.000   28.308    0.000 serialisable.py:204(__hash__)
+4079018/1695758   12.546    0.000   40.117    0.000 serialisable.py:173(__eq__)
+63926784/63165300   11.606    0.000   12.353    0.000 {built-in method builtins.getattr}
+ 10246030   10.990    0.000   16.090    0.000 base.py:39(__set__)
+ 52946109   10.297    0.000   10.305    0.000 {built-in method builtins.isinstance}
+ 13110540    9.451    0.000   22.234    0.000 serialisable.py:160(__iter__)
+     2000    8.053    0.004  228.775    0.114 parser.py:220(parse_xlsx)
+866736/264226    7.828    0.000   36.566    0.000 serialisable.py:46(from_tree)
+    10372    6.017    0.001    6.330    0.001 {built-in method _sqlite3.connect}
+  6306288    5.766    0.000   10.070    0.000 strings.py:12(safe_string)
+ 30549390    5.605    0.000    5.605    0.000 {method 'startswith' of 'str' objects}
+  4967452    5.504    0.000   14.755    0.000 base.py:68(__set__)
+ 19937368    4.212    0.000    4.212    0.000 {method 'append' of 'list' objects}
+    84582    3.897    0.000    3.897    0.000 decoder.py:351(raw_decode)
+552654/298768    3.558    0.000   15.843    0.000 serialisable.py:215(__add__)
+ 11362238    3.491    0.000    3.491    0.000 base.py:24(__set__)
+     5527    3.378    0.001    3.378    0.001 {method 'commit' of 'sqlite3.Connection' objects}
+    11136    3.262    0.000    3.262    0.000 {method 'fetchall' of 'sqlite3.Cursor' objects}
+  2871378    2.969    0.000   11.593    0.000 base.py:164(__set__)
+  1175696    2.828    0.000    3.871    0.000 ElementTree.py:1661(_start)
+    16250    2.735    0.000    2.735    0.000 {built-in method nt.stat}
+  1262804    2.522    0.000    6.641    0.000 styleable.py:29(__get__)
+    90840    2.271    0.000   96.590    0.001 merge.py:93(format)
+  5992696    2.127    0.000    3.026    0.000 base.py:53(_convert)
+5536354/2268828    2.097    0.000   11.918    0.000 {built-in method builtins.hash}
+     4150    2.020    0.000    7.908    0.002 {method 'Parse' of 'pyexpat.xmlparser' objects}
+106840/94840    1.971    0.000    3.301    0.000 serialisable.py:106(to_tree)
+   428246    1.873    0.000   13.476    0.000 borders.py:77(__init__)
+
+
