@@ -1593,8 +1593,9 @@ def update_patio_car_status(car_id, status, authorized_name=None, authorized_doc
 def delete_patio_car(car_id, db_path=None):
     return delete_patio_status(record_id=car_id, db_path=db_path)
 
-def get_patio_summary(db_path=None):
-    cars = list_patio_status(db_path=db_path)
+def get_patio_summary(db_path=None, cars=None):
+    if cars is None:
+        cars = list_patio_status(db_path=db_path)
     summary = {s: 0 for s in PATIO_STATUSES_DISPLAY}
     for c in cars:
         st = c.get("status") or c.get("status_display")
@@ -2184,6 +2185,19 @@ def save_nf_control(data=None, db_path=None, **kwargs):
 
 def get_pending_nfs(db_path=None):
     return get_nf_queue(filter_type='pending', db_path=db_path).get("queue", [])
+
+def is_indexed_file(fpath, db_path=None):
+    """True se o caminho já está no índice de planilhas."""
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM files WHERE file_path = ? LIMIT 1", (fpath,))
+        return cur.fetchone() is not None
+    finally:
+        conn.close()
+
 
 def index_single_file(fpath, db_path=None, old_fpath=None):
     """
