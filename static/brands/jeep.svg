@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 50" width="100%" height="100%">
-  <rect width="110" height="50" rx="10" fill="#1e392a"/>
-  <text x="55" y="34" font-family="'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="2">Jeep</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">JE</text></svg>

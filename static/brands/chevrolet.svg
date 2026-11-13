@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 70" width="100%" height="100%">
-  <defs>
-    <linearGradient id="chevy-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffd54f"/>
-      <stop offset="50%" stop-color="#d4af37"/>
-      <stop offset="100%" stop-color="#aa820a"/>
-    </linearGradient>
-  </defs>
-  <polygon points="12,25 108,25 102,45 6,45" fill="url(#chevy-gold)" stroke="#111827" stroke-width="2.5"/>
-  <polygon points="45,8 75,8 75,62 45,62" fill="url(#chevy-gold)" stroke="#111827" stroke-width="2.5"/>
-  <polygon points="48,12 72,12 72,58 48,58" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">CH</text></svg>

@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 65" width="100%" height="100%">
-  <ellipse cx="55" cy="32.5" rx="50" ry="28" fill="none" stroke="#e2231a" stroke-width="4"/>
-  <text x="55" y="42" font-family="'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="900" fill="#e2231a" text-anchor="middle" letter-spacing="4">BYD</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="20" font-weight="600" letter-spacing=".5">BYD</text></svg>

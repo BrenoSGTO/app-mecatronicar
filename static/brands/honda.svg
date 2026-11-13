@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 90" width="100%" height="100%">
-  <path d="M16,14 L84,14 C87,14 89,16 88,20 L76,78 C75,81 72,84 69,84 L31,84 C28,84 25,81 24,78 L12,20 C11,16 13,14 16,14 Z" fill="none" stroke="#cc0000" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M32,24 L36,74 M68,24 L64,74 M33,48 L67,48" fill="none" stroke="#cc0000" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">HO</text></svg>
