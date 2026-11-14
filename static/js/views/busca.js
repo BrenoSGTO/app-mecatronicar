@@ -120,15 +120,15 @@ function mount(el) {
                 <h1 class="page-title" data-field="title">Veículos</h1>
                 <p class="page-subtitle" data-field="subtitle">Busque por placa, nome do cliente ou modelo na barra superior.</p>
             </div>
-            <div class="page-actions" data-field="directory-tools">
-                <div class="input-group busca-filter">
+            <div class="page-actions">
+                <div class="busca-hint" data-field="hint" hidden>
+                    <span class="kbd" aria-label="Seta para cima">${icon('chevron-up', 12)}</span><span class="kbd" aria-label="Seta para baixo">${icon('chevron-down', 12)}</span> navegar
+                    <span class="kbd">Enter</span> abrir
+                </div>
+                <div class="input-group busca-filter" data-field="directory-tools">
                     ${icon('list-filter', 16, 'input-icon')}
                     <input type="search" class="input" data-field="filter" placeholder="Filtrar esta lista" aria-label="Filtrar a lista de veículos" autocomplete="off">
                 </div>
-            </div>
-            <div class="busca-hint" data-field="hint" hidden>
-                <span class="kbd">↑</span><span class="kbd">↓</span> navegar
-                <span class="kbd">Enter</span> abrir
             </div>
         </header>
         <div data-field="results" aria-live="polite"></div>`);
@@ -277,7 +277,7 @@ function renderDirectory() {
                 ${list.map((car) => {
                     const p = car.plate_clean || car.plate_display || '';
                     return html`<tr class="is-clickable" tabindex="0" role="option" aria-selected="false" data-nav-item data-plate="${p}">
-                        <td>${plate(car.plate_display || car.plate_clean, 'sm')}</td>
+                        <td><span class="plate-chip">${formatPlate(car.plate_display || car.plate_clean)}</span></td>
                         <td class="truncate busca-col-client" title="${car.client_name || ''}">${highlight(car.client_name || 'Cliente', q)}</td>
                         <td class="truncate busca-col-model" title="${car.car_model || ''}">${highlight(car.car_model || 'Veículo', q)}${car.car_color ? html` <span class="text-subtle">· ${car.car_color}</span>` : ''}</td>
                         <td class="num">${car.visit_count || 1}</td>
