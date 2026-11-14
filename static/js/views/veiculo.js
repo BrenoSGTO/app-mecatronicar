@@ -15,23 +15,29 @@ import { createMenu } from '../ui/menu.js';
 import { toast } from '../ui/toast.js';
 import { copyText } from '../ui/clipboard.js';
 import { plate, brandLogo, silhouette } from '../ui/vehicle.js';
-import { cleanPlate, formatKm, formatPlate, matchesSearchTokens, plural } from '../lib/format.js';
+import { identifyCar } from '../lib/catalog.js';
+import { cleanPlate, formatKm, formatPlate, matchesSearchTokens, normalizeText, plural } from '../lib/format.js';
 import { openInExcel, openOrcamentoPdf, openHistoryPdf } from '../lib/documents.js';
 import { openNewOs, openEditOs } from './os.js';
 import { openChecklist } from './checklist.js';
 import { openFiscalVisit } from './fiscal.js';
 import { openPatioManager } from './patio.js';
 import { openPrintSelection } from './impressao.js';
+import { highlight } from './busca.js';
 
 const SERVICE_SECTION = 'Serviço';
+const OPEN_ALL_UP_TO = 5;      // até 5 visitas: todas abertas
+const OPEN_RECENT = 3;         // acima disso: só as 3 mais recentes abertas
 
 let root = null;
-let history = null;        // resposta de /api/car_history + visitas ordenadas
+let history = null;            // resposta de /api/car_history + visitas ordenadas
 let loadingPlate = null;
 let showAllServices = false;
 let noteModal = null;
+let noteCurrent = null;
 let printMenu = null;
-const cardControls = new Map(); // índice da visita -> { setServicesVisible, card }
+const visitOpen = new Map();   // file_path -> aberta?
+const cardControls = new Map();// índice da visita -> { card, setServicesVisible }
 
 /* ------------------------------------------------------------------ */
 /* Helpers de dados                                                    */
@@ -65,6 +71,70 @@ function vehiclePlate() {
 
 function latestVisit() {
     return history?.sorted?.[0] || null;
+}
+
+function visitKey(visit) {
+    return visit.file_path || `${visit.visit_num}-${visit.entry_date}`;
+}
+
+function defaultOpen(index, total) {
+    return total <= OPEN_ALL_UP_TO || index < OPEN_RECENT;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cores originais do Excel com contraste legível                      */
+/* ------------------------------------------------------------------ */
+
+const COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\))$/i;
+
+function parseColor(value) {
+    const v = String(value || '').trim();
+    let m = /^#([0-9a-f]{3})$/i.exec(v);
+    if (m) return [...m[1]].map((c) => parseInt(c + c, 16));
+    m = /^#([0-9a-f]{6})/i.exec(v);
+    if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+    m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(v);
+    if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+    return null;
+}
+
+function luminance([r, g, b]) {
+    const lin = (c) => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrast(a, b) {
+    const la = luminance(a);
+    const lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Texto da planilha se tiver contraste AA; senão preto ou branco, o que ler melhor. */
+function readableText(bgValue, preferredValue) {
+    const bg = parseColor(bgValue);
+    if (!bg) return null;
+    const preferred = parseColor(preferredValue);
+    if (preferred && contrast(bg, preferred) >= 4.5) return preferredValue;
+    const dark = [17, 24, 39];
+    const light = [255, 255, 255];
+    return contrast(bg, dark) >= contrast(bg, light) ? '#111827' : '#ffffff';
+}
+
+/** Aplica as cores de linha vindas do Excel (dado dinâmico, então via custom property). */
+function applyRowColors(container) {
+    for (const tr of container.querySelectorAll('tr[data-row-color]')) {
+        const bg = tr.dataset.rowColor;
+        if (!bg || !COLOR_RE.test(bg)) {
+            tr.classList.remove('has-color');
+            continue;
+        }
+        const fg = readableText(bg, COLOR_RE.test(tr.dataset.rowFg || '') ? tr.dataset.rowFg : '');
+        tr.style.setProperty('--row-bg', bg);
+        if (fg) tr.style.setProperty('--row-fg', fg);
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -105,13 +175,21 @@ function mount(el) {
 
 function renderSkeleton() {
     render($('[data-field="content"]', root), html`
-        <div class="card veiculo-header"><div class="skeleton-stack card-body">
-            <div class="skeleton skeleton-title"></div>
-            <div class="skeleton skeleton-text"></div>
-            <div class="skeleton skeleton-text"></div>
-        </div></div>
-        <div class="skeleton skeleton-block"></div>
-        <div class="skeleton skeleton-block"></div>`);
+        <div class="card veiculo-header" aria-busy="true">
+            <div class="veiculo-top">
+                <div class="skeleton veiculo-skeleton-plate"></div>
+                <div class="skeleton-stack veiculo-skeleton-main">
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text"></div>
+                </div>
+            </div>
+            <div class="skeleton skeleton-block"></div>
+        </div>
+        <div class="visits-list">
+            <div class="skeleton skeleton-block veiculo-skeleton-visit"></div>
+            <div class="skeleton skeleton-block veiculo-skeleton-visit"></div>
+            <div class="skeleton skeleton-block veiculo-skeleton-visit"></div>
+        </div>`);
 }
 
 function renderNotFound(plateValue, message) {
@@ -120,7 +198,7 @@ function renderNotFound(plateValue, message) {
         <div class="empty-state-title">Nenhuma visita encontrada para ${formatPlate(plateValue)}</div>
         <div class="empty-state-text">${message || 'Confira a placa ou atualize a lista de planilhas nas configurações.'}</div>
         <div class="empty-state-actions">
-            <button type="button" class="btn btn-primary btn-sm" data-action="new-visit-plate" data-plate="${plateValue}">${icon('plus', 15)} Nova visita para esta placa</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="new-visit-plate" data-plate="${plateValue}">${icon('plus', 15)} Nova visita para esta placa</button>
             <a class="btn btn-secondary btn-sm" href="#/busca">Buscar outro veículo</a>
         </div>
     </div></div>`);
@@ -138,41 +216,52 @@ function headerMarkup(visits) {
     const minKm = kms.length ? Math.min(...kms) : 0;
     const lastKm = maxKm ? formatKm(maxKm) : (latest.odometer ? formatKm(latest.odometer) : '—');
     const kmDiff = kms.length > 1 && maxKm > minKm ? `+${(maxKm - minKm).toLocaleString('pt-BR')} km` : (kms.length ? '1 registro' : '—');
+    const info = identifyCar(latest.car_model);
 
     return html`
         <section class="card veiculo-header">
-            <div class="veiculo-identity">
-                ${plate(latest.plate_display || latest.plate, 'lg')}
-                ${brandLogo(latest.car_model, 'lg')}
+            <div class="veiculo-top">
+                <div class="veiculo-plate">${plate(latest.plate_display || latest.plate, 'lg')}</div>
                 <div class="veiculo-identity-main">
-                    <div class="row row-wrap">
+                    <div class="veiculo-owner-row">
                         <h1 class="veiculo-owner">${latest.client_name || 'Cliente'}</h1>
-                        ${d.phone ? html`<span class="tag tag-lg">${icon('phone', 14)} <span class="num">${d.phone}</span></span>` : ''}
+                        ${d.phone ? html`<span class="veiculo-phone">
+                            <span class="tag tag-lg">${icon('phone', 14)} <span class="num">${d.phone}</span></span>
+                            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="copy-phone" data-text="${d.phone}" aria-label="Copiar telefone" data-tooltip="Copiar telefone">${icon('copy', 15)}</button>
+                        </span>` : ''}
                     </div>
                     <div class="veiculo-tags">
                         <span class="tag tag-lg tag-accent">${icon('car-front', 14)} ${latest.car_model || 'Veículo'}</span>
                         ${latest.car_year ? html`<span class="tag tag-lg">Ano ${latest.car_year}</span>` : ''}
                         ${latest.car_color ? html`<span class="tag tag-lg">${latest.car_color}</span>` : ''}
                         ${d.car_fuel ? html`<span class="tag tag-lg">${d.car_fuel}</span>` : ''}
-                        ${d.car_chassis ? html`<span class="tag tag-lg mono" title="Chassi">Chassi ${d.car_chassis}</span>` : ''}
+                        ${d.model_comment ? html`<span class="tag tag-lg" title="Nota da célula do modelo na planilha">${icon('sticky-note', 14)} ${d.model_comment}</span>` : ''}
+                        ${d.car_chassis ? html`<button type="button" class="tag tag-lg mono" data-action="copy-chassis" data-text="${d.car_chassis}" title="Copiar chassi">Chassi ${d.car_chassis} ${icon('copy', 12)}</button>` : ''}
                     </div>
                 </div>
-                <div class="veiculo-silhouette">${silhouette(latest.car_model)}</div>
+                <div class="veiculo-vehicle" aria-label="Montadora e modelo">
+                    ${silhouette(latest.car_model)}
+                    <div class="veiculo-vehicle-caption">
+                        ${brandLogo(latest.car_model, 'sm')}
+                        <span class="veiculo-vehicle-name truncate">${info.brandName}${info.modelName && info.modelName !== info.brandName && info.modelName !== 'Veículo' ? ` · ${info.modelName}` : ''}</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="veiculo-stats">
-                <div class="stat"><span class="stat-label">${icon('history', 14)} Visitas</span><span class="stat-value">${visits.length}</span></div>
-                <div class="stat"><span class="stat-label">${icon('gauge', 14)} Último hodômetro</span><span class="stat-value">${lastKm}</span></div>
-                <div class="stat"><span class="stat-label">${icon('chart-column', 14)} Evolução de km</span><span class="stat-value">${kmDiff}</span></div>
+            <div class="veiculo-metrics">
+                <div class="veiculo-metric"><span class="stat-label">${icon('history', 14)} Visitas</span><span class="stat-value">${visits.length}</span></div>
+                <div class="veiculo-metric"><span class="stat-label">${icon('calendar', 14)} Última visita</span><span class="stat-value num">${latest.entry_date || '—'}</span></div>
+                <div class="veiculo-metric"><span class="stat-label">${icon('gauge', 14)} Último hodômetro</span><span class="stat-value">${lastKm}</span></div>
+                <div class="veiculo-metric"><span class="stat-label">${icon('chart-column', 14)} Evolução de km</span><span class="stat-value">${kmDiff}</span></div>
             </div>
 
             <div class="veiculo-actions">
-                <button type="button" class="btn btn-primary" data-action="new-visit">${icon('plus', 16)} Nova visita</button>
+                <button type="button" class="btn btn-secondary" data-action="new-visit">${icon('plus', 16)} Nova visita</button>
                 <button type="button" class="btn btn-secondary" data-action="orcamento-latest" title="Orçamento / OS da visita mais recente em PDF">${icon('file-text', 16)} Orçamento (PDF)</button>
                 <button type="button" class="btn btn-secondary" data-action="checklist-latest" title="Checklist da visita mais recente (sem valores)">${icon('clipboard-list', 16)} Checklist</button>
                 <button type="button" class="btn btn-secondary" data-action="fiscal-vehicle" title="Copiloto Fiscal deste veículo">${icon('receipt-text', 16)} Copiloto Fiscal</button>
                 <button type="button" class="btn btn-secondary" data-action="patio" title="Adicionar ao pátio ou alterar status na TV">${icon('warehouse', 16)} Status no pátio</button>
-                <button type="button" class="btn btn-secondary" data-field="print-trigger">${icon('printer', 16)} Imprimir ${icon('chevron-down', 14)}</button>
+                <button type="button" class="btn btn-secondary push" data-field="print-trigger">${icon('printer', 16)} Imprimir ${icon('chevron-down', 14)}</button>
             </div>
         </section>`;
 }
@@ -203,10 +292,11 @@ function nfBadge(visit, pecas, servicos) {
 
 function itemsTable(items, { main = false, mode = 'pecas' } = {}) {
     const descHeader = mode === 'servicos' ? 'Serviço executado / mão de obra' : 'Peça / anotação da planilha';
+    const showType = new Set(items.map((i) => i.section || 'Item')).size > 1;
     return html`<div class="table-wrap table-flush items-table-wrap">
         <table class="table items-table${main ? ' main-sheet-table' : ''}">
             <thead><tr>
-                <th class="items-col-type">Tipo</th>
+                ${showType ? html`<th class="items-col-type">Tipo</th>` : ''}
                 <th>${descHeader}</th>
                 <th class="num items-col-qty">Qtd</th>
                 <th class="num col-price items-col-money">Valor unit.</th>
@@ -220,10 +310,13 @@ function itemsTable(items, { main = false, mode = 'pecas' } = {}) {
                         data-row-color="${it.color || ''}" data-row-fg="${it.text_color || ''}"
                         data-item-desc="${it.description || ''}" data-item-comment="${it.comment || ''}"
                         data-item-section="${it.section || 'Item'}" data-item-qty="${it.quantity || ''}" data-item-price="${it.total_price || ''}">
-                        <td class="items-type${isService ? ' is-service' : ''}">${it.section || 'Item'}</td>
-                        <td class="items-desc${hasNote ? ' has-excel-note' : ''}"${hasNote ? html` data-action="note" title="Clique para ver a nota desta célula"` : ''}>
-                            ${it.description || ''}
-                            ${hasNote ? html`<span class="note-chip">${icon('sticky-note', 12)} Nota</span>` : ''}
+                        ${showType ? html`<td class="items-type${isService ? ' is-service' : ''}">${it.section || 'Item'}</td>` : ''}
+                        <td class="items-desc${hasNote ? ' has-excel-note' : ''}"${hasNote ? html` data-action="note"` : ''}>
+                            <span class="items-desc-text">${it.description || ''}</span>
+                            ${hasNote ? html`<span class="note-chip">
+                                <button type="button" class="btn btn-ghost btn-sm" data-action="note" title="Ler a nota desta célula">${icon('sticky-note', 14)} Ver nota</button>
+                                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="note-whatsapp" aria-label="Copiar nota para o WhatsApp" data-tooltip="Copiar para o WhatsApp">${icon('message-square-text', 15)}</button>
+                            </span>` : ''}
                         </td>
                         <td class="num">${it.quantity || '—'}</td>
                         <td class="num col-price">${it.unit_price || '—'}</td>
@@ -235,23 +328,11 @@ function itemsTable(items, { main = false, mode = 'pecas' } = {}) {
     </div>`;
 }
 
-/** Aplica as cores de linha vindas do Excel (dado dinâmico → custom property). */
-function applyRowColors(container) {
-    const colorRe = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\))$/i;
-    for (const tr of container.querySelectorAll('tr[data-row-color]')) {
-        const bg = tr.dataset.rowColor;
-        if (!bg || !colorRe.test(bg)) continue;
-        tr.style.setProperty('--row-bg', bg);
-        const fg = tr.dataset.rowFg;
-        tr.style.setProperty('--row-fg', fg && colorRe.test(fg) ? fg : '#1e293b');
-    }
-}
-
 function servicesPanel(servicos, totalServicos, main) {
     return html`<div class="services-panel" data-field="services" hidden>
         <div class="sheet-bar sheet-bar-services">
             <span class="sheet-bar-title">${icon('wrench', 14)} Serviços executados / mão de obra <span class="badge">${servicos.length}</span></span>
-            ${hasValue(totalServicos) ? html`<span class="sheet-bar-total col-price">Total de serviços <strong class="num">${totalServicos}</strong></span>` : ''}
+            ${hasValue(totalServicos) ? html`<span class="sheet-bar-total col-price">Subtotal de mão de obra <strong class="num">${totalServicos}</strong></span>` : ''}
         </div>
         ${servicos.length
             ? itemsTable(servicos, { main, mode: 'servicos' })
@@ -263,6 +344,7 @@ function visitCardMarkup(visit, index) {
     const d = visit.details || {};
     const { pecas, servicos } = splitItems(d);
     const extras = d.extra_sheets_data || [];
+    const open = visitOpen.has(visitKey(visit)) ? visitOpen.get(visitKey(visit)) : defaultOpen(index, history.sorted.length);
     const totals = [
         hasValue(d.total_pecas) && ['Peças', d.total_pecas],
         hasValue(d.total_servicos) && ['Serviços', d.total_servicos],
@@ -270,56 +352,67 @@ function visitCardMarkup(visit, index) {
         d.discount && ['Desconto', d.discount],
     ].filter(Boolean);
 
-    return html`<article class="visit-card" data-visit-index="${index}">
-        <header class="visit-header">
-            <div class="visit-meta">
-                <span class="visit-date">${icon('calendar', 14)} <span class="num">${visit.entry_date || 'Data não informada'}</span></span>
+    return html`<article class="visit-card" data-visit-index="${index}" data-open="${open ? 'true' : 'false'}">
+        <header class="visit-head">
+            <button type="button" class="visit-toggle" data-action="toggle-visit" aria-expanded="${open ? 'true' : 'false'}" title="Abrir ou recolher esta visita">
+                ${icon('chevron-down', 16, 'visit-chevron')}
+                <span class="visit-date num">${visit.entry_date || 'Data não informada'}</span>
                 <span class="tag">${icon('gauge', 12)} <span class="num">${visit.odometer ? formatKm(visit.odometer) : 'KM não informado'}</span></span>
                 ${visit.visit_num ? html`<span class="tag tag-accent">Visita #${visit.visit_num}</span>` : ''}
-                ${nfBadge(visit, pecas, servicos)}
-            </div>
-            <div class="visit-actions">
-                <button type="button" class="btn btn-secondary btn-sm" data-action="orcamento" title="Orçamento / OS em PDF">${icon('file-text', 15)} Orçamento</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-action="checklist" title="Checklist para os mecânicos (sem valores)">${icon('clipboard-list', 15)} Checklist</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-action="fiscal" title="Copiloto Fiscal desta OS">${icon('receipt-text', 15)} Copiloto NF</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-action="edit" title="Editar dados, peças ou serviços desta OS">${icon('pencil', 15)} Editar OS</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-action="excel" title="Abrir a planilha original no Excel">${icon('file-spreadsheet', 15)} Excel</button>
-            </div>
-            <div class="visit-file truncate" title="${visit.file_name || ''}">${icon('file-spreadsheet', 12)} ${visit.file_name || ''}</div>
+            </button>
+            ${nfBadge(visit, pecas, servicos)}
+            <span class="visit-summary truncate">${visit.complaint || ''}</span>
+            ${hasValue(d.total) ? html`<span class="visit-head-total col-price">Total <strong class="num">${d.total}</strong></span>` : ''}
         </header>
 
-        ${(visit.complaint || d.complaint_comment) ? html`<div class="visit-complaint">
-            ${icon('message-square-text', 16)}
-            <div class="visit-complaint-text"><span class="text-subtle">Queixa / motivo:</span> ${visit.complaint || 'Visita para revisão / manutenção'}</div>
-            ${d.complaint_comment ? html`<button type="button" class="btn btn-secondary btn-sm" data-action="scanner-note">${icon('scan-line', 15)} Relatório do scanner</button>` : ''}
-        </div>` : ''}
+        <div class="visit-body" data-field="body"${open ? '' : ' hidden'}>
+            <div class="visit-toolbar">
+                <div class="visit-file truncate" title="${visit.file_name || ''}">${icon('file-spreadsheet', 12)} ${visit.file_name || ''}</div>
+                <div class="visit-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="orcamento" title="Orçamento / OS em PDF">${icon('file-text', 15)} Orçamento</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="checklist" title="Checklist para os mecânicos (sem valores)">${icon('clipboard-list', 15)} Checklist</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="fiscal" title="Copiloto Fiscal desta OS">${icon('receipt-text', 15)} Copiloto NF</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-action="edit" title="Editar dados, peças ou serviços desta OS">${icon('pencil', 15)} Editar OS</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-action="excel" title="Abrir a planilha original no Excel">${icon('file-spreadsheet', 15)} Abrir no Excel</button>
+                </div>
+            </div>
 
-        <div class="sheet-bar">
-            <span class="sheet-bar-title">${icon('package', 14)} Peças da planilha <span class="badge">${pecas.length}</span></span>
-            ${hasValue(d.total_pecas) ? html`<span class="sheet-bar-total col-price">Total de peças <strong class="num">${d.total_pecas}</strong></span>` : ''}
-            <button type="button" class="btn btn-ghost btn-sm push" data-action="toggle-services" aria-expanded="false">
-                ${icon('wrench', 15)} <span data-field="services-label">Ver serviços executados</span> <span class="badge">${servicos.length}</span>
-                ${hasValue(d.total_servicos) ? html`<span class="text-subtle num col-price">${d.total_servicos}</span>` : ''}
-            </button>
+            ${(visit.complaint || d.complaint_comment) ? html`<div class="visit-complaint">
+                ${icon('message-square-text', 16)}
+                <div class="visit-complaint-text"><span class="text-subtle">Queixa / motivo:</span> ${visit.complaint || 'Visita para revisão / manutenção'}</div>
+                ${d.complaint_comment ? html`<span class="visit-complaint-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="scanner-note">${icon('scan-line', 15)} Relatório do scanner</button>
+                    <button type="button" class="btn btn-secondary btn-icon btn-sm" data-action="scanner-whatsapp" aria-label="Copiar relatório do scanner para o WhatsApp" data-tooltip="Copiar para o WhatsApp">${icon('message-square-text', 15)}</button>
+                </span>` : ''}
+            </div>` : ''}
+
+            <div class="sheet-bar">
+                <span class="sheet-bar-title">${icon('package', 14)} Peças da planilha <span class="badge">${pecas.length}</span></span>
+                ${hasValue(d.total_pecas) ? html`<span class="sheet-bar-total col-price">Total de peças <strong class="num">${d.total_pecas}</strong></span>` : ''}
+                <button type="button" class="btn btn-ghost btn-sm push" data-action="toggle-services" aria-expanded="false">
+                    ${icon('wrench', 15)} <span data-field="services-label">Ver serviços executados</span> <span class="badge">${servicos.length}</span>
+                    ${hasValue(d.total_servicos) ? html`<span class="text-subtle num col-price">${d.total_servicos}</span>` : ''}
+                </button>
+            </div>
+            ${pecas.length
+                ? itemsTable(pecas, { main: true, mode: 'pecas' })
+                : html`<p class="items-empty">Nenhuma peça discriminada na seção de peças desta planilha.</p>`}
+            ${servicesPanel(servicos, d.total_servicos, true)}
+
+            <footer class="visit-footer">
+                <div class="visit-extras">
+                    ${extras.length ? html`<span class="text-xs text-subtle">Outras abas:</span>
+                        ${extras.map((sheet, i) => html`<button type="button" class="btn btn-ghost btn-sm extra-sheet-btn" data-action="extra-sheet" data-sheet-index="${i}" title="${sheet.title || `Ver a aba ${sheet.sheet_name}`}">
+                            ${icon('table', 14)} ${sheet.sheet_name}${sheet.items && sheet.items.length ? html` <span class="badge">${sheet.items.length}</span>` : ''}
+                        </button>`)}` : ''}
+                </div>
+                <div class="visit-totals totals-group">
+                    ${totals.map(([label, value]) => html`<span class="visit-total-item">${label} <strong class="num">${value}</strong></span>`)}
+                    ${hasValue(d.total) ? html`<span class="visit-total-final">Total da visita <strong class="num">${d.total}</strong></span>` : ''}
+                </div>
+            </footer>
+            <div class="extra-sheets-holder" data-field="extras"></div>
         </div>
-        ${pecas.length
-            ? itemsTable(pecas, { main: true, mode: 'pecas' })
-            : html`<p class="items-empty">Nenhuma peça discriminada na seção de peças desta planilha.</p>`}
-        ${servicesPanel(servicos, d.total_servicos, true)}
-
-        <footer class="visit-footer">
-            <div class="visit-extras">
-                ${extras.length ? html`<span class="text-xs text-subtle">Outras abas:</span>
-                    ${extras.map((sheet, i) => html`<button type="button" class="btn btn-ghost btn-sm extra-sheet-btn" data-action="extra-sheet" data-sheet-index="${i}" title="${sheet.title || `Ver a aba ${sheet.sheet_name}`}">
-                        ${icon('table', 14)} ${sheet.sheet_name}${sheet.items && sheet.items.length ? html` <span class="badge">${sheet.items.length}</span>` : ''}
-                    </button>`)}` : ''}
-            </div>
-            <div class="visit-totals totals-group">
-                ${totals.map(([label, value]) => html`<span class="visit-total-item">${label} <strong class="num">${value}</strong></span>`)}
-                ${hasValue(d.total) ? html`<span class="visit-total-final">Total da visita <strong class="num">${d.total}</strong></span>` : ''}
-            </div>
-        </footer>
-        <div class="extra-sheets-holder" data-field="extras"></div>
     </article>`;
 }
 
@@ -356,16 +449,16 @@ function extraSheetMarkup(sheet) {
         <header class="extra-sheet-header">
             <span class="fw-semibold">${icon('table', 14)} Aba: ${sheet.sheet_name}</span>
             ${sheet.title ? html`<span class="text-subtle truncate">— ${sheet.title}</span>` : ''}
-            <span class="visit-totals push">
-                ${totals.map(([l, v]) => html`<span class="visit-total-item col-price">${l} <strong class="num">${v}</strong></span>`)}
-                ${sheet.total ? html`<span class="visit-total-final col-price">Total <strong class="num">${sheet.total}</strong></span>` : ''}
+            <span class="visit-totals totals-group push">
+                ${totals.map(([l, v]) => html`<span class="visit-total-item">${l} <strong class="num">${v}</strong></span>`)}
+                ${sheet.total ? html`<span class="visit-total-final">Total <strong class="num">${sheet.total}</strong></span>` : ''}
             </span>
         </header>
         ${body}
     </section>`;
 }
 
-/** Liga o botão "Ver serviços" de um contêiner (card ou aba extra). */
+/** Liga o botão "Ver serviços" de um contêiner (corpo da visita ou aba extra). */
 function setupServicesToggle(container, initiallyOpen) {
     const panel = container.querySelector(':scope > [data-field="services"], :scope > .services-panel');
     const button = container.querySelector(':scope > .sheet-bar [data-action="toggle-services"]');
@@ -384,6 +477,26 @@ function setupServicesToggle(container, initiallyOpen) {
     return setVisible;
 }
 
+/** Abre/recolhe uma visita. `remember: false` para aberturas temporárias (filtro, impressão). */
+function setCardOpen(card, open, { remember = true } = {}) {
+    const body = $('[data-field="body"]', card);
+    if (!body) return;
+    body.hidden = !open;
+    card.dataset.open = open ? 'true' : 'false';
+    $('[data-action="toggle-visit"]', card)?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (remember) {
+        const visit = history?.sorted?.[Number(card.dataset.visitIndex)];
+        if (visit) visitOpen.set(visitKey(visit), open);
+    }
+}
+
+function restoreCardOpenState(card) {
+    const index = Number(card.dataset.visitIndex);
+    const visit = history.sorted[index];
+    const stored = visitOpen.get(visitKey(visit));
+    setCardOpen(card, stored === undefined ? defaultOpen(index, history.sorted.length) : stored, { remember: false });
+}
+
 function renderTimeline() {
     const list = $('[data-field="visits"]', root);
     cardControls.clear();
@@ -395,18 +508,29 @@ function renderTimeline() {
         const { pecas, servicos } = splitItems(visit.details || {});
         const autoOpen = showAllServices || (pecas.length === 0 && servicos.length > 0);
         card._autoOpen = autoOpen;
-        const setVisible = setupServicesToggle(card, autoOpen);
+        const body = $('[data-field="body"]', card);
+        const setVisible = setupServicesToggle(body, autoOpen);
+        card._setServicesVisible = setVisible;
         cardControls.set(index, { card, setServicesVisible: setVisible });
     }
-    syncGlobalServicesButton();
+    syncGlobalButtons();
 }
 
-function syncGlobalServicesButton() {
-    const btn = $('[data-action="toggle-all-services"]', root);
-    if (!btn) return;
-    btn.classList.toggle('is-active', showAllServices);
-    btn.setAttribute('aria-pressed', showAllServices ? 'true' : 'false');
-    btn.querySelector('[data-field="label"]').textContent = showAllServices ? 'Ocultar serviços de todas as planilhas' : 'Mostrar serviços de todas as planilhas';
+function syncGlobalButtons() {
+    const servicesBtn = $('[data-action="toggle-all-services"]', root);
+    if (servicesBtn) {
+        servicesBtn.classList.toggle('is-active', showAllServices);
+        servicesBtn.setAttribute('aria-pressed', showAllServices ? 'true' : 'false');
+        servicesBtn.querySelector('[data-field="label"]').textContent = showAllServices ? 'Ocultar serviços de todas as planilhas' : 'Mostrar serviços de todas as planilhas';
+    }
+    const cards = $$('.visit-card', root);
+    const allOpen = cards.length > 0 && cards.every((c) => c.dataset.open === 'true');
+    const openBtn = $('[data-action="toggle-all-visits"]', root);
+    if (openBtn) {
+        openBtn.hidden = cards.length < 2;
+        openBtn.querySelector('[data-field="label"]').textContent = allOpen ? 'Recolher todas' : 'Expandir todas';
+        openBtn.dataset.mode = allOpen ? 'collapse' : 'expand';
+    }
 }
 
 function renderVehicle() {
@@ -415,18 +539,21 @@ function renderVehicle() {
         ${headerMarkup(visits)}
 
         <section class="veiculo-filter card">
-            <div class="input-group">
-                ${icon('search', 16, 'input-icon')}
-                <input type="search" class="input" data-field="item-filter" placeholder="Buscar peça ou serviço neste veículo (ex.: troca de óleo, filtro, correia, pastilha)" autocomplete="off">
-                <button type="button" class="btn btn-ghost btn-icon btn-sm input-action" data-action="clear-filter" aria-label="Limpar filtro" hidden>${icon('x', 15)}</button>
+            <div class="veiculo-toolbar">
+                <h2 class="section-title veiculo-timeline-title">${icon('history', 18)} Linha do tempo <span class="badge">${visits.length}</span></h2>
+                <div class="input-group veiculo-search">
+                    ${icon('search', 16, 'input-icon')}
+                    <input type="search" class="input" data-field="item-filter" aria-label="Buscar peça ou serviço neste veículo" placeholder="Buscar peça ou serviço neste veículo (ex.: óleo, correia, pastilha)" autocomplete="off">
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm input-action" data-action="clear-filter" aria-label="Limpar filtro" hidden>${icon('x', 15)}</button>
+                </div>
+                <div class="row row-gap-1 row-wrap">
+                    <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-all-visits" data-mode="expand">${icon('chevron-down', 15)} <span data-field="label">Expandir todas</span></button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-all-services" aria-pressed="false">${icon('wrench', 15)} <span data-field="label">Mostrar serviços de todas as planilhas</span></button>
+                </div>
             </div>
             <div class="veiculo-matches" data-field="matches" hidden></div>
         </section>
 
-        <div class="section-header veiculo-timeline-header">
-            <h2 class="section-title">${icon('history', 18)} Linha do tempo das visitas <span class="badge">${visits.length}</span></h2>
-            <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-all-services" aria-pressed="false">${icon('wrench', 15)} <span data-field="label">Mostrar serviços de todas as planilhas</span></button>
-        </div>
         <div class="visits-list" data-field="visits"></div>`);
 
     renderTimeline();
@@ -446,6 +573,45 @@ function renderVehicle() {
 /* Filtro de peças / serviços                                          */
 /* ------------------------------------------------------------------ */
 
+/** Marca os trechos encontrados com a CSS Custom Highlight API (sem mexer no DOM). */
+function paintHits(rows, query) {
+    if (typeof CSS === 'undefined' || !CSS.highlights || typeof Highlight === 'undefined') return;
+    const ranges = [];
+    const tokens = normalizeText(query).split(/\s+/).filter(Boolean);
+    for (const tr of rows) {
+        const cell = tr.querySelector('.items-desc-text');
+        const node = cell?.firstChild;
+        if (!node || node.nodeType !== Node.TEXT_NODE) continue;
+        const text = node.data;
+        let folded = '';
+        const map = [];
+        for (let i = 0; i < text.length; i++) {
+            for (const ch of text[i].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()) {
+                folded += ch;
+                map.push(i);
+            }
+        }
+        for (const token of tokens) {
+            let from = 0;
+            while (token) {
+                const at = folded.indexOf(token, from);
+                if (at < 0) break;
+                const range = new Range();
+                range.setStart(node, map[at]);
+                range.setEnd(node, map[at + token.length - 1] + 1);
+                ranges.push(range);
+                from = at + token.length;
+            }
+        }
+    }
+    if (ranges.length) CSS.highlights.set('item-hit', new Highlight(...ranges));
+    else CSS.highlights.delete('item-hit');
+}
+
+function clearHits() {
+    if (typeof CSS !== 'undefined' && CSS.highlights) CSS.highlights.delete('item-hit');
+}
+
 function filterItems(rawQuery) {
     if (!history) return;
     const q = (rawQuery || '').trim();
@@ -454,15 +620,19 @@ function filterItems(rawQuery) {
 
     if (!q) {
         matchesEl.hidden = true;
+        clearHits();
         for (const card of cards) {
             card.hidden = false;
             card.querySelectorAll('tr.is-match').forEach((tr) => tr.classList.remove('is-match'));
             card._setServicesVisible?.(showAllServices || card._autoOpen === true);
+            restoreCardOpenState(card);
         }
+        syncGlobalButtons();
         return;
     }
 
     const occurrences = [];
+    const matchedRows = [];
     for (const card of cards) {
         const visit = history.sorted[Number(card.dataset.visitIndex)];
         if (!visit) continue;
@@ -479,6 +649,7 @@ function filterItems(rawQuery) {
             const ds = tr.dataset;
             if (matchesSearchTokens(`${ds.itemDesc || ''} ${ds.itemComment || ''}`, q)) {
                 tr.classList.add('is-match');
+                matchedRows.push(tr);
                 cardMatch = true;
                 const isService = ds.itemSection === SERVICE_SECTION;
                 if (isService) serviceMatch = true;
@@ -498,6 +669,7 @@ function filterItems(rawQuery) {
             }
         }
         card.hidden = !cardMatch;
+        if (cardMatch) setCardOpen(card, true, { remember: false });
     }
 
     matchesEl.hidden = false;
@@ -514,17 +686,32 @@ function filterItems(rawQuery) {
                     <span class="num">${o.visit.odometer ? formatKm(o.visit.odometer) : 'KM não inf.'}</span>
                     ${o.visit.visit_num ? html`<span>Visita #${o.visit.visit_num}</span>` : ''}
                 </span>
-                <span class="match-row-desc"><span class="tag">${o.section}</span> ${o.description || ''}${o.quantity && o.quantity !== '-' ? ` (qtd. ${o.quantity})` : ''}</span>
+                <span class="match-row-desc"><span class="tag">${o.section}</span> ${highlight(o.description || '', q)}${o.quantity && o.quantity !== '-' ? ` (qtd. ${o.quantity})` : ''}</span>
                 ${o.price && o.price !== '-' ? html`<span class="match-row-price num col-price">${o.price}</span>` : ''}
             </button>`)}</div>`
             : html`<p class="text-sm text-muted">Nenhuma peça ou serviço com “${q}” nas visitas deste veículo.</p>`}`);
+
+    paintHits(matchedRows.filter((tr) => !tr.closest('[hidden]')), q);
+    syncGlobalButtons();
 }
 
 /* ------------------------------------------------------------------ */
-/* Ações                                                               */
+/* Notas de célula (triângulo vermelho) e relatório do scanner         */
 /* ------------------------------------------------------------------ */
 
-function openNote(title, subtitle, text) {
+function whatsappMessage({ heading, visit, item, text }) {
+    const ctx = vehicleContext();
+    const lines = [
+        `*${heading}*`,
+        `Veículo: ${ctx.car} (${ctx.plateDisplay})`,
+    ];
+    if (visit?.entry_date) lines.push(`Data: ${visit.entry_date}${visit.odometer ? ` · ${formatKm(visit.odometer)}` : ''}`);
+    if (item) lines.push(`Item: ${item}`);
+    lines.push('', String(text || '').replace(/\r\n?/g, '\n').trim(), '', '_MecatroniCar_');
+    return lines.join('\n');
+}
+
+function openNote(note) {
     if (!noteModal) {
         noteModal = createModal({
             id: 'cell-note',
@@ -532,18 +719,47 @@ function openNote(title, subtitle, text) {
             size: 'md',
             body: html`<pre class="preformatted" data-field="text"></pre>`,
             footer: html`
+                <button type="button" class="btn btn-secondary" data-action="copy-whatsapp">${icon('message-square-text', 16)} Copiar para o WhatsApp</button>
                 <button type="button" class="btn btn-secondary" data-action="copy">${icon('copy', 16)} Copiar texto</button>
-                <button type="button" class="btn btn-primary" data-modal-close>Fechar</button>`,
+                <button type="button" class="btn btn-primary push" data-modal-close>Fechar</button>`,
         });
-        noteModal.footer.querySelector('[data-action="copy"]').addEventListener('click', () => {
-            copyText(noteModal.body.querySelector('[data-field="text"]').textContent, 'Texto copiado para a área de transferência.');
+        on(noteModal.footer, 'click', '[data-action]', (e, btn) => {
+            if (!noteCurrent) return;
+            if (btn.dataset.action === 'copy') copyText(noteCurrent.text, 'Texto copiado.');
+            else if (btn.dataset.action === 'copy-whatsapp') copyText(whatsappMessage(noteCurrent), 'Nota copiada. É só colar no WhatsApp.');
         });
     }
-    noteModal.setTitle(title);
-    noteModal.setSubtitle(subtitle);
-    noteModal.body.querySelector('[data-field="text"]').textContent = text || '';
+    noteCurrent = note;
+    noteModal.setTitle(note.title);
+    noteModal.setSubtitle(note.subtitle);
+    noteModal.body.querySelector('[data-field="text"]').textContent = note.text || '';
     noteModal.open();
 }
+
+function rowNote(tr, visit) {
+    return {
+        heading: 'Nota da planilha',
+        title: 'Nota da planilha (Excel)',
+        subtitle: `Item: ${tr.dataset.itemDesc || 'Célula'} (${tr.dataset.itemSection || 'Geral'})`,
+        item: tr.dataset.itemDesc || '',
+        text: tr.dataset.itemComment,
+        visit,
+    };
+}
+
+function scannerNote(visit) {
+    return {
+        heading: 'Relatório do scanner / diagnóstico',
+        title: 'Relatório do scanner / diagnóstico',
+        subtitle: `Veículo: ${visit.car_model || visit.plate} · Data: ${visit.entry_date || ''}`,
+        text: visit.details?.complaint_comment,
+        visit,
+    };
+}
+
+/* ------------------------------------------------------------------ */
+/* Ações                                                               */
+/* ------------------------------------------------------------------ */
 
 function visitFromEvent(target) {
     const card = target.closest('.visit-card');
@@ -583,12 +799,16 @@ function printOnScreen({ indices, withoutPrices, expandServices }) {
     const selected = new Set(indices);
     const cards = $$('.visit-card', root);
     const previousHidden = cards.map((c) => c.hidden);
+    const previousOpen = cards.map((c) => c.dataset.open === 'true');
     document.body.classList.toggle('print-no-prices', Boolean(withoutPrices));
     for (const card of cards) {
         const idx = Number(card.dataset.visitIndex);
         card.hidden = false;
         card.classList.toggle('print-excluded', !selected.has(idx));
-        if (selected.has(idx) && expandServices) card._setServicesVisible?.(true);
+        if (selected.has(idx)) {
+            setCardOpen(card, true, { remember: false });
+            if (expandServices) card._setServicesVisible?.(true);
+        }
     }
     $$('.extra-sheet-panel', root).forEach((p) => p.classList.add('print-excluded'));
 
@@ -597,9 +817,11 @@ function printOnScreen({ indices, withoutPrices, expandServices }) {
         cards.forEach((card, i) => {
             card.classList.remove('print-excluded');
             card.hidden = previousHidden[i];
+            setCardOpen(card, previousOpen[i], { remember: false });
         });
         $$('.extra-sheet-panel', root).forEach((p) => p.classList.remove('print-excluded'));
         window.removeEventListener('afterprint', cleanup);
+        syncGlobalButtons();
     };
     window.addEventListener('afterprint', cleanup);
     setTimeout(() => window.print(), 150);
@@ -622,6 +844,12 @@ function handleAction(event, el) {
             input.focus();
             return;
         }
+        case 'copy-phone':
+            copyText(el.dataset.text, 'Telefone copiado.');
+            return;
+        case 'copy-chassis':
+            copyText(el.dataset.text, 'Chassi copiado.');
+            return;
         case 'new-visit':
             openNewOs({ plate: vehiclePlate() });
             return;
@@ -648,16 +876,26 @@ function handleAction(event, el) {
             } });
             return;
         }
+        case 'toggle-all-visits': {
+            const expand = el.dataset.mode !== 'collapse';
+            for (const card of $$('.visit-card', root)) setCardOpen(card, expand);
+            syncGlobalButtons();
+            return;
+        }
         case 'toggle-all-services':
             showAllServices = !showAllServices;
-            syncGlobalServicesButton();
-            for (const { card } of cardControls.values()) card._setServicesVisible?.(showAllServices);
+            for (const { card } of cardControls.values()) {
+                card._autoOpen = showAllServices || card._autoOpen;
+                card._setServicesVisible?.(showAllServices);
+            }
             $$('.extra-sheet-panel', root).forEach((p) => p._setServicesVisible?.(showAllServices));
+            syncGlobalButtons();
             toast(showAllServices ? 'Mostrando os serviços executados em todas as planilhas.' : 'Mostrando apenas as peças. Abra os serviços de cada planilha quando precisar.');
             return;
         case 'goto-match': {
             const occ = $('[data-field="matches"]', root)._occurrences?.[Number(el.dataset.matchIndex)];
             if (!occ) return;
+            setCardOpen(occ.card, true, { remember: false });
             if (occ.isService) occ.card._setServicesVisible?.(true);
             (occ.row || occ.card).scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
@@ -667,7 +905,7 @@ function handleAction(event, el) {
     }
 
     if (!ctx || !ctx.visit) {
-        // botões que dependem de um card (ex.: toggle-services dentro de aba extra)
+        // botões que dependem de um painel (ex.: toggle-services dentro de aba extra)
         if (action === 'toggle-services') {
             const container = el.closest('.extra-sheet-panel');
             if (container) container._setServicesVisible?.(container.querySelector('.services-panel')?.hidden);
@@ -676,8 +914,13 @@ function handleAction(event, el) {
     }
     const { card, visit } = ctx;
     const d = visit.details || {};
+    const body = $('[data-field="body"]', card);
 
     switch (action) {
+        case 'toggle-visit':
+            setCardOpen(card, body.hidden);
+            syncGlobalButtons();
+            break;
         case 'orcamento':
             openOrcamentoPdf(visit.file_path);
             break;
@@ -694,17 +937,21 @@ function handleAction(event, el) {
             openInExcel(visit.file_path);
             break;
         case 'scanner-note':
-            openNote('Relatório do scanner / diagnóstico', `Veículo: ${visit.car_model || visit.plate} · Data: ${visit.entry_date || ''}`, d.complaint_comment);
+            openNote(scannerNote(visit));
             break;
-        case 'note': {
-            const tr = el.closest('tr');
-            openNote('Nota da planilha (Excel)', `Item: ${tr.dataset.itemDesc || 'Célula'} (${tr.dataset.itemSection || 'Geral'})`, tr.dataset.itemComment);
+        case 'scanner-whatsapp':
+            copyText(whatsappMessage(scannerNote(visit)), 'Relatório copiado. É só colar no WhatsApp.');
             break;
-        }
+        case 'note':
+            openNote(rowNote(el.closest('tr'), visit));
+            break;
+        case 'note-whatsapp':
+            copyText(whatsappMessage(rowNote(el.closest('tr'), visit)), 'Nota copiada. É só colar no WhatsApp.');
+            break;
         case 'toggle-services': {
-            const container = el.closest('.extra-sheet-panel') || card;
+            const container = el.closest('.extra-sheet-panel') || body;
             const panel = container.querySelector(':scope > .services-panel');
-            container._setServicesVisible?.(panel ? panel.hidden : true);
+            (container._setServicesVisible || card._setServicesVisible)?.(panel ? panel.hidden : true);
             break;
         }
         case 'extra-sheet': {
@@ -739,7 +986,11 @@ function handleAction(event, el) {
 async function load(plateParam, { quiet = false } = {}) {
     const requested = cleanPlate(plateParam);
     loadingPlate = requested;
-    if (!quiet) renderSkeleton();
+    if (!quiet) {
+        renderSkeleton();
+        const scroller = root.closest('.main');
+        if (scroller) scroller.scrollTop = 0;
+    }
     try {
         const data = await api.get(`/api/car_history/${encodeURIComponent(requested)}`, { errorMessage: 'Erro ao carregar histórico' });
         if (loadingPlate !== requested) return;
@@ -753,7 +1004,9 @@ async function load(plateParam, { quiet = false } = {}) {
         const filterValue = quiet ? $('[data-field="item-filter"]', root)?.value || '' : '';
         renderVehicle();
         if (filterValue) {
-            $('[data-field="item-filter"]', root).value = filterValue;
+            const input = $('[data-field="item-filter"]', root);
+            input.value = filterValue;
+            $('[data-action="clear-filter"]', root).hidden = false;
             filterItems(filterValue);
         }
         const latest = latestVisit();
@@ -772,6 +1025,10 @@ export default {
     mount,
     enter(params) {
         showAllServices = false;
+        visitOpen.clear();
         load(params.placa);
+    },
+    leave() {
+        clearHits();
     },
 };
