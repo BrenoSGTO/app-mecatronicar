@@ -1,0 +1,155 @@
+/* ==========================================================================
+   Analytics (#/analytics)
+   Dono na Fase 2: T11. Cores de dados: --color-data-pecas / --color-data-servicos
+   (validadas para daltonismo nos dois temas).
+   ========================================================================== */
+
+.view-analytics.is-loading .stat-value {
+    opacity: 0.45;
+}
+
+.analytics-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+
+.analytics-two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: var(--space-3);
+}
+
+@media (max-width: 1199.98px) {
+    .analytics-two-col {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.analytics-dist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.analytics-dist-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analytics-dist .progress-bar {
+    --bar-color: var(--color-text-muted);
+}
+
+.analytics-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    vertical-align: baseline;
+}
+
+.analytics-swatch.is-pecas { background: var(--color-data-pecas); }
+.analytics-swatch.is-servicos { background: var(--color-data-servicos); }
+
+.analytics-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.analytics-legend strong {
+    color: var(--color-text);
+}
+
+/* Barra 100% empilhada com 2px de respiro entre os segmentos */
+.analytics-ratio {
+    display: flex;
+    gap: 2px;
+    height: 14px;
+}
+
+.analytics-ratio > span {
+    width: var(--value, 0%);
+    height: 100%;
+    transition: width var(--duration-slow) var(--ease-out);
+}
+
+.analytics-ratio-pecas {
+    background: var(--color-data-pecas);
+    border-radius: 4px 0 0 4px;
+}
+
+.analytics-ratio-servicos {
+    background: var(--color-data-servicos);
+    border-radius: 0 4px 4px 0;
+}
+
+/* Gráfico de barras mensal (uma série) */
+.analytics-bars {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+    height: 220px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.analytics-bar {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    justify-items: center;
+    gap: 4px;
+    flex: 1 0 64px;
+    min-width: 64px;
+    border-radius: var(--radius-control);
+    padding: 4px 2px;
+}
+
+.analytics-bar:hover {
+    background: var(--color-surface-2);
+}
+
+.analytics-bar-value {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.analytics-bar-track {
+    position: relative;
+    width: 28px;
+    height: 100%;
+    border-bottom: 1px solid var(--color-border-strong);
+}
+
+.analytics-bar-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--h, 0%);
+    border-radius: 4px 4px 0 0;
+    background: var(--color-data-servicos);
+    transition: height var(--duration-slow) var(--ease-out);
+}
+
+.analytics-bar-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+}
+
+.analytics-bar-sub {
+    font-size: 11px;
+    color: var(--color-text-subtle);
+    white-space: nowrap;
+}
+
+.analytics-table-wrap {
+    max-height: 420px;
+}

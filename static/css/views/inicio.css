@@ -1,0 +1,348 @@
+/* ==========================================================================
+   Tela Início / Pátio (#/inicio) + modal "Gerenciar pátio"
+   Dono na Fase 2: T7. Use só tokens; nada de cor crua.
+   ========================================================================== */
+
+.inicio-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-5);
+    align-items: start;
+}
+
+@media (max-width: 1199.98px) {
+    .inicio-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.inicio-patio-head {
+    padding: 0 var(--space-3);
+}
+
+.inicio-patio-head .tabs {
+    border-bottom: 0;
+}
+
+.inicio-patio-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+/* ---------- Cards do pátio ---------- */
+.patio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: var(--space-3);
+}
+
+.patio-empty,
+.patio-grid > .empty-state {
+    grid-column: 1 / -1;
+}
+
+.patio-card-skeleton {
+    height: 196px;
+}
+
+.patio-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) + 3px);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+/* Barra de status à esquerda (cor do status; nunca o card inteiro) */
+.patio-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--st, var(--color-border-strong));
+}
+
+.patio-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-xs);
+}
+
+.patio-card.is-delivered {
+    background: var(--color-surface-2);
+}
+
+.patio-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.patio-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.patio-card-model {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+}
+
+.patio-card-owner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.patio-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    min-width: 0;
+}
+
+.patio-card-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+}
+
+.patio-card-notes {
+    padding: 6px 8px;
+    border-radius: var(--radius-control);
+    background: var(--color-surface-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.patio-card.is-delivered .patio-card-notes {
+    background: var(--color-surface);
+}
+
+.patio-card-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: auto;
+}
+
+.patio-card-actions .select {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ---------- Coluna lateral ---------- */
+.inicio-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.inicio-side-toolbar {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.inicio-side-toolbar .segmented {
+    width: 100%;
+}
+
+.inicio-side-toolbar .segmented-item {
+    flex: 1;
+    justify-content: center;
+}
+
+.inicio-side-list {
+    max-height: 380px;
+    overflow-y: auto;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.inicio-side-pad {
+    padding: var(--space-3);
+}
+
+/* Eventos da agenda */
+.agenda-event {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.agenda-event:last-child {
+    border-bottom: 0;
+}
+
+.agenda-event.is-done {
+    opacity: 0.65;
+}
+
+.agenda-event-when {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border-radius: var(--radius-control);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-subtle);
+    height: fit-content;
+}
+
+.agenda-event-day {
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-subtle);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+}
+
+.agenda-event-day.is-today {
+    color: var(--color-text);
+}
+
+.agenda-event-day.is-today::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 4px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    vertical-align: middle;
+}
+
+.agenda-event-time {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+}
+
+.agenda-event-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.agenda-event-title {
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
+}
+
+.agenda-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    min-width: 0;
+}
+
+.agenda-event-notes {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.agenda-event-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: 2px;
+}
+
+/* ---------- Modal "Gerenciar pátio" ---------- */
+.patio-manager {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+    gap: var(--space-5);
+    align-items: start;
+}
+
+@media (max-width: 899.98px) {
+    .patio-manager {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.patio-manager-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.patio-manager-rows {
+    display: flex;
+    flex-direction: column;
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+}
+
+.patio-manager-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 10px var(--space-3);
+    border-bottom: 1px solid var(--color-border-subtle);
+    text-align: left;
+    transition: background-color var(--duration-fast);
+}
+
+.patio-manager-row:last-child {
+    border-bottom: 0;
+}
+
+.patio-manager-row:hover {
+    background: var(--color-surface-2);
+}
+
+.patio-manager-row.is-selected {
+    background: var(--color-accent-subtle);
+}
+
+.patio-manager-row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    font-size: var(--text-sm);
+}
+
+.patio-third-party {
+    border: 1px solid var(--color-danger-border);
+    margin: 0;
+    min-inline-size: 0;
+}

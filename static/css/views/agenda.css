@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Agenda (#/agenda) — agendamentos da secretária
+   Dono na Fase 2: T11.
+   ========================================================================== */
+
+.agenda-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.agenda-search {
+    width: 340px;
+}
+
+.agenda-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-3);
+}
+
+.agenda-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+}
+
+.agenda-card.is-done {
+    background: var(--color-surface-2);
+}
+
+.agenda-card.is-cancelled {
+    opacity: 0.6;
+}
+
+.agenda-card-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.agenda-card-time {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
+}
+
+.agenda-card .row > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.agenda-card-issue {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.agenda-card-issue p {
+    display: flex;
+    gap: 4px;
+}
+
+.agenda-card-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: var(--space-2);
+}
+
+.agenda-footnote {
+    margin-top: var(--space-3);
+}
