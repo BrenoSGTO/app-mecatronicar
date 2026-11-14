@@ -60,6 +60,7 @@ let form = null;
 let mode = 'new';              // 'new' | 'edit' | 'agenda'
 let existingFilePath = '';
 let editVisit = null;
+let editPlateRaw = '';          // grafia original da placa na célula (ex.: "ABC 3D45")
 let agendamentoId = null;
 let suggestionsCache = null;
 let lookupController = null;
@@ -381,11 +382,11 @@ function rowMarkup(kind) {
         <td class="num os-row-total" data-col="total">—</td>
         <td class="os-col-tools">
             <span class="os-tools">
-                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-note" tabindex="-1" aria-label="Observação" data-tooltip="Observação">${icon('sticky-note', 15)}</button>
-                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-highlight" tabindex="-1" aria-label="Destacar linha" data-tooltip="Destacar linha">${icon('sparkles', 15)}</button>
-                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-up" tabindex="-1" aria-label="Subir linha" data-tooltip="Subir (Alt + ↑)">${icon('chevron-up', 15)}</button>
-                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-down" tabindex="-1" aria-label="Descer linha" data-tooltip="Descer (Alt + ↓)">${icon('chevron-down', 15)}</button>
-                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-remove" tabindex="-1" aria-label="Remover linha" data-tooltip="Remover linha">${icon('trash-2', 15)}</button>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-note" tabindex="-1" aria-label="Observação" title="Observação">${icon('sticky-note', 15)}</button>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-highlight" tabindex="-1" aria-label="Destacar linha" title="Destacar linha">${icon('sparkles', 15)}</button>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-up" tabindex="-1" aria-label="Subir linha" title="Subir (Alt + ↑)">${icon('chevron-up', 15)}</button>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-down" tabindex="-1" aria-label="Descer linha" title="Descer (Alt + ↓)">${icon('chevron-down', 15)}</button>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="row-remove" tabindex="-1" aria-label="Remover linha" title="Remover linha">${icon('trash-2', 15)}</button>
             </span>
         </td>
     </tr>`;
@@ -579,7 +580,14 @@ function openSuggest(input, { force = false } = {}) {
     const el = ensureSuggestEl();
     render(el, html`${matches.map((text, i) => html`<button type="button" class="dropdown-option" role="option" data-index="${i}" data-value="${text}">${text}</button>`)}`);
     el.hidden = false;
-    const rect = input.getBoundingClientRect();
+    positionSuggest();
+}
+
+/** Ancora a lista na célula (e acompanha a rolagem do modal). */
+function positionSuggest() {
+    if (!suggestEl || suggestEl.hidden || !suggestInput) return;
+    const el = suggestEl;
+    const rect = suggestInput.getBoundingClientRect();
     const width = Math.max(rect.width, 360);
     setVar(el, '--suggest-x', `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`);
     setVar(el, '--suggest-w', `${width}px`);
@@ -1061,7 +1069,7 @@ function bindEvents() {
     });
 
     modal.body.addEventListener('scroll', () => {
-        closeSuggest();
+        positionSuggest();
         updateScrollSpy();
     }, { passive: true });
 
@@ -1115,6 +1123,7 @@ function reset({ title, saveLabel }) {
     form.reset();
     existingFilePath = '';
     editVisit = null;
+    editPlateRaw = '';
     agendamentoId = null;
     lookupInfo = null;
     lookupPlate = '';
@@ -1187,6 +1196,10 @@ export function openOsFromAgendamento(ag) {
     if (ag.client_name) f.client_name.value = ag.client_name;
     if (ag.phone) f.client_phone.value = ag.phone;
     f.complaint.value = [ag.title, ag.description].filter(Boolean).join(' - ');
+    // O que veio do agendamento vale mais que o cadastro antigo do veículo.
+    for (const name of ['car_model', 'client_name', 'client_phone']) {
+        if (f[name].value) f[name].dataset.src = 'user';
+    }
     addRow('pecas');
     addRow('servicos', { desc: ag.title || '' });
     afterOpen();
@@ -1247,6 +1260,7 @@ export async function openEditOs(visit) {
     reset({ title: `Editar ordem de serviço · visita #${visit.visit_num || d.visit_num || '1'}`, saveLabel: 'Salvar alterações na planilha' });
     existingFilePath = visit.file_path;
     editVisit = visit;
+    editPlateRaw = String(d.plate || '').trim();
     modal.setSubtitle(`${formatPlate(visit.plate_display || visit.plate)} · ${visit.file_name || ''}`);
 
     const values = {
@@ -1283,7 +1297,7 @@ export async function openEditOs(visit) {
         if (el) el.value = value === null || value === undefined ? '' : String(value);
     }
     form.elements.plate.readOnly = true;
-    setHint('plate', 'Para corrigir a placa, ajuste a planilha no Excel.');
+    setHint('plate', 'Corrija a placa pelo Excel.');
     setHint('visit_num', `Visita atual da planilha: #${values.visit_num}`);
     setHint('odometer', visit.odometer ? `Km atual: ${visit.odometer}` : '');
     setPlateBadge('Editando planilha existente', 'edit');
@@ -1452,7 +1466,8 @@ function buildPayload(items, discount) {
             cep: value('client_cep'),
         },
         car: {
-            plate: cleanPlate(value('plate')),
+            // Na edição preserva a grafia que já está na célula da planilha.
+            plate: edit && editPlateRaw && cleanPlate(editPlateRaw) === cleanPlate(value('plate')) ? editPlateRaw : cleanPlate(value('plate')),
             model: value('car_model'),
             brand: value('car_brand'),
             year: value('car_year'),
@@ -1522,7 +1537,7 @@ async function save() {
     }
 
     const payload = buildPayload(items, discount);
-    const plate = payload.car.plate;
+    const plate = cleanPlate(payload.car.plate);
 
     saving = true;
     const saveBtn = modal.footer.querySelector('[data-action="save"]');
