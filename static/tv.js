@@ -27,7 +27,7 @@
     // Dois formatos de card, medidos em "u" (1u = font-size do card):
     //  - wide: placa e tempo lado a lado (mais largo, mais baixo)
     //  - tall: tudo empilhado (cabe em colunas estreitas, onde a largura é o recurso escasso)
-    var CARD_W = { wide: 14.5, tall: 9.8 };
+    var CARD_W = { wide: 16.2, tall: 9.8 };
 
     var PHASES = [
         { key: 'diagnostico', label: 'Em diagnóstico',        ah: { wide: 8.2,  tall: 13.4 }, re: /diagn/ },
@@ -102,9 +102,9 @@
         if (min < 1) return 'agora';
         if (min < 60) return min + ' min';
         var h = Math.floor(min / 60);
-        if (h < 24) return h + ' h ' + pad2(min % 60) + ' min';
+        if (h < 24) return h + 'h ' + pad2(min % 60) + 'min';
         var d = Math.floor(h / 24);
-        return d + (d === 1 ? ' dia ' : ' dias ') + (h % 24) + ' h';
+        return d + (d === 1 ? ' dia ' : ' dias ') + (h % 24) + 'h';
     }
 
     // Placa: antiga LLL-NNNN com hífen; Mercosul LLLNLNN sem hífen.
