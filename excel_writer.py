@@ -13,6 +13,7 @@ import sqlite3
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.comments import Comment
+from openpyxl.cell.cell import MergedCell
 import openpyxl.worksheet._writer as openpyxl_ws_writer
 import openpyxl.cell._writer as openpyxl_cell_writer
 
@@ -711,6 +712,20 @@ def _parse_time_obj(val):
         pass
     return str(val)
 
+def _reset_item_row(ws, r):
+    """
+    Limpa notas e destaque de cor de uma linha de item (colunas A..I) antes de regravá-la.
+    Sem isso, reordenar/remover linhas deixava a nota ou a cor de outro item na linha errada.
+    As notas e cores de cada item voltam logo em seguida a partir do próprio item.
+    """
+    for c_idx in range(1, 10):
+        cell = ws.cell(r, c_idx)
+        if not isinstance(cell, MergedCell) and cell.comment is not None:
+            cell.comment = None
+        if cell.fill is not None and cell.fill.fill_type:
+            cell.fill = PatternFill(fill_type=None)
+
+
 def populate_workbook(wb, data):
     """
     Preenche a planilha Plan1 com o dicionário de dados da OS e calcula o mapa de valores cacheados
@@ -820,6 +835,7 @@ def populate_workbook(wb, data):
     sum_pecas = 0.0
     for idx in range(14):
         r = 30 + idx
+        _reset_item_row(ws, r)
         if idx < len(pecas):
             item = pecas[idx]
             desc = str(item.get("description") or item.get("desc", "")).strip()
@@ -829,7 +845,7 @@ def populate_workbook(wb, data):
             
             ws.cell(r, 1).value = desc
             ws.cell(r, 7).value = int(qty) if (qty is not None and qty.is_integer()) else qty
-            ws.cell(r, 8).value = unit_price if (desc and unit_price > 0) else (unit_price if desc else None)
+            ws.cell(r, 8).value = unit_price if (desc and unit_price > 0) else None
             
             tot_row = (qty or 0.0) * unit_price if desc else 0.0
             sum_pecas += tot_row
@@ -857,6 +873,7 @@ def populate_workbook(wb, data):
     sum_servicos = 0.0
     for idx in range(4):
         r = 47 + idx
+        _reset_item_row(ws, r)
         if idx < len(servicos):
             item = servicos[idx]
             desc = str(item.get("description") or item.get("desc", "")).strip()
@@ -866,7 +883,7 @@ def populate_workbook(wb, data):
             
             ws.cell(r, 1).value = desc
             ws.cell(r, 7).value = int(qty) if (qty is not None and qty.is_integer()) else qty
-            ws.cell(r, 8).value = unit_price if (desc and unit_price > 0) else (unit_price if desc else None)
+            ws.cell(r, 8).value = unit_price if (desc and unit_price > 0) else None
             
             tot_row = (qty or 0.0) * unit_price if (desc and qty) else (unit_price if desc else 0.0)
             sum_servicos += tot_row
