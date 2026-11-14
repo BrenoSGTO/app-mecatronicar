@@ -1,10 +1,26 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.venv/
+venv/
+
+# Dados locais (recriados pelo app)
 *.db
 oficina_cache.db
+config.json
+
+# Artefatos de build/release (gerados por scripts/build_release.ps1)
+*.zip
+*.exe
+dist/
+build/
+
+# Logs e temporarios
+*.log
+*.tmp
+
+# Editores
 .vscode/
 .idea/
-*.tmp
-update.zip
-config.json
