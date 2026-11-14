@@ -17,7 +17,7 @@ const PERIODS = [
 ];
 
 const CHART_HEIGHT = 280;
-const CHART_MARGIN = { top: 14, right: 14, bottom: 34, left: 68 };
+const CHART_MARGIN = { top: 14, right: 26, bottom: 34, left: 68 };
 
 let root = null;
 let period = '30';
@@ -371,8 +371,11 @@ function wireChartHover() {
         tip.hidden = false;
         const bandW = (chart.clientWidth - CHART_MARGIN.left - CHART_MARGIN.right) / data.monthly_trend.length;
         const center = CHART_MARGIN.left + bandW * (Number(hit.dataset.i) + 0.5);
-        const half = tip.offsetWidth / 2 + 4;
-        setVar(tip, '--x', `${Math.min(Math.max(center, half), chart.clientWidth - half)}px`);
+        // Ao lado da coluna (nunca por cima das barras/linhas): à direita na metade esquerda do gráfico
+        const gap = Math.min(64, bandW * 0.52) / 2 + 14;
+        const onRight = center < chart.clientWidth / 2;
+        tip.dataset.side = onRight ? 'right' : 'left';
+        setVar(tip, '--x', `${onRight ? center + gap : center - gap}px`);
         setVar(tip, '--y', `${CHART_MARGIN.top + 8}px`);
     };
     const hideTip = () => {

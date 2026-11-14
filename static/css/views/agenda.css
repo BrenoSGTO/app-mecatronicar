@@ -437,7 +437,7 @@
 
 .ag-upcoming-item {
     display: grid;
-    grid-template-columns: 112px minmax(0, 1fr) auto auto;
+    grid-template-columns: 112px minmax(0, 1fr) 84px 96px;
     align-items: center;
     gap: var(--space-3);
     width: 100%;
