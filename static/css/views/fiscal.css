@@ -1,12 +1,15 @@
 /* ==========================================================================
-   Copiloto Fiscal (#/fiscal) + modal por visita
-   Dono na Fase 2: T10.
+   Copiloto Fiscal (#/fiscal) + modal por visita + exportação em lote
+   Dono na Fase 2: T10. Só tokens; sem cor, raio ou sombra crua.
    ========================================================================== */
 
+/* ---------- Indicadores ---------- */
 .fiscal-kpis {
-    margin-bottom: var(--space-5);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: var(--space-4);
 }
 
+/* ---------- Barra de filtros ---------- */
 .fiscal-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -16,80 +19,502 @@
     margin-bottom: var(--space-3);
 }
 
-.fiscal-search {
-    width: 320px;
-}
-
-.fiscal-queue-list {
-    overflow: hidden;
-}
-
-.fiscal-queue-item {
+.fiscal-toolbar-tools {
     display: flex;
     align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--color-border-subtle);
+    gap: var(--space-2);
 }
 
-.fiscal-queue-item:last-child {
+.fiscal-search {
+    width: 240px;
+}
+
+.fiscal-sort {
+    width: 210px;
+}
+
+.fiscal-retry {
+    margin-top: var(--space-2);
+}
+
+/* ---------- Fila ---------- */
+.fiscal-list {
+    /* sem overflow:hidden para o cabeçalho poder ficar fixo ao rolar */
+    overflow: visible;
+}
+
+.fiscal-row {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr) 20px;
+    align-items: center;
+    gap: var(--space-4);
+    min-height: 56px;
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+        background-color var(--duration-fast) var(--ease-out),
+        height var(--duration-slow) var(--ease-out),
+        min-height var(--duration-slow) var(--ease-out),
+        padding var(--duration-slow) var(--ease-out),
+        opacity var(--duration-slow) var(--ease-out),
+        transform var(--duration-slow) var(--ease-out);
+}
+
+.fiscal-row:last-child {
     border-bottom: 0;
 }
 
-.fiscal-queue-item:hover {
+.fiscal-row:hover {
+    background: var(--color-surface-hover);
+}
+
+.fiscal-row:focus-visible {
+    outline-offset: -2px;
+    background: var(--color-surface-hover);
+}
+
+.fiscal-row-head {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    min-height: 36px;
+    background: var(--color-surface-2);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-subtle);
+    cursor: default;
+}
+
+.fiscal-row-head:hover {
     background: var(--color-surface-2);
 }
 
-.fiscal-queue-main {
+.fiscal-row.is-leaving {
+    height: 0 !important; /* vence a altura medida em JS (setVar) que serve de ponto de partida da animação */
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+    opacity: 0;
+    transform: translateX(10px);
+    pointer-events: none;
+}
+
+.fiscal-cell-date {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.fiscal-cell-vehicle {
     display: flex;
     flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.fiscal-cell-note {
+    display: flex;
+    align-items: center;
     gap: var(--space-2);
+    min-width: 0;
+}
+
+.fiscal-value {
+    min-width: 88px;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.fiscal-kpis .stat {
+    padding: var(--space-2) var(--space-4);
+}
+
+.fiscal-cell-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.fiscal-cell-go {
+    display: inline-flex;
+    color: var(--color-text-subtle);
+    transition: transform var(--duration-fast) var(--ease-out), color var(--duration-fast);
+}
+
+.fiscal-row:hover .fiscal-cell-go,
+.fiscal-row:focus-visible .fiscal-cell-go {
+    color: var(--color-text);
+    transform: translateX(2px);
+}
+
+.fiscal-count {
+    margin-top: var(--space-2);
+    text-align: right;
+}
+
+.fiscal-skeleton {
+    padding: var(--space-4);
+}
+
+@media (max-width: 1279.98px) {
+    .fiscal-row {
+        grid-template-columns: 84px minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 20px;
+    }
+
+    .fiscal-row > :nth-child(5) {
+        display: none;
+    }
+}
+
+/* ---------- Modal do copiloto ---------- */
+.fiscal-modal-body {
+    scroll-padding-top: 64px;
+}
+
+.fiscal-jumps {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    background: var(--color-surface-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.fiscal-jump {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-h-sm);
+    padding: 0 var(--space-3) 0 var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    transition: border-color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.fiscal-jump:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-hover);
+}
+
+.fiscal-jump-num,
+.fiscal-block-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: var(--color-text);
+    color: var(--color-surface);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.fiscal-flow {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--space-5);
+}
+
+.fiscal-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    scroll-margin-top: 56px;
+}
+
+.fiscal-block-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.fiscal-block-num {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-sm);
+}
+
+.fiscal-block-heading {
     flex: 1;
     min-width: 0;
 }
 
-.fiscal-queue-status {
+.fiscal-block-title {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+}
+
+.fiscal-block-sub {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.fiscal-block-empty {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-control);
+    font-size: var(--text-sm);
+}
+
+/* Campos copiáveis */
+.copy-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+}
+
+.copy-field {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-1);
+    min-width: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    transition: border-color var(--duration-fast), background-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.copy-field > .btn {
+    align-self: center;
+    margin-right: var(--space-2);
+}
+
+.copy-field-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "label icon"
+        "value icon";
+    align-items: center;
+    column-gap: var(--space-3);
+    row-gap: 2px;
+    flex: 1;
+    min-width: 0;
+    min-height: 52px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-control);
+    text-align: left;
+    color: var(--color-text);
+}
+
+.copy-field-label {
+    grid-area: label;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-subtle);
+}
+
+.copy-field-value {
+    grid-area: value;
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+}
+
+.copy-field-icon {
+    grid-area: icon;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-1);
+    color: var(--color-text-subtle);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
 }
 
-.fiscal-queue-actions {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
+.copy-field-done {
+    display: none;
+    align-items: center;
+    gap: var(--space-1);
 }
 
-@media (max-width: 1199.98px) {
-    .fiscal-queue-item {
-        flex-direction: column;
-        align-items: stretch;
-    }
+.copy-field:not(.is-missing):not(.is-empty):hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-hover);
 }
 
-/* ---------- Modal por visita ---------- */
-.fiscal-tabs {
-    margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1) var(--space-5);
-    padding: 0 var(--space-4);
+.copy-field:not(.is-missing):not(.is-empty):hover .copy-field-icon {
+    color: var(--color-text);
+}
+
+.copy-field.is-missing,
+.copy-field.is-empty {
+    border-style: dashed;
+}
+
+.copy-field.is-missing {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-bg);
+}
+
+.copy-field.is-empty {
     background: var(--color-surface-2);
+}
+
+.copy-field.is-missing .copy-field-value,
+.copy-field.is-empty .copy-field-value {
+    color: var(--color-text-subtle);
+    font-weight: var(--weight-regular);
+}
+
+.copy-field.is-missing .copy-field-icon,
+.copy-field.is-empty .copy-field-icon {
+    visibility: hidden;
+}
+
+.copy-field-main:disabled {
+    cursor: default;
+    opacity: 1;
+}
+
+/* Feedback "copiado" */
+.copy-field-main.is-copied .copy-field-icon > .icon {
+    display: none;
+}
+
+.copy-field-main.is-copied .copy-field-done {
+    display: inline-flex;
+    color: var(--color-success);
+}
+
+.copy-field:has(.is-copied) {
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
+}
+
+.btn.is-copied {
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+/* Próximo campo a copiar (atalho N) */
+.is-next {
+    border-color: var(--color-focus);
+    box-shadow: 0 0 0 3px var(--focus-halo);
+}
+
+/* NFS-e */
+.fiscal-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.copy-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-1);
+    margin: calc(var(--space-1) * -1);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    min-width: 0;
 }
 
 .fiscal-textarea {
     font-family: var(--font-mono);
     font-size: var(--text-sm);
-    min-height: 168px;
+    line-height: var(--leading-snug);
+    min-height: 200px;
     background: var(--color-surface-2);
+    resize: vertical;
 }
 
-.fiscal-services .list-item {
-    padding: 8px var(--space-3);
-    font-size: var(--text-sm);
-}
-
-.fiscal-status-row {
+.fiscal-total {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-2);
+}
+
+.fiscal-total-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.fiscal-total-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-subtle);
+}
+
+.fiscal-total-value {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+}
+
+.fiscal-total-inline {
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+}
+
+.fiscal-total-inline .fiscal-total-value {
+    font-size: var(--text-md);
+}
+
+/* NF-e */
+.fiscal-parts-table tfoot td {
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+}
+
+.fiscal-nfe-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.fiscal-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+[data-step="nfe-tsv"].is-next {
+    border-radius: var(--radius-control);
+}
+
+/* Registrar emissão */
+.fiscal-emit {
+    display: flex;
+    align-items: flex-end;
     flex-wrap: wrap;
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
@@ -98,72 +523,83 @@
     background: var(--color-surface-2);
 }
 
-.fiscal-status-total {
+.fiscal-emit-text {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-}
-
-.fiscal-status-total strong {
-    font-size: var(--text-lg);
-}
-
-.fiscal-status-form {
-    display: flex;
-    flex-wrap: wrap;
     gap: var(--space-2);
+    flex: 1 1 220px;
+    align-self: center;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
 }
 
-.fiscal-status-form .input {
-    width: 190px;
+.fiscal-emit-field {
+    width: 160px;
 }
 
-.fiscal-status-form input[type="date"] {
-    width: 150px;
+.fiscal-emit.is-done {
+    align-items: center;
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
 }
 
-/* Dados do tomador */
-.tomador-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
+.fiscal-emit.is-done .fiscal-emit-text {
+    color: var(--color-text);
 }
 
-.tomador-wide {
-    grid-column: 1 / -1;
+.fiscal-emit.is-done .fiscal-emit-text .icon {
+    color: var(--color-success);
 }
 
-.tomador-field {
+/* Rodapé do modal */
+.fiscal-hints {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.fiscal-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    white-space: nowrap;
+}
+
+.fiscal-keys .kbd + .kbd,
+.fiscal-keys .kbd:not(:first-child) {
+    margin-left: var(--space-2);
+}
+
+[data-field="next-hint"] {
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+}
+
+/* ---------- Exportação em lote ---------- */
+.fiscal-export-summary {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: var(--space-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-card);
-    background: var(--color-surface);
-    min-width: 0;
-}
-
-.tomador-label {
-    font-size: var(--text-xs);
-    color: var(--color-text-subtle);
-}
-
-.tomador-row {
-    display: flex;
-    align-items: center;
     gap: var(--space-2);
-    min-width: 0;
+    min-height: 64px;
 }
 
-.tomador-value {
-    flex: 1;
-    min-width: 0;
-    font-weight: var(--weight-medium);
-    overflow-wrap: anywhere;
+.fiscal-export-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
 }
 
-[data-tomador="linha"] {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
+@media (max-width: 1279.98px) {
+    .fiscal-split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .copy-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fiscal-keys {
+        display: none;
+    }
 }
