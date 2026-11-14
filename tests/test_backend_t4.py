@@ -25,7 +25,7 @@ import cache
 import parser
 import server
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLES = os.path.join(BASE_DIR, "planilhas_exemplo")
 LAN = {"REMOTE_ADDR": "192.168.0.77"}
 

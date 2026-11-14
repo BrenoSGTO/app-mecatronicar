@@ -14,7 +14,7 @@ class TestVisualCardsAndAssets(unittest.TestCase):
     """Testes de validação dos assets visuais, placa Mercosul e ausência de emojis."""
 
     def setUp(self):
-        self.root_dir = os.path.dirname(os.path.abspath(__file__))
+        self.root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.brands_dir = os.path.join(self.root_dir, 'static', 'brands')
         self.models_dir = os.path.join(self.root_dir, 'static', 'models')
         self.emoji_pattern = re.compile(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\u2b50]')

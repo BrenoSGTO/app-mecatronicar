@@ -53,7 +53,7 @@ class TestExcelWriter(unittest.TestCase):
         self.assertEqual(v_new, 1)
 
         # Usando a pasta de exemplos existente onde FNB 1A77 tem visita 7
-        samples_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "planilhas_exemplo")
+        samples_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "planilhas_exemplo")
         v_next = excel_writer.get_next_visit_number("FNB1A77", folder_path=samples_dir)
         self.assertEqual(v_next, 8)
 

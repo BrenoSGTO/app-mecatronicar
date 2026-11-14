@@ -26,7 +26,7 @@ import excel_writer
 import pdf_generator
 import server
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class TestMecatroniCarV2Integration(unittest.TestCase):
 
