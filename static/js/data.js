@@ -37,7 +37,14 @@ const loaders = {
     },
 
     async agendamentos() {
-        const data = await api.get('/api/agendamentos', { errorMessage: 'Erro ao carregar agendamentos' });
+        // A API devolve os mais antigos primeiro e corta em 200: limita a janela (120 dias atrás
+        // em diante) e sobe o limite, senão os agendamentos futuros somem com o tempo.
+        const from = new Date();
+        from.setDate(from.getDate() - 120);
+        const data = await api.get('/api/agendamentos', {
+            params: { date_from: from.toISOString().slice(0, 10), limit: 2000 },
+            errorMessage: 'Erro ao carregar agendamentos',
+        });
         state.set('agendamentos', data.agendamentos || []);
     },
 
