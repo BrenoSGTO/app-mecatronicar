@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 80" width="100%" height="100%">
-  <ellipse cx="55" cy="40" rx="48" ry="30" fill="none" stroke="#b30000" stroke-width="5"/>
-  <path d="M38,55 L55,22 L72,55 M44,45 L66,45" fill="none" stroke="#b30000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">CC</text></svg>

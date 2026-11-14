@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 100" width="100%" height="100%">
-  <path d="M10,12 L80,12 L75,76 L45,96 L15,76 Z" fill="#111827" stroke="#0284c7" stroke-width="3"/>
-  <text x="45" y="32" font-family="'Arial Black', sans-serif" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">PEUGEOT</text>
-  <path d="M42,42 C50,40 55,48 52,56 C50,62 56,66 58,74 C54,76 46,74 44,70 C42,66 38,68 34,76 M46,50 C40,54 36,60 38,68" fill="none" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">PE</text></svg>

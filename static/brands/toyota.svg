@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" width="100%" height="100%">
-  <ellipse cx="60" cy="45" rx="54" ry="38" fill="none" stroke="#eb0a1e" stroke-width="7"/>
-  <ellipse cx="60" cy="38" rx="18" ry="28" fill="none" stroke="#eb0a1e" stroke-width="6"/>
-  <ellipse cx="60" cy="30" rx="36" ry="14" fill="none" stroke="#eb0a1e" stroke-width="6"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">TO</text></svg>

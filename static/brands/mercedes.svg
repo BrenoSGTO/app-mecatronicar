@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-  <circle cx="50" cy="50" r="45" fill="none" stroke="#334155" stroke-width="5"/>
-  <polygon points="50,50 48,10 50,7 52,10" fill="#334155"/>
-  <polygon points="50,50 15,68 12,70 15,72" fill="#334155"/>
-  <polygon points="50,50 85,68 88,70 85,72" fill="#334155"/>
-  <circle cx="50" cy="50" r="4" fill="#334155"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><text x="32" y="32" dy=".35em" text-anchor="middle" fill="currentColor" font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing=".5">MB</text></svg>

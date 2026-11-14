@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-  <polygon points="50,8 92,50 50,92 8,50" fill="#f9cc01" stroke="#111827" stroke-width="6" stroke-linejoin="round"/>
-  <circle cx="50" cy="50" r="16" fill="#111827"/>
-  <circle cx="50" cy="50" r="10" fill="#f9cc01"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#71717a"><circle cx="32" cy="32" r="29.5" fill="none" stroke="currentColor" stroke-width="3"/><path fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" d="M19 37v-5l4-9h18l4 9v5zM19 37v4h5v-4M40 37v4h5v-4M23 31h18"/></svg>
