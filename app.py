@@ -12,7 +12,9 @@ from ctypes import wintypes
 import subprocess
 import webbrowser
 import threading
+import urllib.request
 from server import app, BASE_DIR, get_local_ip
+import server
 import config
 import cache
 
@@ -175,17 +177,35 @@ def get_browser_app_cmd(url):
             ]
     return None
 
-def launch_ui():
-    time.sleep(0.6)
+def wait_for_server(timeout=15.0, interval=0.05):
+    """Espera o servidor responder em /api/health (em vez de um sleep fixo)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"{URL}/api/health", timeout=1.0) as resp:
+                if resp.status == 200:
+                    return True
+        except Exception:
+            pass
+        time.sleep(interval)
+    return False
+
+
+def launch_ui(wait_server=True):
+    """Abre a janela do app assim que o servidor responde. Retorna a thread de 'branding'."""
+    if wait_server and not wait_for_server():
+        print("Aviso: o servidor demorou a responder; abrindo a janela mesmo assim.")
     cmd = get_browser_app_cmd(URL)
     if cmd:
         try:
             subprocess.Popen(cmd)
-            threading.Thread(target=find_and_brand_app_windows, daemon=True).start()
-            return
+            t = threading.Thread(target=find_and_brand_app_windows, daemon=True)
+            t.start()
+            return t
         except Exception as e:
             print(f"Não foi possível abrir em modo app: {e}")
     webbrowser.open(URL)
+    return None
 
 def is_port_in_use(port):
     import socket
@@ -220,12 +240,15 @@ def kill_process_on_port(port):
                     pids.add(int(pid))
         for pid in pids:
             subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
-        if pids:
-            time.sleep(0.8)
-    except Exception:
-        pass
+        # Espera a porta liberar (em vez de um sleep fixo).
+        deadline = time.monotonic() + 5.0
+        while pids and is_port_in_use(port) and time.monotonic() < deadline:
+            time.sleep(0.1)
+    except Exception as e:
+        print(f"Aviso ao encerrar o servidor antigo: {e}")
 
 def main():
+    server.configure_logging()
     set_process_app_id()
     print("=" * 60)
     print("  MecatroniCar - Sistema de Histórico da Oficina Mecânica")
@@ -246,31 +269,31 @@ def main():
         running_ver = get_running_server_version(PORT)
         if running_ver == updater.CURRENT_VERSION:
             print(f"Servidor v{running_ver} já em execução em {URL}. Abrindo janela...")
-            launch_ui()
-            time.sleep(4.0)
+            brand_thread = launch_ui(wait_server=False)
+            if brand_thread is not None:
+                brand_thread.join(timeout=6.0)  # aplica o ícone/identidade na barra de tarefas
             return
         else:
             print(f"Reiniciando servidor antigo (v{running_ver}) para nova versão (v{updater.CURRENT_VERSION})...")
             kill_process_on_port(PORT)
 
-    # Check config
-    cfg = config.load_config(BASE_DIR)
-    folder = cfg.get("spreadsheet_folder", "")
-    if folder and os.path.isdir(folder):
-        print(f"Pasta de planilhas configurada: {folder}")
-        print("Verificando índice de planilhas...")
-        res = cache.scan_and_index_folder(folder, db_path)
-        print(f"Índice atualizado: {res.get('total', 0)} planilhas carregadas.")
-    else:
+    # O servidor sobe primeiro (o waitress já escuta a porta ao ser criado) e a
+    # indexação das planilhas roda em segundo plano: a janela abre na hora e a
+    # busca já funciona pelo nome dos arquivos enquanto o conteúdo é lido.
+    # Escuta em todas as interfaces para a TV da oficina acessar pela LAN.
+    http_server = server.create_http_server(host="0.0.0.0", port=PORT)
+    if server.start_background_indexing() is None:
         print("Nenhuma pasta de planilhas configurada. Você poderá selecioná-la na tela do aplicativo.")
-        
+
     local_ip = get_local_ip()
     print(f"\nAbrindo aplicativo em {URL}...")
     print(f"Painel de TV da Oficina (LAN): http://{local_ip}:{PORT}/tv")
-    threading.Thread(target=launch_ui, daemon=True).start()
-    
-    # Run server on all interfaces to allow Smart TVs and devices on LAN
-    app.run(host="0.0.0.0", port=PORT, debug=False, use_reloader=False)
+    threading.Thread(target=launch_ui, daemon=True, name="mecatronicar-ui").start()
+
+    try:
+        http_server.run()
+    finally:
+        cache.stop_background_index(timeout=2.0)
 
 if __name__ == "__main__":
     main()
