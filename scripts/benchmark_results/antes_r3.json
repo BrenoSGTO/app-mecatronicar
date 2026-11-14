@@ -1,0 +1,156 @@
+{
+  "label": "antes_r3",
+  "files": 2000,
+  "queries": {
+    "plate": "BRA2E19",
+    "plate_visits": 24,
+    "plate_partial": "BRA 2E",
+    "name_noaccent": "guimaraes",
+    "model": "civic"
+  },
+  "python": "3.13.14",
+  "index_cold_ms": 758.2,
+  "index_cold_mode": "rápido (nome do arquivo)",
+  "search_first_after_cold": {
+    "wire_bytes_lan": 256685,
+    "first_ms": 624.34,
+    "median_ms": 16.91,
+    "p95_ms": 16.91,
+    "status": 200,
+    "bytes": 256685,
+    "bytes_gzip": 14328,
+    "served_gzip": false,
+    "etag": null
+  },
+  "history_first_after_cold": {
+    "wire_bytes_lan": 257134,
+    "first_ms": 217.9,
+    "median_ms": 216.15,
+    "p95_ms": 216.15,
+    "status": 200,
+    "bytes": 257134,
+    "bytes_gzip": 14413,
+    "served_gzip": false,
+    "etag": null
+  },
+  "full_content_parse_ms": 76796.5,
+  "reindex_noop_ms": 477.4,
+  "reindex_incremental_ms": 430.7,
+  "reindex_incremental_indexed": 30,
+  "endpoints": {
+    "search_plate": {
+      "wire_bytes_lan": 256685,
+      "first_ms": 20.14,
+      "median_ms": 19.2,
+      "p95_ms": 19.97,
+      "status": 200,
+      "bytes": 256685,
+      "bytes_gzip": 14332,
+      "served_gzip": false,
+      "etag": null
+    },
+    "search_name_sem_acento": {
+      "wire_bytes_lan": 532165,
+      "first_ms": 24.37,
+      "median_ms": 23.48,
+      "p95_ms": 29.16,
+      "status": 200,
+      "bytes": 532165,
+      "bytes_gzip": 11889,
+      "served_gzip": false,
+      "etag": null
+    },
+    "search_model": {
+      "wire_bytes_lan": 613942,
+      "first_ms": 29.28,
+      "median_ms": 25.91,
+      "p95_ms": 28.3,
+      "status": 200,
+      "bytes": 613942,
+      "bytes_gzip": 14081,
+      "served_gzip": false,
+      "etag": null
+    },
+    "car_history": {
+      "wire_bytes_lan": 257134,
+      "first_ms": 228.08,
+      "median_ms": 231.9,
+      "p95_ms": 331.88,
+      "status": 200,
+      "bytes": 257134,
+      "bytes_gzip": 14416,
+      "served_gzip": false,
+      "etag": null
+    },
+    "patio": {
+      "wire_bytes_lan": 7321,
+      "first_ms": 211.47,
+      "median_ms": 22.22,
+      "p95_ms": 25.02,
+      "status": 200,
+      "bytes": 7321,
+      "bytes_gzip": 1214,
+      "served_gzip": false,
+      "etag": null
+    },
+    "analytics_all": {
+      "wire_bytes_lan": 10540,
+      "first_ms": 178.59,
+      "median_ms": 191.56,
+      "p95_ms": 294.53,
+      "status": 200,
+      "bytes": 10540,
+      "bytes_gzip": 1890,
+      "served_gzip": false,
+      "etag": null
+    },
+    "analytics_30": {
+      "wire_bytes_lan": 5428,
+      "first_ms": 178.08,
+      "median_ms": 180.47,
+      "p95_ms": 206.19,
+      "status": 200,
+      "bytes": 5428,
+      "bytes_gzip": 948,
+      "served_gzip": false,
+      "etag": null
+    },
+    "nf_queue": {
+      "wire_bytes_lan": 4762391,
+      "first_ms": 348.28,
+      "median_ms": 270.57,
+      "p95_ms": 279.66,
+      "status": 200,
+      "bytes": 4762391,
+      "bytes_gzip": 147098,
+      "served_gzip": false,
+      "etag": null
+    },
+    "static_app_js": {
+      "wire_bytes_lan": 256615,
+      "first_ms": 1.94,
+      "median_ms": 0.97,
+      "p95_ms": 1.02,
+      "status": 200,
+      "bytes": 256615,
+      "bytes_gzip": 45953,
+      "served_gzip": false,
+      "etag": "\"1794611963.257925-256615-2936613576\""
+    }
+  },
+  "http_server": "werkzeug",
+  "http_mixed": {
+    "requests": 240,
+    "errors": 0,
+    "rps": 15.8,
+    "p50_ms": 115.24,
+    "p95_ms": 1542.42
+  },
+  "http_patio_only": {
+    "requests": 400,
+    "errors": 0,
+    "rps": 75.1,
+    "p50_ms": 105.88,
+    "p95_ms": 118.61
+  }
+}

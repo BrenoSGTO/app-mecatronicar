@@ -277,6 +277,12 @@ def run(args):
     work = tempfile.mkdtemp(prefix="mecatronicar_bench_run_")
     folder = os.path.join(work, "planilhas")
     shutil.copytree(folder_src, folder)
+    # Pré-leitura: o antivírus do Windows escaneia cada arquivo novo no primeiro open
+    # (dezenas de ms por planilha e muito variável). Lendo tudo antes, as medições
+    # comparam o código, não o antivírus.
+    for name in os.listdir(folder):
+        with open(os.path.join(folder, name), "rb") as fh:
+            fh.read()
     db_path = os.path.join(work, "bench.db")
     cache.get_db_path = lambda base_dir=None: db_path  # isola do banco oficial
     if hasattr(cache, "enable_connection_pool"):
@@ -416,21 +422,35 @@ def _fmt(v, unit):
     return f"{v:,.1f} ms".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _median_of(runs, getter):
+    vals = []
+    for r in runs:
+        try:
+            v = getter(r)
+        except Exception:
+            v = None
+        if v is not None:
+            vals.append(v)
+    return statistics.median(vals) if vals else None
+
+
+def _load_runs(pattern):
+    import glob
+    paths = sorted(glob.glob(pattern)) or [pattern]
+    return [json.load(open(p, encoding="utf-8")) for p in paths]
+
+
 def compare(a_path, b_path):
-    a = json.load(open(a_path, encoding="utf-8"))
-    b = json.load(open(b_path, encoding="utf-8"))
-    print(f"Massa: {a['files']} planilhas (antes) / {b['files']} (depois). Servidor HTTP: {a.get('http_server')} → {b.get('http_server')}\n")
-    print(f"| Medida | {a['label']} | {b['label']} | Ganho |")
+    """Compara execuções; aceita padrões (ex.: 'antes*.json') e usa a mediana de cada medida."""
+    a_runs, b_runs = _load_runs(a_path), _load_runs(b_path)
+    a, b = a_runs[0], b_runs[0]
+    print(f"Massa: {a['files']} planilhas. Execuções: {len(a_runs)} (antes) / {len(b_runs)} (depois), "
+          f"mediana de cada medida. Servidor HTTP: {a.get('http_server')} → {b.get('http_server')}\n")
+    print("| Medida | antes | depois | Ganho |")
     print("|---|---:|---:|---:|")
     for name, get, unit in ROWS:
-        try:
-            va = get(a)
-        except Exception:
-            va = None
-        try:
-            vb = get(b)
-        except Exception:
-            vb = None
+        va = _median_of(a_runs, get)
+        vb = _median_of(b_runs, get)
         gain = ""
         if va and vb:
             gain = f"{(vb / va):.1f}×" if unit == "req/s" else f"{(va / vb):.1f}×"

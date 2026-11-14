@@ -1,0 +1,167 @@
+{
+  "label": "depois_r1",
+  "files": 2000,
+  "queries": {
+    "plate": "BRA2E19",
+    "plate_visits": 24,
+    "plate_partial": "BRA 2E",
+    "name_noaccent": "guimaraes",
+    "model": "civic"
+  },
+  "python": "3.13.14",
+  "index_cold_ms": 187.8,
+  "index_cold_mode": "rápido (nome do arquivo)",
+  "search_first_after_cold": {
+    "wire_bytes_lan": 16717,
+    "first_ms": 676.96,
+    "median_ms": 5.5,
+    "p95_ms": 5.5,
+    "status": 200,
+    "bytes": 256685,
+    "bytes_gzip": 14327,
+    "served_gzip": false,
+    "etag": null
+  },
+  "history_first_after_cold": {
+    "wire_bytes_lan": 16799,
+    "first_ms": 5.16,
+    "median_ms": 4.73,
+    "p95_ms": 4.73,
+    "status": 200,
+    "bytes": 257134,
+    "bytes_gzip": 14411,
+    "served_gzip": false,
+    "etag": null
+  },
+  "full_content_parse_ms": 26781.2,
+  "reindex_noop_ms": 54.7,
+  "reindex_incremental_ms": 55.4,
+  "reindex_incremental_indexed": 30,
+  "endpoints": {
+    "search_plate": {
+      "wire_bytes_lan": 16721,
+      "first_ms": 6.56,
+      "median_ms": 5.43,
+      "p95_ms": 5.77,
+      "status": 200,
+      "bytes": 256685,
+      "bytes_gzip": 14331,
+      "served_gzip": false,
+      "etag": null
+    },
+    "search_name_sem_acento": {
+      "wire_bytes_lan": 15930,
+      "first_ms": 9.25,
+      "median_ms": 9.13,
+      "p95_ms": 9.5,
+      "status": 200,
+      "bytes": 532165,
+      "bytes_gzip": 11916,
+      "served_gzip": false,
+      "etag": null
+    },
+    "search_model": {
+      "wire_bytes_lan": 18940,
+      "first_ms": 11.78,
+      "median_ms": 10.8,
+      "p95_ms": 12.29,
+      "status": 200,
+      "bytes": 613944,
+      "bytes_gzip": 14104,
+      "served_gzip": false,
+      "etag": null
+    },
+    "car_history": {
+      "wire_bytes_lan": 16802,
+      "first_ms": 10.92,
+      "median_ms": 10.26,
+      "p95_ms": 10.66,
+      "status": 200,
+      "bytes": 257134,
+      "bytes_gzip": 14415,
+      "served_gzip": false,
+      "etag": null
+    },
+    "patio": {
+      "wire_bytes_lan": 1231,
+      "first_ms": 15.72,
+      "median_ms": 1.18,
+      "p95_ms": 1.32,
+      "status": 200,
+      "bytes": 7321,
+      "bytes_gzip": 1218,
+      "served_gzip": false,
+      "etag": "\"6e8ce0e72ae411c345f1d028\""
+    },
+    "patio_304": {
+      "wire_bytes_lan": 0,
+      "first_ms": 1.11,
+      "median_ms": 1.03,
+      "p95_ms": 1.06,
+      "status": 304,
+      "bytes": 0,
+      "bytes_gzip": 20,
+      "served_gzip": false,
+      "etag": "\"6e8ce0e72ae411c345f1d028\""
+    },
+    "analytics_all": {
+      "wire_bytes_lan": 1930,
+      "first_ms": 171.62,
+      "median_ms": 1.07,
+      "p95_ms": 1.21,
+      "status": 200,
+      "bytes": 10540,
+      "bytes_gzip": 1890,
+      "served_gzip": false,
+      "etag": null
+    },
+    "analytics_30": {
+      "wire_bytes_lan": 948,
+      "first_ms": 165.18,
+      "median_ms": 0.95,
+      "p95_ms": 1.09,
+      "status": 200,
+      "bytes": 5428,
+      "bytes_gzip": 948,
+      "served_gzip": false,
+      "etag": null
+    },
+    "nf_queue": {
+      "wire_bytes_lan": 158550,
+      "first_ms": 211.6,
+      "median_ms": 0.86,
+      "p95_ms": 0.86,
+      "status": 200,
+      "bytes": 5105452,
+      "bytes_gzip": 150140,
+      "served_gzip": false,
+      "etag": "\"03bc6ead909df4cfe3a00974\""
+    },
+    "static_app_js": {
+      "wire_bytes_lan": 46615,
+      "first_ms": 1.37,
+      "median_ms": 0.98,
+      "p95_ms": 1.05,
+      "status": 200,
+      "bytes": 256615,
+      "bytes_gzip": 45953,
+      "served_gzip": false,
+      "etag": "\"1794610126.03518-256615-3733137016\""
+    }
+  },
+  "http_server": "waitress",
+  "http_mixed": {
+    "requests": 240,
+    "errors": 0,
+    "rps": 334.9,
+    "p50_ms": 11.36,
+    "p95_ms": 46.45
+  },
+  "http_patio_only": {
+    "requests": 400,
+    "errors": 0,
+    "rps": 629.0,
+    "p50_ms": 12.31,
+    "p95_ms": 16.57
+  }
+}
