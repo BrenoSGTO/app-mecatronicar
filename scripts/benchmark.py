@@ -37,6 +37,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.parse
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -132,7 +133,13 @@ def bench_get(client, url, runs=15, headers=None):
     raw = resp.get_data()
     enc = resp.headers.get("Content-Encoding", "")
     body = gzip.decompress(raw) if enc == "gzip" else raw
+    # Mesmo pedido feito por um aparelho da rede (TV) aceitando gzip: bytes no fio.
+    lan = client.get(url, headers={**(headers or {}), "Accept-Encoding": "gzip"},
+                     environ_base={"REMOTE_ADDR": "192.168.0.50"})
+    wire_lan = len(lan.get_data())
+    lan.close()
     return {
+        "wire_bytes_lan": wire_lan,
         "first_ms": round(first_ms, 2),
         "median_ms": round(statistics.median(times), 2),
         "p95_ms": round(sorted(times)[max(0, int(len(times) * 0.95) - 1)], 2),
@@ -355,7 +362,8 @@ def run(args):
     kind, stop = start_http_server(server, port)
     time.sleep(0.3)
     paths = ["/api/patio", "/api/patio", "/api/patio",
-             f"/api/search?q={q['plate_partial']}", f"/api/car_history/{q['plate']}", "/api/analytics?period=30"]
+             "/api/search?q=" + urllib.parse.quote(q["plate_partial"]), f"/api/car_history/{q['plate']}",
+             "/api/analytics?period=30"]
     out["http_server"] = kind
     out["http_mixed"] = http_load(port, paths, clients=6, per_client=40)
     out["http_patio_only"] = http_load(port, ["/api/patio"], clients=8, per_client=50)
@@ -381,10 +389,10 @@ ROWS = [
     ("/api/analytics?period=all (mediana)", lambda r: r["endpoints"]["analytics_all"]["median_ms"], "ms"),
     ("/api/analytics?period=30 (mediana)", lambda r: r["endpoints"]["analytics_30"]["median_ms"], "ms"),
     ("/api/nf/queue (mediana)", lambda r: r["endpoints"]["nf_queue"]["median_ms"], "ms"),
-    ("Bytes trafegados /api/search placa", lambda r: _wire(r["endpoints"]["search_plate"]), "B"),
-    ("Bytes trafegados /api/car_history", lambda r: _wire(r["endpoints"]["car_history"]), "B"),
-    ("Bytes trafegados /api/patio", lambda r: _wire(r["endpoints"]["patio"]), "B"),
-    ("Bytes trafegados /app.js", lambda r: _wire(r["endpoints"]["static_app_js"]), "B"),
+    ("Bytes p/ cliente da rede: /api/search placa", lambda r: _wire(r["endpoints"]["search_plate"]), "B"),
+    ("Bytes p/ cliente da rede: /api/car_history", lambda r: _wire(r["endpoints"]["car_history"]), "B"),
+    ("Bytes p/ cliente da rede: /api/patio", lambda r: _wire(r["endpoints"]["patio"]), "B"),
+    ("Bytes p/ cliente da rede: /app.js", lambda r: _wire(r["endpoints"]["static_app_js"]), "B"),
     ("HTTP misto 6 clientes: req/s", lambda r: r["http_mixed"]["rps"], "req/s"),
     ("HTTP misto 6 clientes: p95", lambda r: r["http_mixed"]["p95_ms"], "ms"),
     ("HTTP só /api/patio 8 clientes: req/s", lambda r: r["http_patio_only"]["rps"], "req/s"),
@@ -393,6 +401,8 @@ ROWS = [
 
 
 def _wire(e):
+    if "wire_bytes_lan" in e:
+        return e["wire_bytes_lan"]
     return e["bytes_gzip"] if e.get("served_gzip") else e["bytes"]
 
 
@@ -428,6 +438,10 @@ def compare(a_path, b_path):
 
 
 def main():
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")  # console do Windows em cp1252
+    except Exception:
+        pass
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--total", type=int, default=2000)
     ap.add_argument("--label", default="atual")

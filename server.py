@@ -1388,30 +1388,70 @@ def nf_data_endpoint(plate=None):
         "nf_control": nf_rec
     })
 
+_json_body_cache = {}
+_json_body_cache_lock = threading.Lock()
+
+
+def cached_json_response(name, args, tables, build, db_path=None):
+    """
+    Resposta JSON cujo corpo serializado fica em memória enquanto as tabelas
+    `tables` não mudarem (contadores de mudança do banco). Também responde 304
+    via ETag. Útil para respostas grandes (a fila fiscal passa de 4 MB com 2000
+    planilhas e serializá-la custava ~55 ms a cada chamada).
+    """
+    path = db_path or cache.get_db_path(BASE_DIR)
+    gens = cache.get_change_counters(path)
+    key = (name, args, cache._file_identity(path), tuple(gens.get(t, 0) for t in tables))
+    etag = hashlib.blake2b(repr(key).encode("utf-8"), digest_size=12).hexdigest()
+    if etag in request.if_none_match:
+        resp = app.response_class(status=304)
+    else:
+        with _json_body_cache_lock:
+            body = _json_body_cache.get(key)
+        if body is None:
+            body = json.dumps(build(), ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+            with _json_body_cache_lock:
+                for k in [k for k in _json_body_cache if k[:2] == key[:2]]:
+                    del _json_body_cache[k]
+                if len(_json_body_cache) > 16:
+                    _json_body_cache.clear()
+                _json_body_cache[key] = body
+        resp = app.response_class(body, mimetype="application/json")
+    resp.set_etag(etag)
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @app.route("/api/nf/queue", methods=["GET"])
 def nf_queue_endpoint():
     db_path = cache.get_db_path(BASE_DIR)
     filter_type = request.args.get("filter", "pending").strip()
     query = request.args.get("q", "").strip()
-    res = cache.get_nf_queue(filter_type=filter_type, query=query, db_path=db_path)
-    return jsonify({
-        "success": True,
-        "queue": res.get("queue", []),
-        "items": res.get("queue", []),
-        "stats": res.get("stats", {})
-    })
+
+    def build():
+        res = cache.get_nf_queue(filter_type=filter_type, query=query, db_path=db_path)
+        return {
+            "success": True,
+            "queue": res.get("queue", []),
+            "items": res.get("queue", []),
+            "stats": res.get("stats", {})
+        }
+    return cached_json_response("nf_queue", (filter_type, query), ("files", "nf_control"), build, db_path)
 
 @app.route("/api/nf/pending", methods=["GET"])
 def nf_pending_endpoint():
     db_path = cache.get_db_path(BASE_DIR)
-    res = cache.get_nf_queue(filter_type="pending", db_path=db_path)
-    pending = res.get("queue", [])
-    return jsonify({
-        "success": True,
-        "pending": pending,
-        "total": len(pending),
-        "stats": res.get("stats", {})
-    })
+
+    def build():
+        res = cache.get_nf_queue(filter_type="pending", db_path=db_path)
+        pending = res.get("queue", [])
+        return {
+            "success": True,
+            "pending": pending,
+            "total": len(pending),
+            "stats": res.get("stats", {})
+        }
+    return cached_json_response("nf_pending", (), ("files", "nf_control"), build, db_path)
 
 @app.route("/api/nf/status", methods=["POST"])
 def nf_update_status_endpoint():

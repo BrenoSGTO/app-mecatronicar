@@ -477,6 +477,7 @@ def _setup_files_search_column(cur):
     cols = {r[1] for r in cur.fetchall()}
     if "search_text" not in cols:
         cur.execute("ALTER TABLE files ADD COLUMN search_text TEXT")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_files_search ON files(search_text, plate_clean)")
     # Se outro código (ex.: gerar_massa_dados.py) alterar os campos pesquisáveis sem
     # recalcular search_text, invalida-o; backfill_search_text() o recalcula depois.
     cur.execute("""
@@ -1097,25 +1098,39 @@ def search_files(query, db_path=None):
     # por código externo) caem no filtro antigo, campo a campo.
     like_query = _like(query_clean)
     plate_like = _like(query_plate) if query_plate else None
-    cur.execute("""
+    # 1) casamento varrendo só o índice idx_files_search (search_text, plate_clean):
+    #    sem ele o SQLite atravessa as páginas de overflow do data_json (~10 KB por
+    #    linha) para chegar ao search_text, a última coluna da tabela (13 ms -> 1 ms
+    #    com 2000 planilhas);
+    # 2) ordena e corta em 60 lendo só colunas pequenas; 3) só então lê o data_json.
+    order_by = "ORDER BY entry_date_sort DESC, odometer_int DESC, CAST(visit_num AS INTEGER) DESC"
+    cur.execute(f"""
     SELECT 
         file_path, file_name, plate, plate_clean, plate_display,
         client_name, car_model, car_year, car_color, visit_num,
         entry_date, entry_date_sort, odometer, odometer_int,
         complaint, data_json
     FROM files
-    WHERE
-        (? IS NOT NULL AND plate_clean LIKE ? ESCAPE '!') OR
-        (search_text IS NOT NULL AND search_text LIKE ? ESCAPE '!') OR
-        (search_text IS NULL AND (
-            plate_clean LIKE ? ESCAPE '!' OR
-            client_clean LIKE ? ESCAPE '!' OR
-            LOWER(car_model) LIKE ? ESCAPE '!' OR
-            LOWER(file_name) LIKE ? ESCAPE '!' OR
-            LOWER(complaint) LIKE ? ESCAPE '!'
-        ))
-    ORDER BY entry_date_sort DESC, odometer_int DESC, CAST(visit_num AS INTEGER) DESC
-    LIMIT 60
+    WHERE rowid IN (
+        SELECT rowid FROM files
+        WHERE rowid IN (
+            SELECT rowid FROM files
+            WHERE (? IS NOT NULL AND plate_clean LIKE ? ESCAPE '!')
+               OR (search_text IS NOT NULL AND search_text LIKE ? ESCAPE '!')
+            UNION
+            SELECT rowid FROM files
+            WHERE search_text IS NULL AND (
+                plate_clean LIKE ? ESCAPE '!' OR
+                client_clean LIKE ? ESCAPE '!' OR
+                LOWER(car_model) LIKE ? ESCAPE '!' OR
+                LOWER(file_name) LIKE ? ESCAPE '!' OR
+                LOWER(complaint) LIKE ? ESCAPE '!'
+            )
+        )
+        {order_by}
+        LIMIT 60
+    )
+    {order_by}
     """, (
         plate_like, plate_like,
         like_query,
