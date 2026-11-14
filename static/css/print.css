@@ -59,6 +59,11 @@ body {
 .sheet-bar .btn,
 .veiculo-timeline-header .btn,
 .note-chip,
+.visit-chevron,
+.visit-summary,
+.visit-complaint-actions,
+.veiculo-phone .btn,
+[data-action="copy-chassis"] .icon,
 .page-actions,
 .print-excluded,
 [data-tooltip]::after {
@@ -99,6 +104,7 @@ body {
     print-color-adjust: exact !important;
 }
 
+body.print-no-prices .visit-footer,
 body.print-no-prices .col-price,
 body.print-no-prices .totals-group {
     display: none !important;
