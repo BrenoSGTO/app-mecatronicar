@@ -148,7 +148,7 @@
 
     /* Casca */
     --color-sidebar-bg: #ffffff;
-    --color-topbar-bg: rgba(255, 255, 255, 0.92);
+    --color-topbar-bg: #ffffff;
 
     /* Feedback */
     --color-success: #15803d;
@@ -224,7 +224,7 @@
     --focus-halo: rgba(249, 204, 1, 0.30);
 
     --color-sidebar-bg: #121418;
-    --color-topbar-bg: rgba(14, 16, 20, 0.88);
+    --color-topbar-bg: #121418;
 
     --color-success: #5ad48a;
     --color-success-bg: rgba(74, 222, 128, 0.10);

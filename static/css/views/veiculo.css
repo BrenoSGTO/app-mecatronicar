@@ -377,15 +377,13 @@
     vertical-align: middle;
 }
 
-/* Linha com cor de preenchimento vinda do Excel */
-.items-table tr.has-color td {
+/* Linha com cor de preenchimento vinda do Excel (texto sempre na cor da planilha,
+   inclusive no tema escuro, para manter o contraste com o fundo da célula) */
+.items-table tr.has-color td,
+.items-table tr.has-color .items-type,
+.items-table tr.has-color .text-subtle {
     background: var(--row-bg, transparent);
-    color: var(--row-fg, inherit);
-}
-
-.items-table tr.has-color .items-type {
-    color: inherit;
-    opacity: 0.8;
+    color: var(--row-fg, #1e293b);
 }
 
 /* Linha encontrada pelo filtro */

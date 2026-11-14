@@ -256,7 +256,6 @@ html.sb-collapsed .nav-item.is-active::before {
     padding: 0 var(--space-5);
     background: var(--color-topbar-bg);
     border-bottom: 1px solid var(--color-border);
-    backdrop-filter: saturate(1.4) blur(8px);
     min-width: 0;
 }
 
