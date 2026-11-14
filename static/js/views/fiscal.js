@@ -911,7 +911,7 @@ async function downloadExport(button) {
         const text = await res.text();
         const bom = exportFormat === 'csv' && !text.startsWith('﻿') ? '﻿' : '';
         const mime = exportFormat === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8';
-        const slug = scope.replace(/_/g, '-');
+        const slug = { pending: 'pendentes', pending_servico: 'nfse-a-emitir', pending_pecas: 'nfe-a-emitir', emitidas: 'emitidas', all: 'todas' }[scope] || scope;
         const filename = `MecatroniCar_Notas_${slug}_${todayIso()}.${exportFormat}`;
         const url = URL.createObjectURL(new Blob([bom + text], { type: mime }));
         const link = document.createElement('a');
