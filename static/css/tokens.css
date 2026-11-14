@@ -1,0 +1,273 @@
+/* ==========================================================================
+   MecatroniCar v3 — Design tokens (fonte da verdade do design system)
+   --------------------------------------------------------------------------
+   Regras (docs/REPAGINACAO_V3.md, seção 3, e docs/FRONTEND.md):
+   - Amarelo é ACENTO (botão primário, foco, item ativo). Nunca grandes áreas.
+   - Use sempre os tokens semânticos (--color-*), não os valores crus da escala.
+   - Tema via <html data-theme="light|dark">. A preferência "auto" é resolvida
+     em JS (js/theme-boot.js + js/shell/settings.js) para light/dark.
+   - O painel de TV pode reaproveitar este arquivo com data-theme="dark".
+   ========================================================================== */
+
+:root {
+    /* ---------- Marca ---------- */
+    --brand-yellow: #F9CC01;
+    --brand-yellow-600: #E0B700;
+    --brand-yellow-700: #B08C00;   /* "amarelo escuro": texto/borda amarela com contraste AA em fundo claro */
+    --brand-charcoal: #111827;
+
+    /* ---------- Escala de neutros (cinza frio, estilo slate/zinc) ---------- */
+    --gray-0: #ffffff;
+    --gray-25: #fbfbfc;
+    --gray-50: #f6f7f9;
+    --gray-100: #f0f2f5;
+    --gray-150: #e8ebef;
+    --gray-200: #e1e5ea;
+    --gray-300: #cdd3db;
+    --gray-400: #9aa3af;
+    --gray-500: #6b7381;
+    --gray-600: #4b5462;
+    --gray-700: #353c47;
+    --gray-800: #232830;
+    --gray-850: #1b1f26;
+    --gray-900: #15181e;
+    --gray-950: #0e1014;
+
+    /* ---------- Tipografia ---------- */
+    --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 14px;
+    --text-md: 16px;
+    --text-lg: 20px;
+    --text-xl: 24px;
+    --text-2xl: 32px;
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+
+    --leading-tight: 1.25;
+    --leading-snug: 1.4;
+    --leading-normal: 1.5;
+
+    --tracking-caps: 0.04em;      /* para rótulos em caixa alta */
+
+    /* ---------- Espaçamento (escala de 4px) ---------- */
+    --space-0: 0;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+
+    /* ---------- Raios ---------- */
+    --radius-xs: 4px;        /* etiquetas pequenas */
+    --radius-control: 6px;   /* botões, inputs, selects */
+    --radius-card: 10px;     /* cards, painéis */
+    --radius-modal: 14px;    /* modais, popovers grandes */
+    --radius-pill: 999px;
+
+    /* ---------- Tamanhos de controle (alvos >= 32px) ---------- */
+    --control-h-sm: 32px;
+    --control-h-md: 36px;
+    --control-h-lg: 44px;
+    --icon-sm: 16px;
+    --icon-md: 20px;
+    --icon-stroke: 1.75;
+
+    /* ---------- Casca do app ---------- */
+    --sidebar-w: 216px;
+    --sidebar-w-collapsed: 60px;
+    --topbar-h: 52px;
+    --content-max: 1680px;
+
+    /* ---------- Movimento ---------- */
+    --duration-fast: 120ms;
+    --duration-base: 150ms;
+    --duration-slow: 180ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* ---------- Camadas ---------- */
+    --z-sticky: 10;
+    --z-sidebar: 20;
+    --z-topbar: 30;
+    --z-dropdown: 40;
+    --z-modal: 50;
+    --z-toast: 60;
+    --z-tooltip: 70;
+
+    /* ---------- Zoom da interface (config ui_zoom, aplicado em JS) ---------- */
+    --ui-zoom: 1;
+}
+
+/* ==========================================================================
+   Tema CLARO
+   ========================================================================== */
+:root,
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    /* Superfícies */
+    --color-bg: #f3f4f7;                 /* fundo do app (levemente acinzentado) */
+    --color-surface: #ffffff;            /* cards, painéis, modais */
+    --color-surface-2: var(--gray-50);   /* faixas internas, cabeçalhos de tabela */
+    --color-surface-hover: var(--gray-100);
+    --color-surface-active: var(--gray-150);
+    --color-surface-sunken: var(--gray-100); /* trilhos, inputs desabilitados */
+    --color-overlay: rgba(14, 16, 20, 0.45);
+
+    /* Bordas */
+    --color-border: var(--gray-200);
+    --color-border-strong: var(--gray-300);
+    --color-border-subtle: var(--gray-150);
+
+    /* Texto */
+    --color-text: #111827;
+    --color-text-muted: var(--gray-600);   /* secundário */
+    --color-text-subtle: var(--gray-500);  /* terciário, placeholders (AA em branco) */
+    --color-text-inverse: #ffffff;
+    --color-link: #1d4ed8;
+
+    /* Acento (amarelo MecatroniCar) */
+    --color-accent: var(--brand-yellow);
+    --color-accent-hover: var(--brand-yellow-600);
+    --color-accent-active: #CFA900;
+    --color-accent-contrast: var(--brand-charcoal);   /* texto sobre o amarelo */
+    --color-accent-subtle: rgba(249, 204, 1, 0.16);   /* fundo de item ativo */
+    --color-accent-strong: var(--brand-yellow-700);   /* ícone/indicador amarelo legível no claro */
+
+    /* Foco */
+    --color-focus: var(--brand-yellow-700);
+    --focus-halo: rgba(249, 204, 1, 0.45);
+
+    /* Casca */
+    --color-sidebar-bg: #ffffff;
+    --color-topbar-bg: #ffffff;
+
+    /* Feedback */
+    --color-success: #15803d;
+    --color-success-bg: #ecf8f0;
+    --color-success-border: #bfe5cb;
+    --color-warning: #a35a00;
+    --color-warning-bg: #fff6e5;
+    --color-warning-border: #f6d9a3;
+    --color-danger: #c62828;
+    --color-danger-hover: #ad1f1f;
+    --color-danger-bg: #fdf0f0;
+    --color-danger-border: #f3c4c4;
+    --color-info: #1d4ed8;
+    --color-info-bg: #eef3ff;
+    --color-info-border: #c8d6fb;
+
+    /* Nota de célula do Excel (triângulo vermelho) */
+    --color-excel-note: #e02424;
+
+    /* Status do pátio: ponto/barra (solid), fundo da etiqueta (bg), texto da etiqueta (fg) */
+    --status-diagnostico: #2563eb;  --status-diagnostico-bg: #eef3ff;  --status-diagnostico-fg: #1d4ed8;
+    --status-orcamento: #d97706;    --status-orcamento-bg: #fff5e3;    --status-orcamento-fg: #9a5800;
+    --status-aprovacao: #ea580c;    --status-aprovacao-bg: #fff0e7;    --status-aprovacao-fg: #b93f0a;
+    --status-pecas: #7c3aed;        --status-pecas-bg: #f3eeff;        --status-pecas-fg: #6025c9;
+    --status-execucao: #0d9488;     --status-execucao-bg: #e6f6f4;     --status-execucao-fg: #0b6f66;
+    --status-pronto: #16a34a;       --status-pronto-bg: #eaf7ee;       --status-pronto-fg: #15803d;
+    --status-terceiro: #db2777;     --status-terceiro-bg: #fdedf4;     --status-terceiro-fg: #b5175f;
+    --status-entregue: #6b7381;     --status-entregue-bg: #f0f2f5;     --status-entregue-fg: #4b5462;
+
+    /* Dados financeiros (peças x mão de obra), usados em gráficos e totais */
+    --color-data-pecas: #d97706;
+    --color-data-servicos: #2563eb;
+    --color-data-total: #15803d;
+
+    /* Elevação: bordas sutis; sombra só em popover/modal */
+    --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+    --shadow-popover: 0 10px 28px -6px rgba(16, 24, 40, 0.16), 0 2px 6px rgba(16, 24, 40, 0.06);
+    --shadow-modal: 0 28px 56px -12px rgba(16, 24, 40, 0.28), 0 2px 8px rgba(16, 24, 40, 0.08);
+}
+
+/* ==========================================================================
+   Tema ESCURO
+   ========================================================================== */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-bg: #0e1014;
+    --color-surface: #16191e;
+    --color-surface-2: #1b1f25;
+    --color-surface-hover: #20242b;
+    --color-surface-active: #272c34;
+    --color-surface-sunken: #121418;
+    --color-overlay: rgba(0, 0, 0, 0.62);
+
+    --color-border: #272b33;
+    --color-border-strong: #363c46;
+    --color-border-subtle: #20242b;
+
+    --color-text: #e9ebef;
+    --color-text-muted: #aab1bc;
+    --color-text-subtle: #8a929e;
+    --color-text-inverse: #111827;
+    --color-link: #8ab4ff;
+
+    --color-accent: var(--brand-yellow);
+    --color-accent-hover: #ffd83a;
+    --color-accent-active: #e6bc00;
+    --color-accent-contrast: var(--brand-charcoal);
+    --color-accent-subtle: rgba(249, 204, 1, 0.12);
+    --color-accent-strong: var(--brand-yellow);
+
+    --color-focus: var(--brand-yellow);
+    --focus-halo: rgba(249, 204, 1, 0.30);
+
+    --color-sidebar-bg: #121418;
+    --color-topbar-bg: #121418;
+
+    --color-success: #5ad48a;
+    --color-success-bg: rgba(74, 222, 128, 0.10);
+    --color-success-border: rgba(74, 222, 128, 0.28);
+    --color-warning: #fbbf4d;
+    --color-warning-bg: rgba(251, 191, 36, 0.10);
+    --color-warning-border: rgba(251, 191, 36, 0.28);
+    --color-danger: #ff7b7b;
+    --color-danger-hover: #ff9494;
+    --color-danger-bg: rgba(248, 113, 113, 0.10);
+    --color-danger-border: rgba(248, 113, 113, 0.30);
+    --color-info: #8ab4ff;
+    --color-info-bg: rgba(96, 165, 250, 0.10);
+    --color-info-border: rgba(96, 165, 250, 0.28);
+
+    --color-excel-note: #ff5c5c;
+
+    --status-diagnostico: #60a5fa;  --status-diagnostico-bg: rgba(96, 165, 250, 0.14);  --status-diagnostico-fg: #a5c8fd;
+    --status-orcamento: #fbbf24;    --status-orcamento-bg: rgba(251, 191, 36, 0.13);    --status-orcamento-fg: #fcd56b;
+    --status-aprovacao: #fb923c;    --status-aprovacao-bg: rgba(251, 146, 60, 0.14);    --status-aprovacao-fg: #fdba84;
+    --status-pecas: #a78bfa;        --status-pecas-bg: rgba(167, 139, 250, 0.15);       --status-pecas-fg: #c9b8fd;
+    --status-execucao: #2dd4bf;     --status-execucao-bg: rgba(45, 212, 191, 0.13);     --status-execucao-fg: #79e6d6;
+    --status-pronto: #4ade80;       --status-pronto-bg: rgba(74, 222, 128, 0.12);       --status-pronto-fg: #8ceeb0;
+    --status-terceiro: #f472b6;     --status-terceiro-bg: rgba(244, 114, 182, 0.14);    --status-terceiro-fg: #f9a8d4;
+    --status-entregue: #9aa3af;     --status-entregue-bg: rgba(154, 163, 175, 0.12);    --status-entregue-fg: #c8ced6;
+
+    /* validados com o dataviz validate_palette.js (modo escuro): banda de luminosidade + CVD */
+    --color-data-pecas: #c97a0a;
+    --color-data-servicos: #4b8ef0;
+    --color-data-total: #4ade80;
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-popover: 0 12px 32px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --shadow-modal: 0 32px 64px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* ==========================================================================
+   Movimento reduzido
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0ms;
+        --duration-base: 0ms;
+        --duration-slow: 0ms;
+    }
+}

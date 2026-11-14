@@ -1,0 +1,169 @@
+/* ==========================================================================
+   Copiloto Fiscal (#/fiscal) + modal por visita
+   Dono na Fase 2: T10.
+   ========================================================================== */
+
+.fiscal-kpis {
+    margin-bottom: var(--space-5);
+}
+
+.fiscal-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.fiscal-search {
+    width: 320px;
+}
+
+.fiscal-queue-list {
+    overflow: hidden;
+}
+
+.fiscal-queue-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.fiscal-queue-item:last-child {
+    border-bottom: 0;
+}
+
+.fiscal-queue-item:hover {
+    background: var(--color-surface-2);
+}
+
+.fiscal-queue-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    flex: 1;
+    min-width: 0;
+}
+
+.fiscal-queue-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fiscal-queue-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1199.98px) {
+    .fiscal-queue-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* ---------- Modal por visita ---------- */
+.fiscal-tabs {
+    margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1) var(--space-5);
+    padding: 0 var(--space-4);
+    background: var(--color-surface-2);
+}
+
+.fiscal-textarea {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    min-height: 168px;
+    background: var(--color-surface-2);
+}
+
+.fiscal-services .list-item {
+    padding: 8px var(--space-3);
+    font-size: var(--text-sm);
+}
+
+.fiscal-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-2);
+}
+
+.fiscal-status-total {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.fiscal-status-total strong {
+    font-size: var(--text-lg);
+}
+
+.fiscal-status-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.fiscal-status-form .input {
+    width: 190px;
+}
+
+.fiscal-status-form input[type="date"] {
+    width: 150px;
+}
+
+/* Dados do tomador */
+.tomador-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+}
+
+.tomador-wide {
+    grid-column: 1 / -1;
+}
+
+.tomador-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    min-width: 0;
+}
+
+.tomador-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+}
+
+.tomador-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.tomador-value {
+    flex: 1;
+    min-width: 0;
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+}
+
+[data-tomador="linha"] {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+}

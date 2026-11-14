@@ -1,0 +1,141 @@
+/* ==========================================================================
+   Nova visita / Editar OS (modal) + Checklist
+   Dono na Fase 2: T9.
+   ========================================================================== */
+
+.os-form {
+    min-width: 0;
+}
+
+.os-lookup {
+    position: relative;
+}
+
+.os-plate-spinner {
+    visibility: hidden;
+    color: var(--color-text-subtle);
+}
+
+.os-form.is-looking-up .os-plate-spinner {
+    visibility: visible;
+}
+
+.os-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.os-items-table .os-col-qty { width: 96px; }
+.os-items-table .os-col-money { width: 150px; }
+.os-items-table .os-col-remove { width: 48px; }
+
+.os-items-table td {
+    padding: 6px 8px;
+}
+
+.os-items-table tbody tr:hover td {
+    background: transparent;
+}
+
+.os-row-total {
+    color: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+}
+
+.os-totals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-3);
+}
+
+.os-total {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.os-total strong {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+}
+
+.os-total-final {
+    border-color: var(--color-accent-strong);
+    background: var(--color-accent-subtle);
+}
+
+.os-discount {
+    max-width: 160px;
+}
+
+/* O conteúdo do modal xl rola; o formulário usa o fundo do app para destacar as seções */
+.modal#modal-os .modal-body {
+    background: var(--color-bg);
+}
+
+/* ---------------- Checklist ---------------- */
+.checklist-option {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-2);
+}
+
+.checklist-items {
+    display: flex;
+    flex-direction: column;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 8px var(--space-3);
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--text-sm);
+}
+
+.checklist-item:last-child {
+    border-bottom: 0;
+}
+
+label.checklist-item {
+    cursor: pointer;
+}
+
+label.checklist-item:hover {
+    background: var(--color-surface-2);
+}
+
+.checklist-qty {
+    min-width: 32px;
+    color: var(--color-text-muted);
+}
+
+.checklist-desc {
+    flex: 1;
+    min-width: 0;
+}
+
+.checklist-empty {
+    padding: var(--space-3);
+}
+
+.checklist-manual-form {
+    display: grid;
+    grid-template-columns: 190px 72px minmax(0, 1fr) auto;
+    gap: var(--space-2);
+}

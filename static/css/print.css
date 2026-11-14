@@ -1,0 +1,111 @@
+/* ==========================================================================
+   Impressão (carregado com media="print").
+   Imprime só a tela ativa, em tema claro, sem a casca do app.
+   - body.print-no-prices  → esconde .col-price e .totals-group
+   - .print-excluded       → não imprime (visitas não selecionadas)
+   ========================================================================== */
+
+:root,
+:root[data-theme="dark"],
+:root[data-theme="light"] {
+    color-scheme: light;
+    --ui-zoom: 1;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-2: #f6f7f9;
+    --color-surface-hover: #f6f7f9;
+    --color-surface-active: #eceff3;
+    --color-border: #cdd3db;
+    --color-border-strong: #9aa3af;
+    --color-border-subtle: #e1e5ea;
+    --color-text: #111827;
+    --color-text-muted: #4b5462;
+    --color-text-subtle: #6b7381;
+    --color-accent-subtle: #fdf3c4;
+    --color-warning-bg: #fff6e5;
+    --color-warning-border: #f6d9a3;
+}
+
+@page {
+    margin: 12mm;
+}
+
+html,
+body {
+    background: #ffffff !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.app {
+    position: static !important;
+    display: block !important;
+}
+
+.main {
+    overflow: visible !important;
+}
+
+.sidebar,
+.topbar,
+.toast-region,
+#modal-root,
+.menu,
+.veiculo-back,
+.veiculo-actions,
+.veiculo-filter,
+.visit-actions,
+.visit-extras,
+.sheet-bar .btn,
+.veiculo-timeline-header .btn,
+.note-chip,
+.page-actions,
+.print-excluded,
+[data-tooltip]::after {
+    display: none !important;
+}
+
+.view {
+    max-width: none !important;
+    padding: 0 !important;
+    animation: none !important;
+}
+
+.view[hidden] {
+    display: none !important;
+}
+
+.card,
+.visit-card,
+.stat {
+    box-shadow: none !important;
+    break-inside: avoid;
+}
+
+.visit-card {
+    margin-bottom: 12px;
+}
+
+/* Cores de linha vindas do Excel e da placa precisam sair na impressão */
+.items-table tr.has-color td,
+.mercosul-plate,
+.mercosul-top-bar,
+.plate-chip,
+.status-tag,
+.analytics-ratio > span,
+.analytics-bar-fill,
+.progress-bar {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+body.print-no-prices .col-price,
+body.print-no-prices .totals-group {
+    display: none !important;
+}
+
+.analytics-table-wrap,
+.table-wrap {
+    max-height: none !important;
+    overflow: visible !important;
+}
