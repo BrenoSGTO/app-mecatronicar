@@ -12,7 +12,10 @@ Este módulo prepara e engatilha a sincronização bidirecional com a Google Cal
 import os
 import json
 import datetime
+import logging
 from typing import Dict, Any, Optional
+
+log = logging.getLogger("mecatronicar.calendar_sync")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
@@ -27,8 +30,8 @@ def get_gcal_config() -> Dict[str, Any]:
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except (OSError, ValueError) as e:
+            log.warning("gcalendar_config.json ilegível, usando padrão: %s", e)
     return {
         "enabled": False,
         "calendar_id": "primary",
@@ -43,8 +46,8 @@ def save_gcal_config(cfg: Dict[str, Any]) -> bool:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2, ensure_ascii=False)
         return True
-    except Exception as e:
-        print(f"Erro salvando gcalendar_config.json: {e}")
+    except OSError as e:
+        log.error("Erro salvando gcalendar_config.json: %s", e)
         return False
 
 def build_google_calendar_event(agendamento: Dict[str, Any]) -> Dict[str, Any]:
@@ -88,7 +91,8 @@ def build_google_calendar_event(agendamento: Dict[str, Any]) -> Dict[str, Any]:
         dt_end = dt_start + datetime.timedelta(hours=1)
         start_iso = dt_start.isoformat()
         end_iso = dt_end.isoformat()
-    except Exception:
+    except ValueError:
+        log.info("Data/hora de agendamento fora do padrão (%s %s); usando 08:00", sched_date, sched_time)
         start_iso = f"{sched_date}T08:00:00"
         end_iso = f"{sched_date}T09:00:00"
 
@@ -170,6 +174,7 @@ def sync_agendamento_to_gcal(agendamento: Dict[str, Any]) -> Dict[str, Any]:
             "html_link": event.get("htmlLink", "")
         }
     except Exception as e:
+        log.exception("Falha ao sincronizar agendamento com o Google Calendar")
         return {
             "success": False,
             "synced": False,
