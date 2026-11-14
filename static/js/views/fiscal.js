@@ -663,12 +663,12 @@ function flashCopied(btn) {
     btn.classList.add('is-copied');
     let original = null;
     if (btn.classList.contains('btn')) {
-        original = btn.innerHTML;
-        btn.innerHTML = `${icon('check', 14)} Copiado`;
+        original = [...btn.childNodes];
+        render(btn, html`${icon('check', 14)} Copiado`);
     }
     copiedTimers.set(btn, setTimeout(() => {
         btn.classList.remove('is-copied');
-        if (original !== null && btn.isConnected) btn.innerHTML = original;
+        if (original !== null && btn.isConnected) btn.replaceChildren(...original);
     }, 1600));
 }
 
