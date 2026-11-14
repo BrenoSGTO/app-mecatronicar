@@ -122,8 +122,12 @@ class TestVisualCardsAndAssets(unittest.TestCase):
             self.assertIn(sym, content, f"Símbolo {sym} não encontrado em car_catalog.js")
 
     def test_04_css_classes_defined(self):
-        """Verifica se classes essenciais para Placa Mercosul e Cards existem no CSS."""
-        style_path = os.path.join(self.root_dir, 'static', 'style.css')
+        """Verifica se classes essenciais para Placa Mercosul e Cards existem no CSS.
+
+        v3 (T2): o antigo static/style.css foi dividido em static/css/*; os
+        componentes visuais (placa, logo, silhueta) ficam em css/components.css.
+        """
+        style_path = os.path.join(self.root_dir, 'static', 'css', 'components.css')
         tv_css_path = os.path.join(self.root_dir, 'static', 'tv.css')
 
         with open(style_path, 'r', encoding='utf-8') as f:
@@ -132,15 +136,25 @@ class TestVisualCardsAndAssets(unittest.TestCase):
             tv_content = f.read()
 
         for cls in ['.mercosul-plate', '.mercosul-top-bar', '.mercosul-body-area', '.brand-logo-container', '.car-silhouette-container']:
-            self.assertIn(cls, style_content, f"Classe {cls} não encontrada em static/style.css")
+            self.assertIn(cls, style_content, f"Classe {cls} não encontrada em static/css/components.css")
 
         for cls in ['.mercosul-plate', '.brand-logo-container', '.car-silhouette-container']:
             self.assertIn(cls, tv_content, f"Classe {cls} não encontrada em static/tv.css")
 
     def test_05_strict_zero_emojis_in_core_files(self):
         """Validação estrita de 0 emojis nos arquivos de código e templates."""
-        files_to_check = [
-            os.path.join('static', 'app.js'),
+        # v3 (T2): o antigo static/app.js virou módulos em static/js/**; o CSS
+        # foi para static/css/**. Todos entram na verificação.
+        front_files = []
+        for sub in ('js', 'css'):
+            base = os.path.join(self.root_dir, 'static', sub)
+            for dirpath, _dirs, names in os.walk(base):
+                for name in sorted(names):
+                    if name.endswith(('.js', '.css')):
+                        front_files.append(os.path.relpath(os.path.join(dirpath, name), self.root_dir))
+        self.assertGreater(len(front_files), 10, "Módulos do front v3 não encontrados em static/js e static/css")
+
+        files_to_check = front_files + [
             os.path.join('static', 'index.html'),
             os.path.join('static', 'tv.js'),
             os.path.join('static', 'tv.html'),
