@@ -175,11 +175,11 @@ function mount(el) {
                             ${icon('package-check', 16)} Entregues (48h) <span class="badge" data-count="delivered">0</span>
                         </button>
                     </div>
+                    <div class="segmented" role="group" aria-label="Densidade dos cards" data-field="density"></div>
                 </div>
                 <div class="inicio-patio-body" id="patio-panel" role="tabpanel">
                     <div class="patio-toolbar" data-field="toolbar">
                         <div class="filter-pills" data-field="filters" role="group" aria-label="Filtrar por status"></div>
-                        <div class="segmented" role="group" aria-label="Densidade dos cards" data-field="density"></div>
                     </div>
                     <p class="text-sm text-muted" data-field="delivered-hint" hidden>
                         Carros entregues saem da visão principal e ficam aqui por 48 horas para consulta rápida.
@@ -265,6 +265,7 @@ function renderPatio() {
     const skeleton = $('[data-field="skeleton"]', root);
     const empty = $('[data-field="empty"]', root);
     toolbar.hidden = ui.tab !== 'active' || !active.length;
+    $('[data-field="density"]', root).hidden = ui.tab !== 'active' || !active.length;
     hint.hidden = ui.tab !== 'delivered';
 
     if (!patio) {
@@ -272,6 +273,7 @@ function renderPatio() {
         grid.hidden = true;
         empty.hidden = true;
         toolbar.hidden = true;
+        $('[data-field="density"]', root).hidden = true;
         return;
     }
     skeleton.hidden = true;

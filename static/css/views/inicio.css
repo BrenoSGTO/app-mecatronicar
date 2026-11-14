@@ -31,7 +31,15 @@
 }
 
 .inicio-patio-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
     padding: 0 var(--space-3);
+}
+
+.inicio-patio-head .segmented[hidden] {
+    display: none;
 }
 
 .inicio-patio-head .tabs {
@@ -57,10 +65,6 @@
 .patio-toolbar .filter-pills {
     flex: 1 1 auto;
     min-width: 0;
-}
-
-.patio-toolbar .segmented {
-    flex: none;
 }
 
 /* ---------- Grade de cards ---------- */
@@ -670,4 +674,11 @@
     gap: 1px;
     min-width: 0;
     font-size: var(--text-sm);
+}
+
+.patio-manager-list .link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
 }
