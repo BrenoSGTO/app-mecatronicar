@@ -1,54 +1,69 @@
 /* ==========================================================================
    Analytics (#/analytics)
    Dono na Fase 2: T11. Cores de dados: --color-data-pecas / --color-data-servicos
-   (validadas para daltonismo nos dois temas).
+   (validadas para daltonismo nos dois temas). Gráficos em SVG próprio.
    ========================================================================== */
 
-.view-analytics.is-loading .stat-value {
-    opacity: 0.45;
+.view-analytics.is-loading .analytics-kpis .stat-value {
+    opacity: 0.5;
 }
 
-.analytics-section {
+.analytics-body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
+    gap: var(--space-4);
 }
 
-.analytics-two-col {
+/* ---------- Indicadores ---------- */
+.analytics-kpis {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: var(--space-3);
 }
 
-@media (max-width: 1199.98px) {
-    .analytics-two-col {
+@media (max-width: 1279.98px) {
+    .analytics-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.analytics-kpis .stat-value {
+    font-size: var(--text-lg);
+    white-space: nowrap;
+}
+
+.analytics-skeleton-kpi { height: 84px; }
+.analytics-skeleton-chart { height: 340px; }
+.analytics-skeleton-table { height: 260px; }
+
+/* ---------- Grade de cartões ---------- */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: stretch;
+}
+
+@media (max-width: 1099.98px) {
+    .analytics-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 }
 
-.analytics-dist {
+.analytics-card .card-header {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--space-3);
 }
 
-.analytics-dist-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.analytics-dist .progress-bar {
-    --bar-color: var(--color-text-muted);
-}
-
+/* ---------- Legenda e cores de dados ---------- */
 .analytics-swatch {
     display: inline-block;
     width: 10px;
     height: 10px;
     border-radius: 3px;
-    vertical-align: baseline;
+    flex-shrink: 0;
 }
 
 .analytics-swatch.is-pecas { background: var(--color-data-pecas); }
@@ -57,97 +72,271 @@
 .analytics-legend {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-4);
+    margin-bottom: var(--space-2);
     font-size: var(--text-sm);
     color: var(--color-text-muted);
 }
 
-.analytics-legend strong {
+.analytics-legend > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.analytics-legend-total {
+    margin-left: auto;
+}
+
+.analytics-legend-total strong {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+}
+
+/* ---------- Tendência mensal ---------- */
+.analytics-chart {
+    position: relative;
+    width: 100%;
+    min-height: 280px;
+}
+
+.analytics-trend-svg {
+    display: block;
+    overflow: visible;
+}
+
+.chart-grid {
+    stroke: var(--color-border-subtle);
+    stroke-width: 1;
+}
+
+.chart-grid.is-base {
+    stroke: var(--color-border-strong);
+}
+
+.chart-tick,
+.chart-label {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    fill: var(--color-text-subtle);
+    font-variant-numeric: tabular-nums;
+}
+
+.chart-label {
+    fill: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+}
+
+.chart-band {
+    fill: var(--color-surface-hover);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.chart-band.is-active {
+    opacity: 1;
+}
+
+.chart-bar.is-pecas { fill: var(--color-data-pecas); }
+.chart-bar.is-servicos { fill: var(--color-data-servicos); }
+
+/* Respiro de 1px entre os segmentos empilhados */
+.chart-bar {
+    stroke: var(--color-surface);
+    stroke-width: 1px;
+}
+
+.chart-line {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.chart-line.is-pecas { stroke: var(--color-data-pecas); }
+.chart-line.is-servicos { stroke: var(--color-data-servicos); }
+
+.chart-dot {
+    stroke: var(--color-surface);
+    stroke-width: 2;
+}
+
+.chart-dot.is-pecas { fill: var(--color-data-pecas); }
+.chart-dot.is-servicos { fill: var(--color-data-servicos); }
+
+.chart-hit {
+    fill: transparent;
+    cursor: default;
+    outline: none;
+}
+
+.chart-hit:focus-visible {
+    stroke: var(--color-focus);
+    stroke-width: 2;
+    rx: 6;
+}
+
+.chart-tip {
+    position: absolute;
+    left: var(--x, 0);
+    top: var(--y, 0);
+    z-index: var(--z-tooltip);
+    transform: translateX(-50%);
+    min-width: 200px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-popover);
+    font-size: var(--text-sm);
+    pointer-events: none;
+}
+
+.chart-tip-title {
+    margin-bottom: 4px;
+    font-weight: var(--weight-semibold);
+}
+
+.chart-tip-row {
+    display: grid;
+    grid-template-columns: 10px 1fr auto;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px 0;
+    color: var(--color-text-muted);
+}
+
+.chart-tip-row .num {
     color: var(--color-text);
 }
 
-/* Barra 100% empilhada com 2px de respiro entre os segmentos */
-.analytics-ratio {
-    display: flex;
-    gap: 2px;
-    height: 14px;
+.chart-tip-row.is-total {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-border);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
 }
 
-.analytics-ratio > span {
-    width: var(--value, 0%);
-    height: 100%;
-    transition: width var(--duration-slow) var(--ease-out);
-}
-
-.analytics-ratio-pecas {
-    background: var(--color-data-pecas);
-    border-radius: 4px 0 0 4px;
-}
-
-.analytics-ratio-servicos {
-    background: var(--color-data-servicos);
-    border-radius: 0 4px 4px 0;
-}
-
-/* Gráfico de barras mensal (uma série) */
-.analytics-bars {
-    display: flex;
-    align-items: stretch;
-    gap: var(--space-2);
-    height: 220px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-}
-
-.analytics-bar {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-    justify-items: center;
-    gap: 4px;
-    flex: 1 0 64px;
-    min-width: 64px;
-    border-radius: var(--radius-control);
-    padding: 4px 2px;
-}
-
-.analytics-bar:hover {
-    background: var(--color-surface-2);
-}
-
-.analytics-bar-value {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    white-space: nowrap;
-}
-
-.analytics-bar-track {
-    position: relative;
-    width: 28px;
-    height: 100%;
-    border-bottom: 1px solid var(--color-border-strong);
-}
-
-.analytics-bar-fill {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--h, 0%);
-    border-radius: 4px 4px 0 0;
-    background: var(--color-data-servicos);
-    transition: height var(--duration-slow) var(--ease-out);
-}
-
-.analytics-bar-label {
+.chart-tip-foot {
+    margin-top: 4px;
     font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
+    color: var(--color-text-subtle);
 }
 
-.analytics-bar-sub {
-    font-size: 11px;
-    color: var(--color-text-subtle);
-    white-space: nowrap;
+/* ---------- Rosca peças x mão de obra ---------- */
+.analytics-split {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.analytics-donut {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    width: 100%;
+}
+
+.analytics-donut-svg {
+    width: 168px;
+    height: 168px;
+}
+
+.donut-track,
+.donut-seg {
+    fill: none;
+    stroke-width: 22;
+}
+
+.donut-track { stroke: var(--color-surface-sunken); }
+.donut-seg.is-pecas { stroke: var(--color-data-pecas); }
+.donut-seg.is-servicos { stroke: var(--color-data-servicos); }
+
+.donut-value {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: var(--weight-semibold);
+    fill: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.donut-caption {
+    font-size: 12px;
+    fill: var(--color-text-subtle);
+}
+
+.analytics-split-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+}
+
+.analytics-split-list li {
+    display: grid;
+    grid-template-columns: 10px 1fr auto auto;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.analytics-split-pct {
+    min-width: 52px;
+    text-align: right;
+    font-weight: var(--weight-semibold);
+}
+
+.analytics-split-val {
+    min-width: 96px;
+    text-align: right;
+}
+
+/* ---------- Permanência ---------- */
+.analytics-dist {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-5);
+}
+
+@media (max-width: 899.98px) {
+    .analytics-dist {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.analytics-dist-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analytics-dist-head {
+    display: flex;
+    flex-direction: column;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.analytics-dist-head .text-muted {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-regular);
+}
+
+.analytics-dist .progress-bar {
+    --bar-color: var(--color-text-muted);
+}
+
+/* ---------- Ordens recentes ---------- */
+.analytics-recent {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
 }
 
 .analytics-table-wrap {
