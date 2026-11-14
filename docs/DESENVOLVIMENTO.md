@@ -18,8 +18,7 @@ O painel da TV fica em `http://localhost:54321/tv`.
 python -m pytest -q
 ```
 
-Os `test_*.py` ficam por enquanto na raiz (mover para `tests/` está previsto
-para a Fase 3, depois dos merges das outras tarefas).
+Os testes ficam em `tests/` (o `tests/conftest.py` deixa importar os módulos da raiz).
 
 ## Estrutura de pastas
 
