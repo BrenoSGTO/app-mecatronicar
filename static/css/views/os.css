@@ -3,12 +3,81 @@
    Dono na Fase 2: T9.
    ========================================================================== */
 
+/* O corpo do modal rola; a navegação de seções fica colada no topo e o fundo destaca os cards. */
+.modal#modal-os .modal-body,
+.os-body {
+    padding: 0;
+    background: var(--color-bg);
+}
+
 .os-form {
     min-width: 0;
 }
 
+.os-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-4) var(--space-5) var(--space-5);
+    border: 0;
+}
+
+.os-fieldset:disabled {
+    opacity: 0.7;
+}
+
+/* Campos sem dica não ocupam espaço. */
+.os-form .field-hint:empty {
+    display: none;
+}
+
+/* ---------------- Navegação de seções ---------------- */
+.os-nav {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-5);
+    overflow-x: auto;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.os-nav-item {
+    flex-shrink: 0;
+    height: 28px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-pill);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.os-nav-item:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
+.os-nav-item.is-active {
+    background: var(--color-accent-subtle);
+    color: var(--color-text);
+}
+
+/* ---------------- Alerta, busca e campos ---------------- */
+.os-alert .push {
+    align-self: center;
+}
+
 .os-lookup {
     position: relative;
+}
+
+.os-lookup-empty {
+    padding: var(--space-3);
 }
 
 .os-plate-spinner {
@@ -20,6 +89,22 @@
     visibility: visible;
 }
 
+.os-complaint {
+    min-height: 56px;
+}
+
+.os-form .input.is-invalid,
+.os-form .select.is-invalid,
+.os-form .textarea.is-invalid {
+    border-color: var(--color-danger);
+    background: var(--color-danger-bg);
+}
+
+.os-form .input.is-invalid:focus {
+    box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
+
+/* ---------------- Peças e mão de obra ---------------- */
 .os-suggestions {
     display: flex;
     flex-wrap: wrap;
@@ -27,16 +112,51 @@
     gap: var(--space-2);
 }
 
-.os-items-table .os-col-qty { width: 96px; }
-.os-items-table .os-col-money { width: 150px; }
-.os-items-table .os-col-remove { width: 48px; }
+.os-counter {
+    font-variant-numeric: tabular-nums;
+}
+
+.os-items-table {
+    table-layout: fixed;
+}
+
+.os-items-table .os-col-idx { width: 36px; }
+.os-items-table .os-col-qty { width: 92px; }
+.os-items-table .os-col-money { width: 132px; }
+.os-items-table .os-col-tools { width: 192px; }
+
+.os-items-table th.os-col-idx,
+.os-items-table td.os-col-idx {
+    padding-right: 4px;
+    padding-left: var(--space-3);
+    color: var(--color-text-subtle);
+}
 
 .os-items-table td {
-    padding: 6px 8px;
+    padding: 5px 6px;
+    vertical-align: top;
+}
+
+.os-items-table td.num {
+    padding-top: 12px;
 }
 
 .os-items-table tbody tr:hover td {
     background: transparent;
+}
+
+.os-items-table tbody tr.is-highlighted td {
+    background: var(--color-accent-subtle);
+}
+
+.os-cell-desc {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.os-note-input {
+    font-style: italic;
 }
 
 .os-row-total {
@@ -44,6 +164,29 @@
     font-weight: var(--weight-medium);
 }
 
+.os-tools {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    opacity: 0.55;
+    transition: opacity var(--duration-fast);
+}
+
+.os-row:hover .os-tools,
+.os-row:focus-within .os-tools {
+    opacity: 1;
+}
+
+.os-tools .btn[aria-pressed="true"] {
+    color: var(--color-text);
+    background: var(--color-accent-subtle);
+}
+
+.os-grid-hint {
+    margin: 0;
+}
+
+/* ---------------- Totais, checklist e rodapé ---------------- */
 .os-totals {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -77,9 +220,51 @@
     max-width: 160px;
 }
 
-/* O conteúdo do modal xl rola; o formulário usa o fundo do app para destacar as seções */
-.modal#modal-os .modal-body {
-    background: var(--color-bg);
+.os-checklist-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.os-footer-total {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+.os-footer-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.os-footer-total strong {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+}
+
+.os-footer-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Lista de sugestões do catálogo (flutua sobre o modal, ancorada na célula) */
+.os-suggest {
+    position: fixed;
+    top: var(--suggest-y, 0);
+    right: auto;
+    left: var(--suggest-x, 0);
+    width: var(--suggest-w, 360px);
+    max-height: 264px;
+}
+
+.os-suggest .dropdown-option {
+    flex-direction: row;
 }
 
 /* ---------------- Checklist ---------------- */
