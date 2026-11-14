@@ -1112,6 +1112,31 @@ body.has-modal {
     flex: 1;
 }
 
+/* Toast com atalhos (toast(..., { actions })) */
+.toast-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.toast-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+}
+
+.toast-action {
+    padding: 2px 0;
+    color: var(--brand-yellow);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+}
+
+.toast-action:hover {
+    text-decoration: underline;
+}
+
 /* --------------------------------------------------------------------------
    Menu suspenso / dropdown (js/ui/menu.js)
    -------------------------------------------------------------------------- */

@@ -51,9 +51,10 @@ async function boot() {
 
     $('#btn-nova-visita')?.addEventListener('click', () => openNewOs());
 
-    // Depois de salvar uma OS, abre a ficha do veículo atualizada.
-    on('os:saved', ({ plate }) => {
-        if (plate) navigate(`/veiculo/${encodeURIComponent(plate)}`);
+    // Depois de salvar uma OS, abre a ficha do veículo atualizada
+    // (a tela de OS passa silent: ela mesma oferece o atalho no aviso de sucesso).
+    on('os:saved', ({ plate, silent }) => {
+        if (plate && !silent) navigate(`/veiculo/${encodeURIComponent(plate)}`);
     });
 
     defineRoutes([
