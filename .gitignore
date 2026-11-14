@@ -24,3 +24,7 @@ build/
 # Editores
 .vscode/
 .idea/
+
+# SQLite em modo WAL
+*.db-wal
+*.db-shm
