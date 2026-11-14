@@ -324,7 +324,7 @@ class TestHttpLayer(_ServerCase):
     def test_js_mime_type_is_text_javascript(self):
         self.assertEqual(mimetypes.guess_type("x.js")[0], "text/javascript")
         self.assertEqual(mimetypes.guess_type("x.mjs")[0], "text/javascript")
-        for url in ("/app.js", "/static/app.js"):
+        for url in ("/js/main.js", "/static/js/main.js"):
             r = self.client.get(url)
             self.assertEqual(r.status_code, 200, url)
             self.assertEqual(r.mimetype, "text/javascript", url)
@@ -332,26 +332,26 @@ class TestHttpLayer(_ServerCase):
             r.close()
 
     def test_static_files_revalidate_with_304(self):
-        r = self.client.get("/app.js")
+        r = self.client.get("/js/main.js")
         etag = r.headers["ETag"]
         r.close()
         self.assertIn("no-cache", r.headers.get("Cache-Control", ""))
-        r2 = self.client.get("/app.js", headers={"If-None-Match": etag})
+        r2 = self.client.get("/js/main.js", headers={"If-None-Match": etag})
         self.assertEqual(r2.status_code, 304)
 
     def test_gzip_only_for_lan_clients(self):
-        r = self.client.get("/app.js", headers={"Accept-Encoding": "gzip"}, environ_base=LAN)
+        r = self.client.get("/js/main.js", headers={"Accept-Encoding": "gzip"}, environ_base=LAN)
         self.assertEqual(r.headers.get("Content-Encoding"), "gzip")
         self.assertIn("Accept-Encoding", r.headers.get("Vary", ""))
         raw = gzip.decompress(r.data)
-        with open(os.path.join(BASE_DIR, "static", "app.js"), "rb") as f:
+        with open(os.path.join(BASE_DIR, "static", "js", "main.js"), "rb") as f:
             self.assertEqual(raw, f.read())
         # Revalidação com o ETag da versão comprimida.
-        r2 = self.client.get("/app.js", headers={"Accept-Encoding": "gzip", "If-None-Match": r.headers["ETag"]},
+        r2 = self.client.get("/js/main.js", headers={"Accept-Encoding": "gzip", "If-None-Match": r.headers["ETag"]},
                              environ_base=LAN)
         self.assertEqual(r2.status_code, 304)
         # Na própria máquina (Edge da secretária) não comprime: não há rede para economizar.
-        r3 = self.client.get("/app.js", headers={"Accept-Encoding": "gzip"})
+        r3 = self.client.get("/js/main.js", headers={"Accept-Encoding": "gzip"})
         self.assertIsNone(r3.headers.get("Content-Encoding"))
         r3.close()
 
