@@ -2,9 +2,9 @@
 """
 Suíte de Testes da Nova Grade Dinâmica e Painel de TV (Issue #14)
 Validação de:
-1. Servir /tv com layout de grade dinâmica sem colunas rígidas
-2. Existência e integridade de static/tv.html e templates/tv.html
-3. Estrutura do tv-cars-grid, tv-phase-bar e auto-fit
+1. Servir /tv com o painel v3 (colunas de status que se ajustam ao conteúdo)
+2. Existência de um único tv.html (static/) e dos assets tv.js/tv.css/tv-icons.js
+3. Estrutura do tv-board, colunas por fase e agenda do dia
 4. API /api/patio suportando cadastro e fluxo de múltiplos veículos em fases operacionais
 5. Ordenação e dados enriquecidos para exibição em TV 1080p
 """
@@ -37,39 +37,40 @@ class TestTVGrid(unittest.TestCase):
         except Exception:
             pass
 
-    def test_01_tv_html_template_and_static_parity(self):
-        """Garante que static/tv.html e templates/tv.html contêm a nova grade e estão sincronizados."""
+    def test_01_single_tv_html_with_status_columns(self):
+        """Existe um único tv.html (static/) e ele contém colunas de status, agenda e modal de gestão."""
         static_tv = os.path.join(BASE_DIR, "static", "tv.html")
         template_tv = os.path.join(BASE_DIR, "templates", "tv.html")
 
         self.assertTrue(os.path.exists(static_tv), "static/tv.html deve existir")
-        self.assertTrue(os.path.exists(template_tv), "templates/tv.html deve existir")
+        self.assertFalse(os.path.exists(template_tv), "templates/tv.html (duplicata) foi removido na v3")
 
         with open(static_tv, "r", encoding="utf-8") as f:
-            static_content = f.read()
+            content = f.read()
 
-        with open(template_tv, "r", encoding="utf-8") as f:
-            template_content = f.read()
+        self.assertIn('id="tv-board"', content, "Deve conter o quadro de colunas")
+        for phase in ("diagnostico", "orcamento", "aprovacao", "pecas", "execucao", "pronto", "terceiro"):
+            self.assertIn(f'data-phase="{phase}"', content, f"Deve conter a coluna {phase}")
+        self.assertIn("tv-empty", content, "Deve conter o estado vazio")
+        self.assertIn("tv-agenda", content, "Deve conter a agenda do dia")
+        self.assertIn("tv-manage-modal", content, "Deve conter o modal de gerenciamento")
+        self.assertNotIn("tv-columns-grid", content, "Não deve conter a antiga estrutura de 7 colunas rígidas")
 
-        # Ambos devem conter os elementos chave da nova grade dinâmica
-        for content in (static_content, template_content):
-            self.assertIn("tv-cars-grid", content, "Deve conter o container da grade dinâmica")
-            self.assertIn("tv-phase-bar", content, "Deve conter a barra horizontal de fases")
-            self.assertIn("tv-empty-state", content, "Deve conter o estado vazio amigável")
-            self.assertIn("tv-manage-modal", content, "Deve conter o modal de gerenciamento")
-            self.assertNotIn("tv-columns-grid", content, "Não deve conter a antiga estrutura de 7 colunas rígidas")
-
-    def test_02_tv_route_serves_dynamic_grid(self):
-        """Valida que a rota /tv entrega a nova página com status 200 e referências corretas."""
+    def test_02_tv_route_serves_panel(self):
+        """Valida que a rota /tv entrega a página do painel com status 200 e referências corretas."""
         resp = self.client.get("/tv")
         self.assertEqual(resp.status_code, 200)
         html = resp.data.decode("utf-8")
         resp.close()
         self.assertIn("tv-body", html)
-        self.assertIn("tv-cars-grid", html)
-        self.assertIn("tv-phase-bar", html)
-        self.assertIn("tv.js?v=2.1.0", html)
-        self.assertIn("tv.css?v=2.1.0", html)
+        self.assertIn('id="tv-board"', html)
+        self.assertIn("tv.js?v=3.0.0", html)
+        self.assertIn("tv.css?v=3.0.0", html)
+        self.assertIn("tv-icons.js", html)
+        for asset in ("/tv.js", "/tv.css", "/tv-icons.js"):
+            r = self.client.get(asset)
+            self.assertEqual(r.status_code, 200, f"{asset} deve ser servido")
+            r.close()
 
     def test_03_patio_multi_phase_workflow(self):
         """Testa inclusão de múltiplos veículos em fases diferentes para ordenação na TV."""
