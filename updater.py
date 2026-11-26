@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import threading
 
+# v3.0.0: Início, Histórico e Painel de TV (Agenda/Fiscal/Analytics atrás de "modulos_em_teste").
 CURRENT_VERSION = "3.0.0"
 REPO_OWNER = "BrenoSGTO"
 REPO_NAME = "app-mecatronicar"
