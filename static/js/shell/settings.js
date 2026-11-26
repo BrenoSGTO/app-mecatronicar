@@ -14,6 +14,7 @@ import { api } from '../api.js';
 import { state, emit } from '../state.js';
 import { refresh } from '../data.js';
 import { openUpdatesModal } from './updates.js';
+import { openAutopecasManager } from '../views/autopecas.js';
 
 const THEME_KEY = 'mc.theme';
 const ZOOM_KEY = 'mecatronicar_zoom'; // mesma chave da v2
@@ -161,6 +162,7 @@ function renderMenu() {
             <button type="button" class="btn btn-secondary btn-icon btn-sm" data-action="zoom-in" data-keep-open aria-label="Aumentar (Ctrl +)" data-tooltip="Aumentar (Ctrl +)">${icon('plus', 16)}</button>
         </div>
         <div class="menu-separator"></div>
+        <button type="button" class="menu-item" data-action="autopecas">${icon('warehouse', 16)} Autopeças da cotação</button>
         <button type="button" class="menu-item" data-action="updates">${icon('download', 16)} Verificar atualizações</button>
         <div class="settings-version">MecatroniCar ${info.version ? `v${info.version}` : ''}</div>`;
 }
@@ -195,6 +197,9 @@ export function initSettings() {
                 case 'zoom-reset':
                     applyZoom(100, { save: true });
                     menu.refresh();
+                    break;
+                case 'autopecas':
+                    openAutopecasManager();
                     break;
                 case 'updates':
                     openUpdatesModal();

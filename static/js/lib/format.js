@@ -19,6 +19,33 @@ export function parseMoney(value) {
     return Number.isFinite(n) ? n : 0;
 }
 
+// Aceita "1.234,56", "1234,56", "1234.56", "R$ 1.234,56", "12,5", "12.5", "1.234" (= mil duzentos e trinta e quatro).
+// Devolve null para vazio e NaN para texto inválido.
+export function parseDecimal(raw, decimals = 2) {
+    let s = String(raw ?? '').replace(/R\$/gi, '').replace(/\s/g, '');
+    if (s === '') return null;
+    if (!/^[\d.,]+$/.test(s) || !/\d/.test(s)) return NaN;
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    if (lastComma !== -1 && lastDot !== -1) {
+        const decimalSep = lastComma > lastDot ? ',' : '.';
+        const thousandSep = decimalSep === ',' ? '.' : ',';
+        if (s.split(decimalSep).length > 2) return NaN;
+        s = s.split(thousandSep).join('').replace(decimalSep, '.');
+    } else if (lastComma !== -1) {
+        if (s.split(',').length > 2) return NaN;
+        s = s.replace(',', '.');
+    } else if (lastDot !== -1) {
+        const grouped = /^\d{1,3}(\.\d{3})+$/.test(s) && !/^0\./.test(s);
+        if (grouped) s = s.split('.').join('');
+        else if (s.split('.').length > 2) return NaN;
+    }
+    const n = Number(s);
+    if (!Number.isFinite(n)) return NaN;
+    const factor = 10 ** decimals;
+    return Math.round(n * factor) / factor;
+}
+
 /** Número para campo de valor editável: 12.5 → "12,50". Texto passa direto. */
 export function moneyInputValue(value) {
     if (value === null || value === undefined || value === '') return '';

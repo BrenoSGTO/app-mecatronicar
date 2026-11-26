@@ -612,6 +612,17 @@ def save_order_endpoint():
     if not order_data:
         return jsonify({"success": False, "error": "Dados da ordem de serviço não fornecidos."}), 400
 
+    # Cotação de peças: uso interno, nunca vai para a planilha (fica só no banco local).
+    cotacao = None
+    if "cotacao" in order_data:
+        order_data = dict(order_data)
+        cotacao = order_data.pop("cotacao")
+        if cotacao is not None:
+            try:
+                cotacao = cache.normalize_cotacao(cotacao)
+            except ValueError as e:
+                return jsonify({"success": False, "error": str(e)}), 400
+
     # Validação antecipada dos dados essenciais
     car_info = order_data.get("car") if isinstance(order_data.get("car"), dict) else {}
     plate = car_info.get("plate") or order_data.get("car_plate") or order_data.get("plate")
@@ -645,6 +656,13 @@ def save_order_endpoint():
 
         parsed = cache.index_single_file(file_path, db_path, old_fpath=existing_file_path)
         stats = cache.get_stats(db_path)
+        cotacao_saved = True
+        if cotacao is not None:
+            try:
+                cache.save_cotacao(file_path, cotacao, plate=plate, db_path=db_path)
+            except Exception:
+                log.exception("OS salva, mas a cotação não foi gravada")
+                cotacao_saved = False
 
         return jsonify({
             "success": True,
@@ -655,7 +673,8 @@ def save_order_endpoint():
             "plate_clean": parsed.get("plate_clean", "") if parsed else cache.clean_plate(plate),
             "visit_num": parsed.get("visit_num", "") if parsed else (res.get("visit_num") or "1"),
             "details": parsed,
-            "stats": stats
+            "stats": stats,
+            "cotacao_saved": cotacao_saved
         }), 200
     except ValueError as ve:
         log.info("OS recusada: %s", ve)
@@ -1003,6 +1022,66 @@ def remove_patio_car_post_endpoint():
     db_path = cache.get_db_path(BASE_DIR)
     success = cache.delete_patio_car(car_id, db_path)
     return jsonify({"success": success})
+
+# ==============================================================================
+# AUTOPEÇAS E COTAÇÃO DE PEÇAS (uso interno: nunca sai em OS, orçamento ou NF)
+# ==============================================================================
+
+@app.route("/api/autopecas", methods=["GET"])
+@local_only
+def list_autopecas_endpoint():
+    db_path = _db_path_from_request(request.args.get("db_path") or app.config.get("TEST_DB_PATH"))
+    return jsonify({"success": True, "autopecas": cache.list_autopecas(db_path)})
+
+
+@app.route("/api/autopecas", methods=["POST"])
+@local_only
+def save_autopeca_endpoint():
+    data = _json_body()
+    db_path = _db_path_from_request(data.get("db_path") or app.config.get("TEST_DB_PATH"))
+    try:
+        saved = cache.save_autopeca(data, db_path)
+    except LookupError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    return jsonify({"success": True, "autopeca": saved})
+
+
+@app.route("/api/autopecas/<int:autopeca_id>", methods=["DELETE"])
+@local_only
+def delete_autopeca_endpoint(autopeca_id):
+    db_path = _db_path_from_request(request.args.get("db_path") or app.config.get("TEST_DB_PATH"))
+    if cache.delete_autopeca(autopeca_id, db_path):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Autopeça não encontrada."}), 404
+
+
+@app.route("/api/cotacao", methods=["GET"])
+@local_only
+def get_cotacao_endpoint():
+    file_path = request.args.get("file_path") or ""
+    db_path = _db_path_from_request(request.args.get("db_path") or app.config.get("TEST_DB_PATH"))
+    if not resolve_spreadsheet_path(file_path, db_path, must_exist=False):
+        return jsonify({"success": False, "error": "OS não encontrada na pasta de planilhas."}), 400
+    data = cache.get_cotacao(file_path, db_path) or {"suppliers": [], "parts": [], "updated_at": None}
+    return jsonify({"success": True, "cotacao": data})
+
+
+@app.route("/api/cotacao", methods=["PUT", "POST"])
+@local_only
+def save_cotacao_endpoint():
+    data = _json_body()
+    file_path = data.get("file_path") or ""
+    db_path = _db_path_from_request(data.get("db_path") or app.config.get("TEST_DB_PATH"))
+    if not resolve_spreadsheet_path(file_path, db_path, must_exist=False):
+        return jsonify({"success": False, "error": "Salve a OS antes de guardar a cotação."}), 400
+    try:
+        saved = cache.save_cotacao(file_path, data.get("cotacao") or {}, plate=data.get("plate"), db_path=db_path)
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    return jsonify({"success": True, "cotacao": saved})
+
 
 # ==============================================================================
 # ROTAS DE AGENDAMENTOS E CALENDÁRIO (Issue #15)

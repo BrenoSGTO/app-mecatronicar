@@ -22,12 +22,12 @@ function fixAssetPath(path) {
     return String(path).replace(/^\/static\//, '/');
 }
 
-/** Identifica marca/modelo/silhueta a partir do texto do modelo. */
-export function identifyCar(modelText) {
+/** Identifica marca/modelo/silhueta a partir do texto do modelo (e da marca, se houver). */
+export function identifyCar(modelText, brandText = '') {
     const catalog = window.CarCatalog;
     if (!catalog || typeof catalog.identifyCar !== 'function') return { ...FALLBACK, modelName: modelText || 'Veículo' };
     try {
-        const info = catalog.identifyCar(modelText || '');
+        const info = catalog.identifyCar(modelText || '', brandText || '');
         return {
             ...info,
             brandLogo: fixAssetPath(info.brandLogo),
@@ -40,3 +40,38 @@ export function identifyCar(modelText) {
 
 export const GENERIC_BRAND_LOGO = FALLBACK.brandLogo;
 export const GENERIC_SILHOUETTE = FALLBACK.silhouette;
+
+/* Consulta ao catálogo FIPE (formulário de OS: Marca -> Ano -> Modelo). */
+
+function api() {
+    return window.CarCatalog || null;
+}
+
+/** [{ key, name, logo, popular }] na ordem de exibição (mais comuns primeiro). */
+export function catalogBrands() {
+    const c = api();
+    return c && c.brandList ? c.brandList().map((b) => ({ ...b, logo: fixAssetPath(b.logo) })) : [];
+}
+
+/** Chave da marca reconhecida num texto ("VW" -> "volkswagen") ou ''. */
+export function findBrandKey(text) {
+    const c = api();
+    return c && c.findBrandKey ? c.findBrandKey(text || '') : '';
+}
+
+export function brandLogoUrl(key) {
+    const c = api();
+    const b = c && c.BRANDS && c.BRANDS[key];
+    return b ? fixAssetPath(b.logo) : '';
+}
+
+export function catalogYears(brandKey) {
+    const c = api();
+    return c && c.yearsForBrand ? c.yearsForBrand(brandKey) : [];
+}
+
+/** Modelos por motor da marca (filtrados pelo ano-modelo, se informado). */
+export function catalogModels(brandKey, year) {
+    const c = api();
+    return c && c.modelOptions ? c.modelOptions(brandKey, year) : [];
+}

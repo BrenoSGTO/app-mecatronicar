@@ -199,7 +199,19 @@
     min-width: 0;
 }
 
+.patio-card-model-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.patio-card-model-row .brand-logo-container {
+    align-self: flex-start;
+}
+
 .patio-card-model {
+    min-width: 0;
     font-size: var(--text-md);
     font-weight: var(--weight-semibold);
     line-height: var(--leading-snug);

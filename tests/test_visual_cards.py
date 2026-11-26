@@ -19,25 +19,24 @@ class TestVisualCardsAndAssets(unittest.TestCase):
         self.models_dir = os.path.join(self.root_dir, 'static', 'models')
         self.emoji_pattern = re.compile(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\u2b50]')
 
-    def test_01_brand_logos_exist_and_valid_svg(self):
-        """Verifica se os logos vetoriais das montadoras existem e são SVGs válidos."""
-        expected_brands = [
-            'fiat.svg', 'volkswagen.svg', 'chevrolet.svg', 'toyota.svg',
-            'hyundai.svg', 'renault.svg', 'jeep.svg', 'nissan.svg',
-            'honda.svg', 'ford.svg', 'peugeot.svg', 'citroen.svg',
-            'mitsubishi.svg', 'chery.svg', 'bmw.svg', 'mercedes.svg',
-            'audi.svg', 'kia.svg', 'byd.svg', 'generic.svg'
-        ]
-        self.assertTrue(os.path.isdir(self.brands_dir), f"Diretório {self.brands_dir} não encontrado")
+    def test_01_brand_logos_exist_and_valid(self):
+        """Toda marca da Tabela FIPE tem logo: PNG oficial (car-logos-dataset) ou monograma SVG."""
+        import sys
+        sys.path.insert(0, os.path.join(self.root_dir, 'scripts'))
+        from vehicle_brands import FIPE_BRANDS, logo_file
 
-        for brand_file in expected_brands:
-            file_path = os.path.join(self.brands_dir, brand_file)
-            self.assertTrue(os.path.isfile(file_path), f"Logo não encontrado: {brand_file}")
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.assertGreater(len(content), 50, f"SVG muito pequeno: {brand_file}")
-            self.assertIn('<svg', content, f"Arquivo {brand_file} não contém tag <svg")
-            self.assertIn('</svg>', content, f"Arquivo {brand_file} não contém fechamento </svg>")
+        self.assertTrue(os.path.isdir(self.brands_dir), f"Diretório {self.brands_dir} não encontrado")
+        self.assertTrue(os.path.isfile(os.path.join(self.brands_dir, 'generic.svg')))
+        for key, _name, slug, _aliases in FIPE_BRANDS.values():
+            file_path = os.path.join(self.brands_dir, logo_file(key, slug))
+            self.assertTrue(os.path.isfile(file_path), f"Logo não encontrado: {logo_file(key, slug)}")
+            with open(file_path, 'rb') as f:
+                head = f.read(8)
+            if slug:
+                self.assertEqual(head[1:4], b'PNG', f"PNG inválido: {key}")
+                self.assertLess(os.path.getsize(file_path), 200 * 1024, f"logo pesado demais: {key}")
+            else:
+                self._assert_clean_svg(file_path)
 
     def test_02_popular_model_silhouettes_exist(self):
         """Verifica se toda silhueta referenciada pelo catálogo (arquétipos + genéricos) existe.

@@ -106,7 +106,7 @@ internal static class Program
         {
             ProcessStartInfo checkPsi = new ProcessStartInfo();
             checkPsi.FileName = pythonExe;
-            checkPsi.Arguments = "-c \"import flask, openpyxl, xlrd\"";
+            checkPsi.Arguments = "-c \"import flask, openpyxl, xlrd, waitress\"";
             checkPsi.WorkingDirectory = appDir;
             checkPsi.CreateNoWindow = true;
             checkPsi.UseShellExecute = false;
@@ -118,7 +118,7 @@ internal static class Program
 
             ProcessStartInfo pipPsi = new ProcessStartInfo();
             pipPsi.FileName = pythonExe;
-            pipPsi.Arguments = "-m pip install --disable-pip-version-check --quiet openpyxl xlrd flask";
+            pipPsi.Arguments = "-m pip install --disable-pip-version-check --quiet openpyxl xlrd flask waitress";
             pipPsi.WorkingDirectory = appDir;
             pipPsi.CreateNoWindow = true;
             pipPsi.UseShellExecute = false;

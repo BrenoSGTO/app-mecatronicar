@@ -47,65 +47,14 @@
             </div>
         </header>
 
-        <!-- Quadro: colunas de status + agenda do dia -->
+        <!-- Quadro: grade de cards + agenda do dia -->
         <main class="tv-main">
-            <section class="tv-board" id="tv-board" aria-label="Veículos no pátio por status">
-                <section class="tv-col" data-phase="diagnostico" aria-label="Em diagnóstico">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="search"></i>
-                        <h2 class="tv-col-name">Diagnóstico</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
-                <section class="tv-col" data-phase="orcamento" aria-label="Esperando orçamento">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="file-text"></i>
-                        <h2 class="tv-col-name">Orçamento</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
-                <section class="tv-col" data-phase="aprovacao" aria-label="Esperando aprovação">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="hourglass"></i>
-                        <h2 class="tv-col-name">Aprovação</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
-                <section class="tv-col" data-phase="pecas" aria-label="Esperando peças">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="package"></i>
-                        <h2 class="tv-col-name">Peças</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
-                <section class="tv-col" data-phase="execucao" aria-label="Em execução">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="wrench"></i>
-                        <h2 class="tv-col-name">Em execução</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
-                <section class="tv-col" data-phase="pronto" aria-label="Pronto para retirada">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="circle-check"></i>
-                        <h2 class="tv-col-name">Pronto p/ retirada</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
-                <section class="tv-col" data-phase="terceiro" aria-label="Liberado para retirada por terceiro">
-                    <header class="tv-col-head">
-                        <i class="tv-col-icon" data-icon="key-round"></i>
-                        <h2 class="tv-col-name">Retirada por terceiro</h2>
-                        <span class="tv-col-count">0</span>
-                    </header>
-                    <div class="tv-col-body"></div>
-                </section>
+            <section class="tv-board" id="tv-board" aria-label="Veículos no pátio">
+                <!-- Quantos carros em cada status (só os status com carro). Os cards não são agrupados. -->
+                <div class="tv-legend" id="tv-legend" aria-label="Quantidade por status"></div>
+
+                <!-- Todos os carros numa grade só: cards horizontais, sempre na mesma proporção -->
+                <div class="tv-grid" id="tv-grid"></div>
 
                 <!-- Pátio vazio -->
                 <div class="tv-empty" id="tv-empty-state" hidden>
@@ -254,6 +203,7 @@
 
     <div id="tv-toast" class="tv-toast" role="status" aria-live="polite" hidden></div>
 
+    <script src="vehicle_catalog.js?v=3.0.0"></script>
     <script src="car_catalog.js?v=3.0.0"></script>
     <script src="tv-icons.js?v=3.0.0"></script>
     <script src="tv.js?v=3.0.0"></script>

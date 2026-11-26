@@ -16,7 +16,10 @@ def load_config(base_dir=None):
         "spreadsheet_folder": default_sample_dir if os.path.exists(default_sample_dir) else "",
         "theme": "light",
         "sort_order": "desc",
-        "ui_zoom": 100
+        "ui_zoom": 100,
+        # Agenda, Copiloto Fiscal e Analytics ainda em validação: só aparecem com
+        # "modulos_em_teste": true no config.json desta máquina.
+        "modulos_em_teste": False
     }
     
     if os.path.exists(cpath):

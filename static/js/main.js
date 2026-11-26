@@ -57,16 +57,23 @@ async function boot() {
         if (plate && !silent) navigate(`/veiculo/${encodeURIComponent(plate)}`);
     });
 
+    await loadConfig();
+
+    // Agenda, Copiloto Fiscal e Analytics ainda em validação: só com
+    // "modulos_em_teste": true no config.json (some do menu e das rotas).
+    const beta = Boolean((state.get('config') || {}).modulos_em_teste);
+    document.documentElement.dataset.beta = beta ? 'on' : 'off';
     defineRoutes([
         { path: '/inicio', view: inicioView },
         { path: '/busca', view: buscaView },
         { path: '/veiculo/:placa', view: veiculoView },
-        { path: '/agenda', view: agendaView },
-        { path: '/fiscal', view: fiscalView },
-        { path: '/analytics', view: analyticsView },
+        ...(beta ? [
+            { path: '/agenda', view: agendaView },
+            { path: '/fiscal', view: fiscalView },
+            { path: '/analytics', view: analyticsView },
+        ] : []),
     ], { host: $('#view-host'), fallback: '/inicio' });
 
-    await loadConfig();
     startRouter();
     startDataPolling();
 }

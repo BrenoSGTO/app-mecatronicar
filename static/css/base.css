@@ -144,6 +144,12 @@ hr {
     display: none !important;
 }
 
+/* Módulos em validação (Agenda, Copiloto Fiscal, Analytics): main.js marca
+   <html data-beta="on|off"> conforme "modulos_em_teste" no config.json. */
+html:not([data-beta="on"]) [data-beta-only] {
+    display: none !important;
+}
+
 /* ---------- Foco visível (anel amarelo) ---------- */
 :focus {
     outline: none;

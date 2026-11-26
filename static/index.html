@@ -42,21 +42,21 @@
                     <span class="nav-label">Início</span>
                     <span class="nav-badge" data-badge="patio" hidden></span>
                 </a>
-                <a class="nav-item" href="#/busca" data-nav="busca" data-tooltip="Busca de veículos" data-tooltip-pos="right">
-                    <svg class="icon icon-20" aria-hidden="true"><use href="#i-search"></use></svg>
-                    <span class="nav-label">Busca</span>
+                <a class="nav-item" href="#/busca" data-nav="busca" data-tooltip="Histórico de veículos (fichas fechadas, só consulta)" data-tooltip-pos="right">
+                    <svg class="icon icon-20" aria-hidden="true"><use href="#i-history"></use></svg>
+                    <span class="nav-label">Histórico</span>
                 </a>
-                <a class="nav-item" href="#/agenda" data-nav="agenda" data-tooltip="Agenda" data-tooltip-pos="right">
+                <a class="nav-item" href="#/agenda" data-nav="agenda" data-beta-only data-tooltip="Agenda" data-tooltip-pos="right">
                     <svg class="icon icon-20" aria-hidden="true"><use href="#i-calendar-days"></use></svg>
                     <span class="nav-label">Agenda</span>
                     <span class="nav-badge" data-badge="agenda" hidden></span>
                 </a>
-                <a class="nav-item" href="#/fiscal" data-nav="fiscal" data-tooltip="Copiloto Fiscal" data-tooltip-pos="right">
+                <a class="nav-item" href="#/fiscal" data-nav="fiscal" data-beta-only data-tooltip="Copiloto Fiscal" data-tooltip-pos="right">
                     <svg class="icon icon-20" aria-hidden="true"><use href="#i-receipt-text"></use></svg>
                     <span class="nav-label">Copiloto Fiscal</span>
                     <span class="nav-badge" data-badge="fiscal" hidden></span>
                 </a>
-                <a class="nav-item" href="#/analytics" data-nav="analytics" data-tooltip="Analytics" data-tooltip-pos="right">
+                <a class="nav-item" href="#/analytics" data-nav="analytics" data-beta-only data-tooltip="Analytics" data-tooltip-pos="right">
                     <svg class="icon icon-20" aria-hidden="true"><use href="#i-chart-column"></use></svg>
                     <span class="nav-label">Analytics</span>
                 </a>
@@ -105,6 +105,7 @@
     <div class="toast-region" id="toast-region" aria-live="polite" role="status"></div>
 
     <!-- Catálogo de veículos (script clássico compartilhado com a TV: define window.CarCatalog) -->
+    <script src="vehicle_catalog.js?v=3.0.0"></script>
     <script src="car_catalog.js?v=3.0.0"></script>
     <script type="module" src="js/main.js?v=3.0.0"></script>
 </body>

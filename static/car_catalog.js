@@ -1,7 +1,8 @@
 /**
  * MecatroniCar - Catálogo de Veículos, Identidade Visual & Componentes Oficiais
- * - 100 modelos mais populares do Brasil mapeados (10 marcas x 10 modelos)
- * - Monogramas neutros das montadoras em SVG (static/brands/, sem reproduzir logotipos registrados)
+ * - Todas as marcas/modelos da Tabela FIPE (static/vehicle_catalog.js, gerado por
+ *   scripts/build_vehicle_catalog.py) + apelidos curados dos 100 modelos mais comuns
+ * - Logos das montadoras em static/brands/ (scripts/vehicle_brands.py; monograma quando não há logo)
  * - Silhuetas laterais por arquétipo de carroceria, em escala real (static/models/, campo `shape`)
  *   Assets gerados por scripts/generate_vehicle_assets.py — revisão em docs/assets-galeria.html
  * - Placas Mercosul oficiais padronizadas
@@ -18,29 +19,11 @@
     }
 }(typeof self !== 'undefined' ? self : this, function () {
 
-    // 1. Catálogo das 10 Montadoras Principais + Marcas Comuns
-    const BRANDS = {
-        fiat: { name: 'Fiat', logo: '/static/brands/fiat.svg' },
-        volkswagen: { name: 'Volkswagen', logo: '/static/brands/volkswagen.svg' },
-        chevrolet: { name: 'Chevrolet', logo: '/static/brands/chevrolet.svg' },
-        toyota: { name: 'Toyota', logo: '/static/brands/toyota.svg' },
-        hyundai: { name: 'Hyundai', logo: '/static/brands/hyundai.svg' },
-        renault: { name: 'Renault', logo: '/static/brands/renault.svg' },
-        jeep: { name: 'Jeep', logo: '/static/brands/jeep.svg' },
-        nissan: { name: 'Nissan', logo: '/static/brands/nissan.svg' },
-        honda: { name: 'Honda', logo: '/static/brands/honda.svg' },
-        ford: { name: 'Ford', logo: '/static/brands/ford.svg' },
-        peugeot: { name: 'Peugeot', logo: '/static/brands/peugeot.svg' },
-        citroen: { name: 'Citroën', logo: '/static/brands/citroen.svg' },
-        mitsubishi: { name: 'Mitsubishi', logo: '/static/brands/mitsubishi.svg' },
-        chery: { name: 'Caoa Chery', logo: '/static/brands/chery.svg' },
-        bmw: { name: 'BMW', logo: '/static/brands/bmw.svg' },
-        mercedes: { name: 'Mercedes-Benz', logo: '/static/brands/mercedes.svg' },
-        audi: { name: 'Audi', logo: '/static/brands/audi.svg' },
-        kia: { name: 'Kia', logo: '/static/brands/kia.svg' },
-        byd: { name: 'BYD', logo: '/static/brands/byd.svg' },
-        generic: { name: 'MecatroniCar', logo: '/static/brands/generic.svg' }
-    };
+    // 1. Montadoras: vêm do catálogo completo da Tabela FIPE (static/vehicle_catalog.js,
+    //    window.VEHICLE_CATALOG) com o logo oficial de cada uma em static/brands/.
+    const FULL = (typeof window !== 'undefined' && window.VEHICLE_CATALOG) || { brands: [], popular: [] };
+    const BRANDS = { generic: { name: 'MecatroniCar', logo: '/static/brands/generic.svg' } };
+    for (const b of FULL.brands) BRANDS[b.k] = { name: b.n, logo: '/static/brands/' + b.l };
 
     // 2. Mapeamento dos 100 Modelos Mais Populares
     const POPULAR_MODELS = [
@@ -183,102 +166,220 @@
             .trim();
     }
 
-    /**
-     * Identifica montadora, modelo e silhueta correspondente a partir de uma string
-     */
-    function identifyCar(modelStr) {
-        const norm = normalizeText(modelStr);
-        if (!norm) {
-            return {
-                brandKey: 'generic',
-                brandName: 'MecatroniCar',
-                brandLogo: BRANDS.generic.logo,
-                modelKey: 'car-generic',
-                modelName: 'Veículo',
-                silhouette: '/static/models/car-generic.svg',
-                bodyType: 'hatch'
-            };
-        }
+    const SHAPE_BODY = {
+        'picape-pequena': 'pickup', 'picape-media': 'pickup', 'hatch-compacto': 'hatch', 'hatch-medio': 'hatch',
+        'sedan-compacto': 'sedan', 'sedan-medio': 'sedan', 'suv-compacto': 'suv', 'suv-medio': 'suv',
+        'suv-cupe': 'suv', 'suv-offroad': 'suv', 'monovolume': 'suv', 'furgao-compacto': 'van',
+        'furgao-grande': 'van', 'caminhao-leve': 'van'
+    };
 
-        // 1. Tenta identificar por modelo específico mais longo primeiro (ex: "onix plus" antes de "onix")
-        // Ordena por tamanho do padrão decrescente
-        const sortedModels = [...POPULAR_MODELS].sort((a, b) => {
-            const maxA = Math.max(...a.patterns.map(p => p.length));
-            const maxB = Math.max(...b.patterns.map(p => p.length));
-            return maxB - maxA;
-        });
+    /** Texto normalizado com hífens virando espaço e bordas, para comparar palavra a palavra. */
+    function spaced(str) {
+        return ' ' + normalizeText(str).replace(/-/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    }
 
-        for (const item of sortedModels) {
-            for (const pat of item.patterns) {
-                // Regex de palavra inteira ou limite
-                const regex = new RegExp(`(^|\\s)${pat}(\\s|$)`, 'i');
-                if (regex.test(norm) || norm.includes(pat)) {
-                    const brandObj = BRANDS[item.brand] || BRANDS.generic;
-                    return {
-                        brandKey: item.brand,
-                        brandName: brandObj.name,
-                        brandLogo: brandObj.logo,
-                        modelKey: item.key,
-                        modelName: item.name,
-                        silhouette: `/static/models/${item.shape}.svg`,
-                        bodyType: item.body
-                    };
-                }
+    function hasWord(haystack, needle) {
+        return needle.trim().length > 0 && haystack.indexOf(needle) !== -1;
+    }
+
+    const GENERIC_WORDS = new Set(['pick up', 'van', 'super', 'express', 'club', 'coupe', 'cupe', 'space',
+        'grand', 'new', 'classic', 'cargo', 'furgao', 'jipe', 'buggy', 'sedan', 'hatch', 'sport', 'turbo', 'king']);
+
+    // Índices montados uma vez: apelidos de marca e nomes de modelo (mais longos primeiro).
+    const BRAND_ALIASES = [];
+    const MODEL_INDEX = [];
+    (function buildIndex() {
+        const popularRank = {};
+        (FULL.popular || []).forEach((k, i) => { popularRank[k] = i; });
+        for (const b of FULL.brands) {
+            const names = new Set([b.n, b.k.replace(/-/g, ' ')].concat(b.a || []));
+            for (const alias of names) {
+                const sp = spaced(alias);
+                if (sp.trim()) BRAND_ALIASES.push({ key: b.k, sp });
+            }
+            const rank = popularRank[b.k] !== undefined ? popularRank[b.k] : 100;
+            for (const m of b.m) {
+                const sp = spaced(m[0]);
+                if (!sp.trim()) continue;
+                // Nome que parece um ano ("2008", "3008"...) só vale com a marca conhecida.
+                const yearLike = /^\s\d{4}\s$/.test(sp) && Number(sp) >= 1950 && Number(sp) <= 2040;
+                MODEL_INDEX.push({ brand: b.k, name: m[0], shape: m[1], sp, rank, yearLike });
             }
         }
+        BRAND_ALIASES.sort((x, y) => y.sp.length - x.sp.length);
+        MODEL_INDEX.sort((x, y) => (y.sp.length - x.sp.length) || (x.rank - y.rank));
+    })();
 
-        // 2. Tenta identificar montadora isoladamente
-        let foundBrand = 'generic';
-        if (norm.includes('fiat')) foundBrand = 'fiat';
-        else if (norm.includes('vw') || norm.includes('volks') || norm.includes('volkswagen')) foundBrand = 'volkswagen';
-        else if (norm.includes('chev') || norm.includes('gm') || norm.includes('corsa') || norm.includes('celta')) foundBrand = 'chevrolet';
-        else if (norm.includes('toyo') || norm.includes('toyota')) foundBrand = 'toyota';
-        else if (norm.includes('hyundai')) foundBrand = 'hyundai';
-        else if (norm.includes('renault')) foundBrand = 'renault';
-        else if (norm.includes('jeep')) foundBrand = 'jeep';
-        else if (norm.includes('nissan')) foundBrand = 'nissan';
-        else if (norm.includes('honda')) foundBrand = 'honda';
-        else if (norm.includes('ford')) foundBrand = 'ford';
-        else if (norm.includes('peugeot')) foundBrand = 'peugeot';
-        else if (norm.includes('citroen')) foundBrand = 'citroen';
-        else if (norm.includes('mitsu')) foundBrand = 'mitsubishi';
-        else if (norm.includes('chery')) foundBrand = 'chery';
-        else if (norm.includes('bmw')) foundBrand = 'bmw';
-        else if (norm.includes('mercedes')) foundBrand = 'mercedes';
-        else if (norm.includes('audi')) foundBrand = 'audi';
-        else if (norm.includes('kia')) foundBrand = 'kia';
-        else if (norm.includes('byd')) foundBrand = 'byd';
+    const POPULAR_SORTED = POPULAR_MODELS.map(item => ({
+        item,
+        pats: item.patterns.map(spaced)
+    })).sort((a, b) => Math.max(...b.pats.map(p => p.length)) - Math.max(...a.pats.map(p => p.length)));
 
-        // 3. Tenta identificar tipo de carroceria genérica
+    /** Marca a partir de um texto ("VW", "GM - Chevrolet", "Fiat"...). Devolve a chave ou ''. */
+    function findBrandKey(text) {
+        const sp = spaced(text);
+        if (!sp.trim()) return '';
+        for (const a of BRAND_ALIASES) {
+            if (hasWord(sp, a.sp)) return a.key;
+        }
+        return '';
+    }
+
+    function result(brandKey, modelKey, modelName, shape, body) {
+        const known = Boolean(BRANDS[brandKey]);
+        const brandObj = known ? BRANDS[brandKey] : BRANDS.generic;
+        return {
+            brandKey: known ? brandKey : 'generic',
+            brandName: brandObj.name,
+            brandLogo: brandObj.logo,
+            modelKey,
+            modelName,
+            silhouette: `/static/models/${shape}.svg`,
+            bodyType: body || SHAPE_BODY[shape] || 'hatch'
+        };
+    }
+
+    const identifyCache = new Map();
+
+    /**
+     * Identifica montadora, modelo e silhueta a partir do texto do modelo
+     * (e, quando houver, do campo Marca da ficha).
+     */
+    function identifyCar(modelStr, brandStr) {
+        const cacheKey = (modelStr || '') + '␟' + (brandStr || '');
+        if (identifyCache.has(cacheKey)) return identifyCache.get(cacheKey);
+        const info = identifyUncached(modelStr, brandStr);
+        if (identifyCache.size > 2000) identifyCache.clear();
+        identifyCache.set(cacheKey, info);
+        return info;
+    }
+
+    function identifyUncached(modelStr, brandStr) {
+        const norm = normalizeText(modelStr);
+        const sp = spaced(modelStr);
+        const brandKey = findBrandKey(brandStr) || findBrandKey(modelStr);
+        if (!norm && !brandKey) {
+            return result('generic', 'car-generic', 'Veículo', 'car-generic', 'hatch');
+        }
+
+        // 1. Catálogo completo (FIPE): nome do modelo como palavra inteira; o mais longo vence.
+        let best = null;
+        for (const item of MODEL_INDEX) {
+            if (brandKey && item.brand !== brandKey) continue;
+            // Sem marca, ignora nomes que viram falso positivo em texto livre:
+            // anos ("2008"), siglas curtas ("GL", "ES") e palavras genéricas ("Pick-up", "Van").
+            if (!brandKey && (item.yearLike || item.sp.trim().length <= 2 || GENERIC_WORDS.has(item.sp.trim()))) continue;
+            if (hasWord(sp, item.sp)) { best = item; break; }
+        }
+        // 2. Apelidos curados dos modelos mais comuns ("stepway" -> Sandero, "hb-20" -> HB20...).
+        let popular = null;
+        let popularLen = 0;
+        for (const { item, pats } of POPULAR_SORTED) {
+            if (brandKey && item.brand !== brandKey) continue;
+            const hit = pats.find(p => hasWord(sp, p));
+            if (hit) { popular = item; popularLen = hit.length; break; }
+        }
+        if (popular && (!best || popularLen > best.sp.length)) {
+            return result(popular.brand, popular.key, popular.name, popular.shape, popular.body);
+        }
+        if (best) {
+            return result(best.brand, `${best.brand}-${normalizeText(best.name).replace(/\s+/g, '-')}`, best.name, best.shape);
+        }
+
+        // 3. Só a montadora (ou nada) + carroceria genérica pelo texto.
         let genericSilhouette = 'car-generic';
         let bodyType = 'hatch';
-        if (norm.includes('sedan') || norm.includes('sed')) {
+        if (norm.includes('sedan') || /\bsed\b/.test(norm)) {
             genericSilhouette = 'sedan-generic';
             bodyType = 'sedan';
         } else if (norm.includes('suv') || norm.includes('cross') || norm.includes('jeep')) {
             genericSilhouette = 'suv-generic';
             bodyType = 'suv';
-        } else if (norm.includes('picape') || norm.includes('pickup') || norm.includes('cabine') || norm.includes('strada') || norm.includes('toro')) {
+        } else if (norm.includes('picape') || norm.includes('pickup') || norm.includes('pick up') || norm.includes('cabine')) {
             genericSilhouette = 'pickup-generic';
             bodyType = 'pickup';
-        } else if (norm.includes('furg') || norm.includes('van') || norm.includes('utilitario') || norm.includes('partner') || norm.includes('fiorino')) {
+        } else if (norm.includes('furg') || /\bvan\b/.test(norm) || norm.includes('utilitario')) {
             genericSilhouette = 'van-generic';
             bodyType = 'van';
         } else if (norm.includes('hatch')) {
             genericSilhouette = 'hatch-generic';
             bodyType = 'hatch';
         }
+        return result(brandKey || 'generic', genericSilhouette, modelStr || 'Veículo', genericSilhouette, bodyType);
+    }
 
-        const brandObj = BRANDS[foundBrand] || BRANDS.generic;
-        return {
-            brandKey: foundBrand,
-            brandName: brandObj.name,
-            brandLogo: brandObj.logo,
-            modelKey: genericSilhouette,
-            modelName: modelStr || 'Veículo',
-            silhouette: `/static/models/${genericSilhouette}.svg`,
-            bodyType: bodyType
-        };
+    /* ---------------- Consulta do catálogo (formulário de OS) ---------------- */
+
+    function brandList() {
+        const popular = FULL.popular || [];
+        return FULL.brands.map(b => ({ key: b.k, name: b.n, logo: BRANDS[b.k].logo, popular: popular.includes(b.k), aliases: b.a || [] }));
+    }
+
+    function getBrand(key) {
+        return FULL.brands.find(b => b.k === key) || null;
+    }
+
+    function parseYears(ranges) {
+        const out = [];
+        for (const part of String(ranges || '').split(',')) {
+            if (!part) continue;
+            const [a, b] = part.split('-').map(Number);
+            for (let y = a; y <= (b || a); y++) out.push(y);
+        }
+        return out;
+    }
+
+    function inRanges(ranges, year) {
+        return String(ranges || '').split(',').some(part => {
+            const [a, b] = part.split('-').map(Number);
+            return year >= a && year <= (b || a);
+        });
+    }
+
+    /** Anos-modelo que a marca teve à venda (mais novo primeiro). */
+    function yearsForBrand(key) {
+        const b = getBrand(key);
+        if (!b) return [];
+        const set = new Set();
+        for (const m of b.m) for (const e of Object.values(m[2])) parseYears(e[0]).forEach(y => set.add(y));
+        return [...set].sort((x, y) => y - x);
+    }
+
+    const FUEL_NAMES = { 1: 'Gasolina', 2: 'Álcool', 3: 'Diesel', 4: 'Elétrico', 5: 'Flex', 6: 'Híbrido', 7: 'GNV' };
+
+    function engineSort(a, b) {
+        const na = parseFloat(a) || 99;
+        const nb = parseFloat(b) || 99;
+        return (na - nb) || a.localeCompare(b);
+    }
+
+    /**
+     * Opções de modelo de uma marca: uma por motor ("Strada 1.3", "Strada 1.4"...).
+     * Com ano, só o que existia naquele ano-modelo.
+     */
+    function modelOptions(key, year) {
+        const b = getBrand(key);
+        if (!b) return [];
+        const out = [];
+        for (const [name, shape, engines] of b.m) {
+            for (const eng of Object.keys(engines).sort(engineSort)) {
+                const [ranges, fuels] = engines[eng];
+                if (year && !inRanges(ranges, year)) continue;
+                const years = parseYears(ranges);
+                out.push({
+                    brand: b.k,
+                    model: name,
+                    engine: eng,
+                    label: eng ? `${name} ${eng}` : name,
+                    shape,
+                    body: SHAPE_BODY[shape] || '',
+                    fuels: fuels.split('').map(c => FUEL_NAMES[c]).filter(Boolean),
+                    from: years[0],
+                    to: years[years.length - 1]
+                });
+            }
+        }
+        return out;
     }
 
     /**
@@ -415,6 +516,11 @@
         BRANDS,
         POPULAR_MODELS,
         identifyCar,
+        findBrandKey,
+        brandList,
+        yearsForBrand,
+        modelOptions,
+        source: FULL.source || '',
         renderMercosulPlateHtml,
         renderBrandLogoHtml,
         renderCarSilhouetteHtml,

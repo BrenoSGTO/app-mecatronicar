@@ -13,7 +13,7 @@
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\build_release.ps1
-  powershell -ExecutionPolicy Bypass -File scripts\build_release.ps1 -Version 2.0.0
+  powershell -ExecutionPolicy Bypass -File scripts\build_release.ps1 -Version 3.0.0
 #>
 param([string]$Version = "")
 
@@ -40,7 +40,7 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar launcher.cs" }
 Write-Host "[2/3] Montando zip de release v$Version..."
 # Somente arquivos versionados necessarios em producao (sem testes, docs, planilhas de exemplo, packaging)
 $files = git -c core.quotepath=off ls-files | Where-Object {
-    $_ -notmatch '^(docs|packaging|planilhas_exemplo|\.issues)/' -and
+    $_ -notmatch '^(docs|packaging|planilhas_exemplo|tests|\.issues)/' -and
     $_ -notmatch '^test_.*\.py$' -and
     $_ -notmatch '^(\.gitignore|apresentacao_pitch\.html|ROADMAP_V2\.md|RELEASE_V2\.0\.0\.md|gerar_massa_dados\.py)$' -and
     $_ -notmatch '^scripts/'

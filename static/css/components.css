@@ -1155,6 +1155,11 @@ body.has-modal {
     transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 
+/* Menu aberto de dentro de um modal: acima do modal, abaixo dos avisos (toast). */
+.menu.is-over-modal {
+    z-index: calc(var(--z-modal) + 5);
+}
+
 .menu.is-open {
     opacity: 1;
     transform: none;
@@ -1594,6 +1599,7 @@ a.list-item:hover,
     border-radius: 8px;
 }
 
+.brand-logo-container.is-xs { width: 26px; height: 22px; padding: 2px 3px; border-radius: 5px; }
 .brand-logo-container.is-sm { width: 30px; height: 30px; padding: 4px; }
 .brand-logo-container.is-lg { width: 56px; height: 56px; padding: 7px; }
 

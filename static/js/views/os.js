@@ -3,7 +3,8 @@
  *
  * - Autopreenchimento por placa (GET /api/car_lookup/:placa) e busca de cliente/veículo
  *   recorrente (GET /api/os/autocomplete). Só preenche campos que o usuário não digitou.
- * - Catálogo rápido de peças/serviços (GET /api/quick_suggestions): chips + lista ao digitar.
+ * - Catálogo rápido de peças/serviços (GET /api/quick_suggestions): lista ao digitar.
+ * - Marca -> Ano -> Modelo com listas da Tabela FIPE (os-vehicle.js), aceitando texto livre.
  * - Peças e mão de obra em grade editável (Tab/Enter/setas, Alt+setas reordena, totais ao vivo).
  *   A planilha comporta 14 peças e 4 serviços (excel_writer.py): a grade respeita esses limites.
  * - Validação antes de salvar, proteção contra duplo envio, contra sobrescrever uma visita
@@ -25,9 +26,11 @@ import { toast } from '../ui/toast.js';
 import { openInExcel, openOrcamentoPdf } from '../lib/documents.js';
 import { PATIO_STATUSES, statusValue } from '../lib/patio.js';
 import {
-    cleanPlate, formatDateBr, formatMoney, formatPlate, formatTimeBr, matchesSearchTokens, normalizeText,
+    cleanPlate, formatDateBr, formatMoney, formatPlate, formatTimeBr, matchesSearchTokens, normalizeText, parseDecimal,
 } from '../lib/format.js';
 import { openChecklist } from './checklist.js';
+import { createCotacaoPanel } from './cotacao.js';
+import { initVehiclePicker, syncBrandLogo, closeVehiclePicker } from './os-vehicle.js';
 
 const SERVICE_SECTION = 'Serviço';
 const PAYMENT_OPTIONS = ['Pix', 'Dinheiro', 'Cartão de Débito', 'Cartão de Crédito 1x', 'Cartão de Crédito 2x', 'Cartão de Crédito 3x', 'Faturado', 'Boleto'];
@@ -71,37 +74,16 @@ let initialPatioStatus = '';
 let layoutBlocked = '';
 let userEdited = false;
 let saving = false;
+let cot = null;                // painel da aba "Cotação de peças" (uso interno, não vai para o Excel)
+let cotTimer = null;
+let cotSaving = null;           // promessa do salvamento automático em andamento
+let cotDirty = false;           // alterações da cotação ainda não gravadas (edição de OS)
+let activeTab = 'ficha';
+let cotReady = false;           // cotação salva já carregada (na edição, só grava depois disso)
 
 /* ------------------------------------------------------------------ */
 /* Números pt-BR                                                       */
 /* ------------------------------------------------------------------ */
-
-// Aceita "1.234,56", "1234,56", "1234.56", "R$ 1.234,56", "12,5", "12.5", "1.234" (= mil duzentos e trinta e quatro).
-// Devolve null para vazio e NaN para texto inválido.
-function parseDecimal(raw, decimals = 2) {
-    let s = String(raw ?? '').replace(/R\$/gi, '').replace(/\s/g, '');
-    if (s === '') return null;
-    if (!/^[\d.,]+$/.test(s) || !/\d/.test(s)) return NaN;
-    const lastComma = s.lastIndexOf(',');
-    const lastDot = s.lastIndexOf('.');
-    if (lastComma !== -1 && lastDot !== -1) {
-        const decimalSep = lastComma > lastDot ? ',' : '.';
-        const thousandSep = decimalSep === ',' ? '.' : ',';
-        if (s.split(decimalSep).length > 2) return NaN;
-        s = s.split(thousandSep).join('').replace(decimalSep, '.');
-    } else if (lastComma !== -1) {
-        if (s.split(',').length > 2) return NaN;
-        s = s.replace(',', '.');
-    } else if (lastDot !== -1) {
-        const grouped = /^\d{1,3}(\.\d{3})+$/.test(s) && !/^0\./.test(s);
-        if (grouped) s = s.split('.').join('');
-        else if (s.split('.').length > 2) return NaN;
-    }
-    const n = Number(s);
-    if (!Number.isFinite(n)) return NaN;
-    const factor = 10 ** decimals;
-    return Math.round(n * factor) / factor;
-}
 
 const NUMBER_FORMATS = {
     2: new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -168,10 +150,6 @@ function itemsSection(kind) {
             </h3>
             <button type="button" class="btn btn-secondary btn-sm" data-action="add-row" data-kind="${kind}">${icon('plus', 15)} ${k.add}</button>
         </div>
-        <div class="os-suggestions">
-            <span class="text-xs text-subtle">Atalhos</span>
-            <div class="chip-list" data-chips="${kind}"></div>
-        </div>
         <div class="table-wrap">
             <table class="table os-items-table">
                 <thead><tr>
@@ -197,7 +175,11 @@ function build() {
         size: 'xl',
         closeOnBackdrop: false,
         bodyClass: 'os-body',
-        body: html`<form class="os-form" novalidate autocomplete="off">
+        body: html`<div class="tabs os-tabs" role="tablist" aria-label="Partes da OS">
+            <button type="button" class="tab" role="tab" id="os-tab-ficha" aria-controls="os-panel-ficha" aria-selected="true" data-action="tab" data-tab="ficha">${icon('clipboard-list', 16)} Ficha da OS</button>
+            <button type="button" class="tab" role="tab" id="os-tab-cotacao" aria-controls="os-panel-cotacao" aria-selected="false" data-action="tab" data-tab="cotacao">${icon('table', 16)} Cotação de peças <span class="badge" data-field="cot-badge" hidden></span><span class="os-tab-private">${icon('eye-off', 12)} uso interno</span></button>
+        </div>
+        <form class="os-form" novalidate autocomplete="off" id="os-panel-ficha" role="tabpanel" aria-labelledby="os-tab-ficha">
             <nav class="os-nav" aria-label="Seções da ficha">
                 ${SECTIONS.map(([id, label]) => html`<button type="button" class="os-nav-item" data-action="goto" data-target="${id}">${label}</button>`)}
             </nav>
@@ -227,9 +209,16 @@ function build() {
                             <input class="input input-upper input-mono" name="plate" placeholder="BRA2E19" autocomplete="off" maxlength="8">
                             <span class="field-hint" data-hint="plate"></span>
                         </label>
-                        ${field('car_model', 'Modelo', { col: 3, required: true, placeholder: 'Ex.: VW Fox 1.0 8V' })}
-                        ${field('car_brand', 'Marca', { col: 2, placeholder: 'VW, GM…' })}
+                        <label class="field col-2">
+                            <span class="field-label"><span>Marca</span></span>
+                            <span class="input-group os-brand-group">
+                                <img class="os-brand-logo" data-field="brand-logo" alt="" hidden>
+                                <input class="input" name="car_brand" placeholder="Fiat, VW…" autocomplete="off">
+                            </span>
+                            <span class="field-hint" data-hint="car_brand"></span>
+                        </label>
                         ${field('car_year', 'Ano', { col: 1, placeholder: '2018', cls: 'input-num', inputmode: 'numeric', maxlength: 4 })}
+                        ${field('car_model', 'Modelo', { col: 3, required: true, placeholder: 'Escolha ou digite' })}
                         ${field('car_color', 'Cor', { col: 2, placeholder: 'Prata' })}
                         ${field('car_fuel', 'Combustível', { col: 2, placeholder: 'Flex' })}
 
@@ -315,7 +304,8 @@ function build() {
 
                 <datalist id="os-datalist-payment">${PAYMENT_OPTIONS.map((p) => html`<option value="${p}"></option>`)}</datalist>
             </fieldset>
-        </form>`,
+        </form>
+        <div class="os-cot-host" id="os-panel-cotacao" role="tabpanel" aria-labelledby="os-tab-cotacao" data-field="cot-host" hidden></div>`,
         footer: html`
             <div class="os-footer-total push">
                 <span class="os-footer-label">Total geral</span>
@@ -325,6 +315,8 @@ function build() {
             <button type="button" class="btn btn-secondary" data-modal-close>Cancelar</button>
             <button type="button" class="btn btn-primary" data-action="save">${icon('save', 16)} <span data-field="save-label">Salvar ficha no Excel</span></button>`,
         onClose: () => {
+            flushCotacao();
+            cot?.close();
             closeSuggest();
             hideClientResults();
             lookupController?.abort();
@@ -334,6 +326,12 @@ function build() {
     });
 
     form = modal.body.querySelector('form');
+    cot = createCotacaoPanel({ onChange: onCotacaoChange, getOsParts });
+    $('[data-field="cot-host"]', modal.body).append(cot.el);
+    modal.body.querySelector('.os-tabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="tab"]');
+        if (btn) switchTab(btn.dataset.tab);
+    });
 
     // Fechar (X, Esc, Cancelar) pede confirmação quando há alterações; durante o envio não fecha.
     const realClose = modal.close.bind(modal);
@@ -352,6 +350,7 @@ function build() {
     };
 
     bindEvents();
+    initVehiclePicker(form, modal.el, { onChange: markEdited });
 }
 
 function beforeUnload(event) {
@@ -464,26 +463,6 @@ function removeRow(tr) {
     (neighbor || tbody.rows[0])?.querySelector('[data-col="desc"]')?.focus();
 }
 
-function firstEmptyRow(kind) {
-    return [...tbodyOf(kind).rows].find((tr) => !tr.querySelector('[data-col="desc"]').value.trim()
-        && !tr.querySelector('[data-col="unit"]').value.trim());
-}
-
-/** Atalho do catálogo: usa a primeira linha vazia ou cria outra. */
-function addOrFill(kind, desc) {
-    let tr = firstEmptyRow(kind);
-    if (!tr) tr = addRow(kind);
-    if (!tr) {
-        toast(`A planilha comporta no máximo ${KINDS[kind].limit} ${KINDS[kind].noun}.`, 'error');
-        return;
-    }
-    tr.querySelector('[data-col="desc"]').value = desc;
-    if (!tr.querySelector('[data-col="qty"]').value.trim()) tr.querySelector('[data-col="qty"]').value = '1';
-    tr.querySelector('[data-col="unit"]').focus();
-    markEdited();
-    recalc();
-}
-
 function rowValues(tr) {
     const desc = tr.querySelector('[data-col="desc"]').value.trim();
     const qtyRaw = tr.querySelector('[data-col="qty"]').value;
@@ -528,7 +507,7 @@ function recalc() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Catálogo rápido (chips + lista ao digitar)                          */
+/* Catálogo rápido (lista ao digitar)                                  */
 /* ------------------------------------------------------------------ */
 
 let suggestEl = null;
@@ -545,9 +524,6 @@ async function loadSuggestions() {
             return;
         }
     }
-    const chips = (kind, list) => html`${list.map((text) => html`<button type="button" class="chip" data-action="chip" data-kind="${kind}" data-value="${text}" title="Adicionar “${text}”">${icon('plus', 12)} ${text}</button>`)}`;
-    render($('[data-chips="pecas"]', form), chips('pecas', (suggestionsCache.pecas || []).slice(0, 6)));
-    render($('[data-chips="servicos"]', form), chips('servicos', (suggestionsCache.servicos || []).slice(0, 5)));
 }
 
 function suggestionPool(kind) {
@@ -794,6 +770,7 @@ function autofill(name, value) {
     if (el.dataset.src === 'user' && el.value.trim()) return;
     el.value = String(value);
     el.dataset.src = 'auto';
+    if (name === 'car_brand') syncBrandLogo();
 }
 
 function clearAutofilled() {
@@ -804,6 +781,7 @@ function clearAutofilled() {
             delete el.dataset.src;
         }
     }
+    syncBrandLogo();
 }
 
 async function plateLookup(rawPlate) {
@@ -922,6 +900,103 @@ function markEdited() {
     userEdited = true;
 }
 
+function tabsHeight() {
+    return modal.body.querySelector('.os-tabs')?.offsetHeight || 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Abas: ficha da OS x cotação de peças (interna)                      */
+/* ------------------------------------------------------------------ */
+
+const tabScroll = { ficha: 0, cotacao: 0 };
+
+function switchTab(tab) {
+    if (tab === activeTab) return;
+    tabScroll[activeTab] = modal.body.scrollTop;
+    activeTab = tab;
+    $$('.os-tabs [data-tab]', modal.body).forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false'));
+    form.hidden = tab !== 'ficha';
+    $('[data-field="cot-host"]', modal.body).hidden = tab !== 'cotacao';
+    closeSuggest();
+    hideClientResults();
+    if (tab === 'cotacao') cot.close();
+    modal.body.scrollTop = tabScroll[tab] || 0;
+    if (tab === 'ficha') updateScrollSpy();
+}
+
+/** Peças que estão na aba da OS agora (para "Copiar peças da OS"). */
+function getOsParts() {
+    return currentItems().pecas.map((p) => {
+        const qty = parseDecimal(p.quantity, 3);
+        return { desc: p.description, qty: qty && qty > 0 ? qty : 1 };
+    });
+}
+
+function updateCotBadge() {
+    const badge = $('[data-field="cot-badge"]', modal.body);
+    const c = cot.counts();
+    badge.hidden = !c.suppliers && !c.parts;
+    badge.textContent = String(c.parts);
+    badge.title = `${c.parts} ${c.parts === 1 ? 'peça' : 'peças'} · ${c.suppliers} ${c.suppliers === 1 ? 'autopeça' : 'autopeças'}`;
+}
+
+function onCotacaoChange() {
+    updateCotBadge();
+    if (mode === 'edit' && existingFilePath) {
+        cotDirty = true;
+        cot.setSaveState('Alterações não salvas…', 'pending');
+        clearTimeout(cotTimer);
+        cotTimer = setTimeout(saveCotacaoNow, 900);
+    } else {
+        markEdited();
+        cot.setSaveState('Será guardada junto com a OS ao salvar.', 'info');
+    }
+}
+
+/** Edição de OS: a cotação se salva sozinha (não precisa regravar a planilha). */
+async function saveCotacaoNow() {
+    clearTimeout(cotTimer);
+    cotTimer = null;
+    if (!cotDirty || !existingFilePath || !cotReady) return;
+    if (cotSaving) {
+        await cotSaving.catch(() => {});
+        if (!cotDirty) return;
+    }
+    cotDirty = false;
+    const filePath = existingFilePath;
+    cot.setSaveState('Salvando cotação…', 'pending');
+    cotSaving = api.put('/api/cotacao', { file_path: filePath, plate: form.elements.plate.value, cotacao: cot.getData() }, { errorMessage: 'Não foi possível salvar a cotação' })
+        .then(() => { if (!cotDirty && filePath === existingFilePath) cot.setSaveState('Cotação salva', 'ok'); })
+        .catch((err) => {
+            cotDirty = true;
+            cot.setSaveState('Não foi possível salvar a cotação. Tente de novo.', 'error');
+            toast(err.message, 'error');
+        })
+        .finally(() => { cotSaving = null; });
+    return cotSaving;
+}
+
+function flushCotacao() {
+    if (cotTimer || cotDirty) saveCotacaoNow();
+}
+
+async function loadCotacao(filePath) {
+    cot.load(null);
+    updateCotBadge();
+    if (!filePath) return;
+    cot.setSaveState('Carregando cotação…', 'pending');
+    try {
+        const data = await api.get('/api/cotacao', { params: { file_path: filePath }, errorMessage: 'Não foi possível carregar a cotação' });
+        if (filePath !== existingFilePath) return;
+        cot.load(data.cotacao);
+        cotReady = true;
+        updateCotBadge();
+        cot.setSaveState(data.cotacao?.updated_at ? 'Cotação salva' : 'Salva sozinha enquanto você digita.', data.cotacao?.updated_at ? 'ok' : 'info');
+    } catch (err) {
+        cot.setSaveState('Não foi possível carregar a cotação.', 'error');
+    }
+}
+
 /** Posição da seção dentro da área rolável do modal. */
 function sectionTop(section) {
     return section.getBoundingClientRect().top - modal.body.getBoundingClientRect().top + modal.body.scrollTop;
@@ -931,12 +1006,13 @@ function scrollToSection(id) {
     const section = $(`#os-sec-${id}`, form);
     if (!section) return;
     const nav = $('.os-nav', form);
-    modal.body.scrollTo({ top: Math.max(0, sectionTop(section) - nav.offsetHeight - 8), behavior: 'smooth' });
+    modal.body.scrollTo({ top: Math.max(0, sectionTop(section) - nav.offsetHeight - tabsHeight() - 8), behavior: 'smooth' });
 }
 
 function updateScrollSpy() {
+    if (activeTab !== 'ficha') return;
     const nav = $('.os-nav', form);
-    const probe = modal.body.scrollTop + nav.offsetHeight + 40;
+    const probe = modal.body.scrollTop + nav.offsetHeight + tabsHeight() + 40;
     let current = SECTIONS[0][0];
     for (const [id] of SECTIONS) {
         const section = $(`#os-sec-${id}`, form);
@@ -975,7 +1051,6 @@ function bindEvents() {
     form.elements.entry_date.addEventListener('input', (e) => { e.target.value = maskDate(e.target.value); });
     form.elements.entry_time.addEventListener('input', (e) => { e.target.value = maskTime(e.target.value); });
     form.elements.visit_num.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
-    form.elements.car_year.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
 
     // Valores em R$ e quantidades: normaliza ao sair do campo ("1234.5" vira "1.234,50").
     form.addEventListener('focusout', (e) => {
@@ -1057,8 +1132,6 @@ function bindEvents() {
             const tr = btn.closest('tr');
             setRowHighlight(tr, tr.dataset.color ? '' : HIGHLIGHT_COLOR);
             markEdited();
-        } else if (action === 'chip') {
-            addOrFill(btn.dataset.kind, btn.dataset.value);
         } else if (action === 'pick-client') {
             pickClient(btn);
         } else if (action === 'checklist') {
@@ -1120,8 +1193,19 @@ function setPatioOptions({ current = '', allowNone = true, noneLabel = '' } = {}
 
 function reset({ title, saveLabel }) {
     if (!modal) build();
+    flushCotacao();
     form.reset();
     existingFilePath = '';
+    cotDirty = false;
+    clearTimeout(cotTimer);
+    cotTimer = null;
+    activeTab = 'cotacao';
+    switchTab('ficha');
+    tabScroll.ficha = 0;
+    tabScroll.cotacao = 0;
+    cotReady = false;
+    cot.load(null);
+    updateCotBadge();
     editVisit = null;
     editPlateRaw = '';
     agendamentoId = null;
@@ -1132,6 +1216,7 @@ function reset({ title, saveLabel }) {
     saving = false;
     lookupController?.abort();
     closeSuggest();
+    closeVehiclePicker();
     clearRows();
     hideClientResults();
     setPlateBadge('', '');
@@ -1155,6 +1240,7 @@ function reset({ title, saveLabel }) {
 
 function afterOpen() {
     recalc();
+    syncBrandLogo();
     userEdited = false;
     initialPatioStatus = form.elements.patio_status.value;
     modal.open({ focus: false });
@@ -1162,10 +1248,11 @@ function afterOpen() {
     setTimeout(updateScrollSpy, 30);
 }
 
-export function openNewOs({ plate } = {}) {
+export function openNewOs({ plate, patioStatus = '', subtitle = '' } = {}) {
     mode = 'new';
     reset({ title: 'Nova visita', saveLabel: 'Salvar ficha no Excel' });
-    setPatioOptions({ current: PATIO_STATUSES[0].value, noneLabel: 'Não adicionar ao pátio' });
+    setPatioOptions({ current: patioStatus ? statusValue(patioStatus) : PATIO_STATUSES[0].value, noneLabel: 'Não adicionar ao pátio' });
+    if (subtitle) modal.setSubtitle(subtitle);
     $('[data-field="checklist-text"]', form).textContent = 'Disponível depois de salvar: o aviso de sucesso traz o atalho do checklist.';
     $('[data-action="checklist"]', form).disabled = true;
     addRow('pecas');
@@ -1335,6 +1422,7 @@ export async function openEditOs(visit) {
     $('[data-field="checklist-text"]', form).textContent = 'Abre o checklist com as peças e serviços que estão na ficha agora (inclusive alterações ainda não salvas).';
     $('[data-action="checklist"]', form).disabled = false;
     afterOpen();
+    loadCotacao(existingFilePath);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1488,6 +1576,8 @@ function buildPayload(items, discount) {
         pecas: items.pecas.map(toItem),
         servicos: items.servicos.map(toItem),
     };
+    // Cotação interna: o servidor tira do payload antes de gravar a planilha e guarda só no banco local.
+    if (mode === 'edit' ? cotReady : !cot.isEmpty()) payload.cotacao = cot.getData();
     // Na edição o status do pátio só vai se o usuário escolheu outro.
     const status = f.patio_status.value;
     if (status && (!edit || status !== initialPatioStatus)) payload.patio_status = status;
@@ -1536,6 +1626,8 @@ async function save() {
         return;
     }
 
+    clearTimeout(cotTimer);
+    cotTimer = null;
     const payload = buildPayload(items, discount);
     const plate = cleanPlate(payload.car.plate);
 
@@ -1582,6 +1674,8 @@ async function save() {
         }
         userEdited = false;
         saving = false;
+        cotDirty = false;
+        if (payload.cotacao && data.cotacao_saved === false) toast('A ficha foi salva, mas a cotação não. Abra a OS e confira a aba Cotação.', 'error');
         modal.forceClose();
         announceSaved(data, payload);
         refresh('cars', 'patio', 'agendamentos', 'nfStats');

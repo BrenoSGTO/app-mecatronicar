@@ -83,6 +83,23 @@ class TestChecklist(unittest.TestCase):
         for txt in ("Anotações do mecânico", "Teste de rodagem", "Mecânico responsável"):
             self.assertIn(txt, out)
 
+    def test_sempre_uma_folha_a4(self):
+        """Checklist é sempre UMA folha A4: densidade cresce com os itens e há ajuste final."""
+        poucos = G.render_checklist_html(dict(BASE, pecas_items=_itens(2), servicos_items=[]))
+        self.assertIn('class="d-normal"', poucos)
+        limite = G.render_checklist_html(dict(BASE, pecas_items=_itens(14), servicos_items=_itens(4)))
+        self.assertIn('class="d-tight"', limite)
+        muitos = G.render_checklist_html(dict(BASE, pecas_items=_itens(30), servicos_items=[]))
+        self.assertIn("two-up", muitos)
+        for out in (poucos, limite, muitos):
+            self.assertIn("size: A4 portrait", out)
+            self.assertIn("max-height: 265mm", out)
+            self.assertIn('class="fit-clip"', out)
+        scanner = "\n".join(f"P0{300 + i} falha" for i in range(80))
+        out = G.render_checklist_html(dict(BASE, pecas_items=_itens(14), complaint_comment=scanner), include_scanner=True)
+        self.assertIn("Relatório resumido para caber na folha", out)
+        self.assertNotIn("P0379", out)
+
     def test_muitos_itens_e_campos_ausentes(self):
         out = G.render_checklist_html(dict(BASE, pecas_items=_itens(60)))
         self.assertEqual(out.count('class="chk"><div class="check-box">'), 60)

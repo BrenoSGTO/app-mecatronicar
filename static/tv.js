@@ -3,8 +3,9 @@
  * Painel de TV do pátio (rota /tv).
  *
  * Princípios:
- *  - Sempre cabe na tela: o layout das colunas/cards é calculado em JS a partir do
- *    tamanho real disponível (sem rolagem em 1280x720, 1920x1080 ou 3840x2160).
+ *  - Sempre cabe na tela: todos os carros ficam numa grade só (sem colunas por status),
+ *    em cards horizontais de proporção fixa. O JS escolhe o nº de colunas que deixa os
+ *    cards maiores (sem rolagem em 1280x720, 1920x1080 ou 3840x2160).
  *  - Atualiza só o que mudou: cada carro é um nó DOM com assinatura; o polling compara
  *    por id e só mexe nos cards novos/alterados/removidos.
  *  - Rodando 12 h+: um único timer de polling (setTimeout encadeado), pausa com a aba
@@ -24,22 +25,25 @@
     var FETCH_TIMEOUT_MS = 8000;
     var STALE_AFTER_MS = 24 * 3600 * 1000; // tempo no status destacado em âmbar
 
-    // Dois formatos de card, medidos em "u" (1u = font-size do card):
-    //  - wide: placa e tempo lado a lado (mais largo, mais baixo)
-    //  - tall: tudo empilhado (cabe em colunas estreitas, onde a largura é o recurso escasso)
-    var CARD_W = { wide: 16.2, tall: 9.8 };
+    // Card único, sempre horizontal e sempre na mesma proporção, medido em "u"
+    // (1u = font-size do card). O layout só escolhe quantas colunas e o tamanho de "u".
+    var CARD_W = 17.6;
+    var CARD_H = 10.8;
 
+    // Ordem do fluxo da oficina: os cards seguem esta ordem na grade.
     var PHASES = [
-        { key: 'diagnostico', label: 'Em diagnóstico',        ah: { wide: 8.2,  tall: 13.4 }, re: /diagn/ },
-        { key: 'orcamento',   label: 'Esperando orçamento',   ah: { wide: 8.2,  tall: 13.4 }, re: /orcam/ },
-        { key: 'aprovacao',   label: 'Esperando aprovação',   ah: { wide: 8.2,  tall: 13.4 }, re: /aprov/ },
-        { key: 'pecas',       label: 'Esperando peças',       ah: { wide: 8.2,  tall: 13.4 }, re: /peca/ },
-        { key: 'execucao',    label: 'Em execução',           ah: { wide: 8.2,  tall: 13.4 }, re: /execu/ },
-        { key: 'pronto',      label: 'Pronto p/ retirada',    ah: { wide: 8.2,  tall: 13.4 }, re: /client|retir|pronto/ },
-        { key: 'terceiro',    label: 'Retirada por terceiro', ah: { wide: 13.4, tall: 20.6 }, re: /terceir/ }
+        // label: legenda e avisos; short: pílula do card (cabe ao lado do tempo no status)
+        { key: 'diagnostico', label: 'Em diagnóstico',        short: 'Diagnóstico',       re: /diagn/ },
+        { key: 'orcamento',   label: 'Esperando orçamento',   short: 'Orçamento',         re: /orcam/ },
+        { key: 'aprovacao',   label: 'Esperando aprovação',   short: 'Aprovação',         re: /aprov/ },
+        { key: 'pecas',       label: 'Esperando peças',       short: 'Esperando peças',   re: /peca/ },
+        { key: 'execucao',    label: 'Em execução',           short: 'Em execução',       re: /execu/ },
+        { key: 'pronto',      label: 'Pronto p/ retirada',    short: 'Pronto p/ retirada', re: /client|retir|pronto/ },
+        { key: 'terceiro',    label: 'Retirada por terceiro', short: 'Retira terceiro',   re: /terceir/ }
     ];
     var PHASE_BY_KEY = {};
-    PHASES.forEach(function (p) { PHASE_BY_KEY[p.key] = p; });
+    var PHASE_INDEX = {};
+    PHASES.forEach(function (p, i) { PHASE_BY_KEY[p.key] = p; PHASE_INDEX[p.key] = i; });
 
     var PHASE_ICON = {
         diagnostico: 'search', orcamento: 'file-text', aprovacao: 'hourglass',
@@ -140,6 +144,8 @@
     var el = {
         app: $('tv-app'),
         board: $('tv-board'),
+        grid: $('tv-grid'),
+        legend: $('tv-legend'),
         empty: $('tv-empty-state'),
         total: $('tv-total-cars'),
         clockTime: $('tv-clock-time'),
@@ -154,12 +160,6 @@
         agendaMore: $('tv-agenda-more'),
         toast: $('tv-toast')
     };
-
-    var cols = {};   // key -> { root, body, count }
-    PHASES.forEach(function (p) {
-        var root = el.board.querySelector('.tv-col[data-phase="' + p.key + '"]');
-        cols[p.key] = { root: root, body: root.querySelector('.tv-col-body'), count: root.querySelector('.tv-col-count') };
-    });
 
     function serverNow() { return Date.now() + state.offsetMs; }
 
@@ -307,11 +307,12 @@
     function identify(model) {
         var key = model || '';
         if (state.brandCache.has(key)) return state.brandCache.get(key);
-        var info = { brand: 'generic', silhouette: '' };
+        var info = { brand: 'generic', logo: '', silhouette: '' };
         try {
             if (window.CarCatalog && window.CarCatalog.identifyCar) {
                 var r = window.CarCatalog.identifyCar(model);
                 info.brand = r.brandKey || 'generic';
+                info.logo = r.brandLogo ? 'brands/' + String(r.brandLogo).split('/').pop() : '';
                 info.silhouette = r.silhouette ? 'models/' + String(r.silhouette).split('/').pop() : '';
             }
         } catch (e) { /* catálogo indisponível */ }
@@ -329,36 +330,40 @@
     }
 
     function brandHtml(info, model) {
-        if (info.brand === 'generic') {
+        if (info.brand === 'generic' || !info.logo) {
             return '<span class="brand-logo-container">' + icon('car') + '</span>';
         }
-        return '<span class="brand-logo-container"><img class="brand-logo-img" src="brands/' + esc(info.brand) +
-            '.svg" alt="" onerror="this.parentNode.innerHTML=\'\'"></span>';
+        return '<span class="brand-logo-container has-img"><img class="brand-logo-img" src="' + esc(info.logo) +
+            '" alt="" onerror="this.parentNode.innerHTML=\'\'"></span>';
     }
 
     function cardInner(vm) {
         var info = identify(vm.model);
-        var pickup = '';
+        var phase = PHASE_BY_KEY[vm.phase];
+        var foot = '';
         if (vm.phase === 'terceiro') {
-            pickup = '<div class="tv-pickup">' + icon('key-round') +
-                '<div class="tv-pickup-text"><span class="tv-pickup-label">Retira</span>' +
-                '<span class="tv-pickup-name">' + esc(vm.authName || 'Terceiro autorizado') + '</span>' +
-                (vm.authDoc ? '<span class="tv-pickup-doc">Doc. ' + esc(vm.authDoc) + '</span>' : '') +
-                '</div></div>';
+            foot = '<div class="tv-pickup">' + icon('key-round') +
+                '<div class="tv-pickup-text"><span class="tv-pickup-label">Retira' +
+                (vm.authDoc ? '<span class="tv-pickup-doc"> · Doc. ' + esc(vm.authDoc) + '</span>' : '') + '</span>' +
+                '<span class="tv-pickup-name">' + esc(vm.authName || 'Terceiro autorizado') + '</span></div>' +
+                '</div>';
+        } else if (vm.notes || vm.box) {
+            foot = '<div class="tv-card-notes">' +
+                (vm.box ? '<span class="tv-card-box">' + esc(vm.box) + '</span>' : '') +
+                (vm.notes ? '<span class="tv-card-notes-text" title="' + esc(vm.notes) + '">' + esc(vm.notes) + '</span>' : '') +
+                '</div>';
         }
         return '<i class="tv-card-bar"></i>' +
+            (info.silhouette ? '<div class="car-silhouette-container"><img class="car-silhouette-img" src="' + esc(info.silhouette) +
+                '" alt="" loading="lazy" onerror="this.parentNode.style.display=\'none\'"></div>' : '') +
+            '<div class="tv-card-status"><span class="tv-status-pill">' + icon(PHASE_ICON[vm.phase]) +
+            '<span title="' + esc(phase.label) + '">' + esc(phase.short) + '</span></span>' +
+            '<span class="tv-since" data-since>' + icon('clock') + '<span></span></span></div>' +
             '<div class="tv-card-top">' + brandHtml(info, vm.model) +
             '<div class="tv-card-model" title="' + esc(vm.model) + '">' + esc(vm.model) + '</div></div>' +
             '<div class="tv-card-mid">' + plateHtml(vm.plate) +
-            '<span class="tv-since" data-since>' + icon('clock') + '<span></span></span></div>' +
-            (vm.client || vm.box
-                ? '<div class="tv-card-client"><span class="tv-who">' + icon('user') + '<span>' + esc(vm.client || 'Cliente da oficina') + '</span></span>' +
-                  (vm.box ? '<span class="tv-card-box">' + esc(vm.box) + '</span>' : '') + '</div>'
-                : '') +
-            (vm.notes ? '<div class="tv-card-notes" title="' + esc(vm.notes) + '">' + esc(vm.notes) + '</div>' : '') +
-            pickup +
-            (info.silhouette ? '<div class="car-silhouette-container"><img class="car-silhouette-img" src="' + esc(info.silhouette) +
-                '" alt="" loading="lazy" onerror="this.parentNode.style.display=\'none\'"></div>' : '');
+            '<span class="tv-who">' + icon('user') + '<span>' + esc(vm.client || 'Cliente da oficina') + '</span></span></div>' +
+            foot;
     }
 
     function paintCard(rec) {
@@ -543,28 +548,38 @@
 
     function sortRecs(list) {
         return list.sort(function (a, b) {
+            var pa = PHASE_INDEX[a.vm.phase], pb = PHASE_INDEX[b.vm.phase];
+            if (pa !== pb) return pa - pb;              // ordem do fluxo da oficina
             var sa = isNaN(a.vm.since) ? Infinity : a.vm.since;
             var sb = isNaN(b.vm.since) ? Infinity : b.vm.since;
-            if (sa !== sb) return sa - sb;             // quem espera há mais tempo fica no topo
+            if (sa !== sb) return sa - sb;             // quem espera há mais tempo vem antes
             return (a.vm.id || 0) - (b.vm.id || 0);
         });
     }
 
-    var byPhase = {}; // key -> recs ordenados (reutilizado em place/relayout)
+    var legendSig = '';
 
     function place() {
-        PHASES.forEach(function (p) { byPhase[p.key] = []; });
-        state.cars.forEach(function (rec) { byPhase[rec.vm.phase].push(rec); });
-        PHASES.forEach(function (p) {
-            var list = sortRecs(byPhase[p.key]);
-            var body = cols[p.key].body;
-            for (var i = 0; i < list.length; i++) {
-                if (body.children[i] !== list[i].el) body.insertBefore(list[i].el, body.children[i] || null);
-            }
-            cols[p.key].count.textContent = list.length;
-            cols[p.key].root.setAttribute('data-empty', list.length === 0 ? 'true' : 'false');
+        var list = [];
+        var counts = {};
+        state.cars.forEach(function (rec) {
+            list.push(rec);
+            counts[rec.vm.phase] = (counts[rec.vm.phase] || 0) + 1;
         });
+        sortRecs(list);
+        for (var i = 0; i < list.length; i++) {
+            if (el.grid.children[i] !== list[i].el) el.grid.insertBefore(list[i].el, el.grid.children[i] || null);
+        }
         el.total.textContent = state.cars.size;
+
+        var sig = PHASES.map(function (p) { return counts[p.key] || 0; }).join(',');
+        if (sig !== legendSig) {
+            legendSig = sig;
+            el.legend.innerHTML = PHASES.filter(function (p) { return counts[p.key]; }).map(function (p) {
+                return '<span class="tv-legend-item" data-phase="' + p.key + '">' + icon(PHASE_ICON[p.key]) +
+                    '<span class="tv-legend-label">' + esc(p.label) + '</span><b>' + counts[p.key] + '</b></span>';
+            }).join('');
+        }
     }
 
     // ------------------------------------------------------------------
@@ -597,102 +612,31 @@
         el.board.setAttribute('data-empty', 'false');
         el.empty.hidden = true;
 
-        // 1) largura das colunas: vazias viram faixas; as cheias recebem o que precisam para que
-        //    TODOS os cards tenham o mesmo tamanho (maior "u" que cabe), e a sobra é dividida igualmente.
-        var uMax = Math.max(14, window.innerHeight * 0.042);
-        var uiPx = parseFloat(getComputedStyle(el.app).fontSize) || 16;
-        var g0 = px(getComputedStyle(el.board).columnGap) || 8;
-        var active = PHASES.filter(function (p) { return (byPhase[p.key] || []).length > 0; });
-        var collapsedW = Math.min(120, Math.max(40, window.innerWidth * 0.036)); // espelha --collapsed-w
-        var avail = el.board.clientWidth - (PHASES.length - active.length) * collapsedW - (PHASES.length - 1) * g0;
-        var bodyH = el.board.clientHeight - 5.4 * uiPx - g0 - 2;   // pior caso: cabeçalho em 2 linhas
-        var padW = 2 * g0 + 2;
-
-        function needWidth(p, n, u) {
-            var best = Infinity;
-            ['wide', 'tall'].forEach(function (kind) {
-                for (var c = 1; c <= n; c++) {
-                    var r = Math.ceil(n / c);
-                    if (r * p.ah[kind] * u + (r - 1) * g0 > bodyH) continue;
-                    var w = c * CARD_W[kind] * u + (c - 1) * g0 + padW;
-                    if (w < best) best = w;
-                }
-            });
-            return best;
+        // Todos os cards com o mesmo tamanho e a mesma proporção (CARD_W x CARD_H em "u").
+        // Testa cada nº de colunas e fica com o que deixa o card maior; a grade é centralizada.
+        var cs = getComputedStyle(el.grid);
+        var g = px(cs.columnGap) || 8;
+        var W = el.grid.clientWidth;
+        var H = el.grid.clientHeight;
+        if (W <= 0 || H <= 0) return;
+        var best = null;
+        for (var c = 1; c <= total; c++) {
+            var r = Math.ceil(total / c);
+            var u = Math.min((W - (c - 1) * g) / (c * CARD_W), (H - (r - 1) * g) / (r * CARD_H));
+            if (u <= 0) continue;
+            if (!best || u > best.u + 0.01) best = { c: c, r: r, u: u };
         }
-        function totalNeed(u) {
-            var sum = 0;
-            for (var i = 0; i < active.length; i++) {
-                var w = needWidth(active[i], byPhase[active[i].key].length, u);
-                if (w === Infinity) return Infinity;
-                sum += w;
-            }
-            return sum;
-        }
-        var lo = 2, hi = uMax;
-        if (totalNeed(hi) <= avail) lo = hi;
-        else for (var it = 0; it < 22; it++) {
-            var mid = (lo + hi) / 2;
-            if (totalNeed(mid) <= avail) lo = mid; else hi = mid;
-        }
-        var uCommon = lo;
-        var needs = active.map(function (p) { return needWidth(p, byPhase[p.key].length, uCommon); });
-        var used = needs.reduce(function (a, b) { return a + (isFinite(b) ? b : 0); }, 0);
-        var extra = active.length ? Math.max(0, avail - used) / active.length : 0;
-        var needByKey = {};
-        active.forEach(function (p, i) { needByKey[p.key] = (isFinite(needs[i]) ? needs[i] : avail / active.length) + extra; });
+        if (!best) return;
+        // Com poucos carros o card não vira um outdoor.
+        var uMax = Math.max(16, window.innerHeight * 0.05);
+        var uFinal = Math.min(best.u, uMax);
+        var cardW = uFinal * CARD_W;
+        var cardH = uFinal * CARD_H;
 
-        var tracks = PHASES.map(function (p) {
-            return needByKey[p.key] ? 'minmax(0, ' + needByKey[p.key].toFixed(2) + 'fr)' : 'var(--collapsed-w)';
-        });
-        el.board.style.gridTemplateColumns = tracks.join(' ');
-        PHASES.forEach(function (p) {
-            var root = cols[p.key].root;
-            root.setAttribute('data-narrow', root.offsetWidth / uiPx < 17 ? '1' : '0');
-        });
-
-        // 2) para cada coluna cheia, escolhe nº de colunas internas que maximiza o tamanho dos cards
-        PHASES.forEach(function (p) {
-            var list = byPhase[p.key] || [];
-            var n = list.length;
-            if (n === 0) return;
-            var body = cols[p.key].body;
-            var cs = getComputedStyle(body);
-            var g = px(cs.rowGap) || 8;
-            var W = body.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
-            var H = body.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom);
-            if (W <= 0 || H <= 0) return;
-
-            var best = null;
-            ['wide', 'tall'].forEach(function (kind) {
-                var ah = p.ah[kind], aw = CARD_W[kind];
-                var cand = null;
-                for (var c = 1; c <= n; c++) {
-                    var r = Math.ceil(n / c);
-                    var cw = (W - (c - 1) * g) / c;
-                    var ch = (H - (r - 1) * g) / r;
-                    if (cw <= 0 || ch <= 0) continue;
-                    var u = Math.min(cw / aw, ch / ah);
-                    // só aceita mais colunas internas se o ganho for relevante (>4%)
-                    if (!cand || u > cand.u * 1.04) cand = { kind: kind, c: c, r: r, u: u, cw: cw, ch: ch, aw: aw, ah: ah };
-                }
-                // o formato empilhado só vence se render texto sensivelmente maior (>6%)
-                if (cand && (!best || cand.u > best.u * 1.06)) best = cand;
-            });
-            if (!best) return;
-            var uFinal = Math.min(best.u, uMax);
-            var rowH = Math.min(best.ch, uFinal * best.ah * 1.25);
-            var trackW = Math.min(best.cw, uFinal * best.aw * 1.5);
-
-            body.style.setProperty('--u', uFinal.toFixed(2) + 'px');
-            body.style.setProperty('--c', best.c);
-            body.style.setProperty('--rowh', rowH.toFixed(1) + 'px');
-            body.style.setProperty('--trackw', trackW.toFixed(1) + 'px');
-            body.setAttribute('data-layout', best.kind);
-            body.setAttribute('data-size', uFinal < 9 ? 's' : (uFinal < 14 ? 'm' : 'l'));
-            body.setAttribute('data-notes', (uFinal >= 11 && rowH / uFinal >= best.ah + 2.0) ? '1' : '0');
-            body.setAttribute('data-sil', (best.kind === 'wide' && best.cw >= uFinal * 21 && rowH / uFinal >= best.ah + 1.2) ? '1' : '0');
-        });
+        el.grid.style.setProperty('--u', uFinal.toFixed(2) + 'px');
+        el.grid.style.gridTemplateColumns = 'repeat(' + best.c + ', ' + cardW.toFixed(1) + 'px)';
+        el.grid.style.gridAutoRows = cardH.toFixed(1) + 'px';
+        el.grid.setAttribute('data-size', uFinal < 9 ? 's' : (uFinal < 13 ? 'm' : 'l'));
     }
 
     // ------------------------------------------------------------------
@@ -1043,7 +987,7 @@
 
     if (typeof ResizeObserver === 'function') {
         var ro = new ResizeObserver(queueLayout);
-        ro.observe(el.board);
+        ro.observe(el.grid);
         ro.observe(el.agendaList);
     }
     window.addEventListener('resize', queueLayout);

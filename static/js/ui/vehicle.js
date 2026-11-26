@@ -21,9 +21,9 @@ export function plate(value, size = 'md') {
     </div>`;
 }
 
-/** Logo da montadora a partir do texto do modelo.  size: 'sm' | 'md' | 'lg' */
-export function brandLogo(modelText, size = 'md') {
-    const info = identifyCar(modelText);
+/** Logo da montadora a partir do texto do modelo (e da marca, se houver).  size: 'xs' | 'sm' | 'md' | 'lg' */
+export function brandLogo(modelText, size = 'md', brandText = '') {
+    const info = identifyCar(modelText, brandText);
     const cls = size === 'md' ? '' : ` is-${size}`;
     return html`<span class="brand-logo-container${cls}" title="Montadora: ${info.brandName}">
         <img class="brand-logo-img" src="${info.brandLogo}" alt="${info.brandName}" loading="lazy" data-fallback="${GENERIC_BRAND_LOGO}">
@@ -31,8 +31,8 @@ export function brandLogo(modelText, size = 'md') {
 }
 
 /** Silhueta lateral do modelo. */
-export function silhouette(modelText) {
-    const info = identifyCar(modelText);
+export function silhouette(modelText, brandText = '') {
+    const info = identifyCar(modelText, brandText);
     return html`<span class="car-silhouette-container" title="Modelo: ${info.modelName}">
         <img class="car-silhouette-img" src="${info.silhouette}" alt="" loading="lazy" data-fallback="${GENERIC_SILHOUETTE}">
     </span>`;

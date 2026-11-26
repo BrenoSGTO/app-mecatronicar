@@ -17,13 +17,14 @@ import { icon } from '../ui/icon.js';
 import { createModal, confirmDialog } from '../ui/modal.js';
 import { createMenu } from '../ui/menu.js';
 import { toast } from '../ui/toast.js';
-import { plate, silhouette, statusTag } from '../ui/vehicle.js';
+import { plate, silhouette, statusTag, brandLogo } from '../ui/vehicle.js';
 import { PATIO_STATUSES, DELIVERED_STATUS, THIRD_PARTY_STATUS, statusKey, statusLabel, statusValue } from '../lib/patio.js';
 import {
     cleanPlate, formatDateBr, formatDelivered, formatPlate, formatRelativeDay, formatTimeBr,
     isoToBr, pad2, parseDateTime, plural, shortName, todayIso,
 } from '../lib/format.js';
 import { openPatioManager, openPatioEntry, isValidPlate } from './patio.js';
+import { openEditOs, openNewOs } from './os.js';
 
 const AGENDA_SERVICES = [
     ['Revisão Geral', 'Revisão geral'],
@@ -193,7 +194,7 @@ function mount(el) {
             </section>
 
             <aside class="inicio-side">
-                <section class="card inicio-agenda" aria-label="Agendamentos">
+                <section class="card inicio-agenda" aria-label="Agendamentos" data-beta-only>
                     <div class="card-header">
                         <span class="card-title">${icon('calendar-clock', 16)} Agendamentos <span class="badge" data-count="agenda">0</span></span>
                         <button type="button" class="btn btn-secondary btn-sm" data-action="agenda-new">${icon('plus', 14)} Novo</button>
@@ -377,7 +378,10 @@ function vehicleBlock(m) {
     return html`<div class="patio-card-vehicle">
         <span class="patio-card-art">${silhouette(m.model)}</span>
         <div class="patio-card-id">
-            <div class="patio-card-model" title="${m.model}">${m.model || 'Modelo não informado'}</div>
+            <div class="patio-card-model-row">
+                ${brandLogo(m.model, 'xs')}
+                <div class="patio-card-model" title="${m.model}">${m.model || 'Modelo não informado'}</div>
+            </div>
             ${m.color ? html`<div class="patio-card-color">${m.color}</div>` : ''}
             <div class="patio-card-owner" title="${m.client}">${icon('user', 14)} <span class="truncate">${m.client ? shortName(m.client) : 'Cliente não informado'}</span></div>
         </div>
@@ -385,7 +389,7 @@ function vehicleBlock(m) {
 }
 
 function activeCard(m) {
-    return html`<article class="patio-card" data-status="${m.statusKey}" data-car-id="${m.id}" data-plate="${m.plateClean}" tabindex="0" aria-label="${m.plateText}, ${m.model || 'modelo não informado'}, ${m.statusLabel}. Enter abre o histórico.">
+    return html`<article class="patio-card" data-status="${m.statusKey}" data-car-id="${m.id}" data-plate="${m.plateClean}" tabindex="0" aria-label="${m.plateText}, ${m.model || 'modelo não informado'}, ${m.statusLabel}. Enter abre a OS atual.">
         <div class="patio-card-top">
             ${plate(m.plateText, 'sm')}
             <button type="button" class="status-tag status-trigger" data-action="status-menu" data-status="${m.statusKey}" aria-label="Status: ${m.statusLabel}. Alterar status" aria-haspopup="menu" aria-expanded="false">${m.statusLabel} ${icon('chevron-down', 12)}</button>
@@ -400,7 +404,7 @@ function activeCard(m) {
         <div class="patio-card-actions">
             <button type="button" class="btn btn-secondary btn-sm patio-card-deliver" data-action="deliver">${icon('package-check', 14)} Entregar</button>
             <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="edit" aria-label="Editar dados do veículo" data-tooltip="Editar dados">${icon('pencil', 14)}</button>
-            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="history" aria-label="Abrir histórico do veículo" data-tooltip="Histórico">${icon('history', 14)}</button>
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="open-os" aria-label="Abrir a OS atual" data-tooltip="Abrir OS atual">${icon('clipboard-list', 14)}</button>
         </div>
     </article>`;
 }
@@ -421,6 +425,40 @@ function deliveredCard(m) {
             <button type="button" class="btn btn-ghost btn-sm" data-action="history">${icon('history', 14)} Histórico</button>
         </div>
     </article>`;
+}
+
+/**
+ * Card do pátio = OS em andamento. Abre a ficha ligada a esta passagem do carro pelo pátio;
+ * se ele entrou sem ficha, abre uma OS nova já com a placa e o status do pátio.
+ * O histórico de visitas fechadas fica na tela Histórico (só consulta).
+ */
+let openingOs = false;
+async function openCurrentOs(car) {
+    if (!car || openingOs) return;
+    const plateClean = cleanPlate(car.plate_clean || car.plate_display || car.plate);
+    const status = car.status || car.status_display || '';
+    if (car.file_path) {
+        openingOs = true;
+        try {
+            const data = await api.get(`/api/car_history/${encodeURIComponent(plateClean || car.file_path)}`, { errorMessage: 'Não foi possível abrir a OS' });
+            const visit = (data.visits || []).find((v) => v.file_path === car.file_path);
+            if (visit) {
+                await openEditOs(visit);
+                return;
+            }
+            toast('A planilha ligada a este carro não foi encontrada. Abrindo uma OS nova para ele.', 'info');
+        } catch (err) {
+            toast(err.message, 'error');
+            return;
+        } finally {
+            openingOs = false;
+        }
+    }
+    openNewOs({
+        plate: plateClean,
+        patioStatus: status,
+        subtitle: `${formatPlate(plateClean) || 'Carro'} está no pátio sem OS. Ao salvar, esta ficha fica ligada ao card do pátio.`,
+    });
 }
 
 function findCar(id) {
@@ -914,6 +952,9 @@ function bindEvents() {
             case 'history':
                 if (card?.dataset.plate) navigate(vehicleHref(card.dataset.plate));
                 break;
+            case 'open-os':
+                if (card) openCurrentOs(findCar(card.dataset.carId));
+                break;
             case 'event-confirm':
             case 'event-to-patio':
             case 'event-done':
@@ -925,15 +966,23 @@ function bindEvents() {
         }
     });
 
-    // Clique no corpo do card (fora dos controles) abre o histórico do veículo
+    // Clique no corpo do card (fora dos controles): carro no pátio abre a OS atual;
+    // carro já entregue abre o histórico (ficha fechada, só consulta).
+    const openCard = (card) => {
+        if (card.classList.contains('is-delivered')) {
+            if (card.dataset.plate) navigate(vehicleHref(card.dataset.plate));
+            return;
+        }
+        openCurrentOs(findCar(card.dataset.carId));
+    };
     on(root, 'click', '.patio-card', (e, card) => {
         if (e.target.closest('button, select, a, input')) return;
-        if (card.dataset.plate) navigate(vehicleHref(card.dataset.plate));
+        openCard(card);
     });
     on(root, 'keydown', '.patio-card', (e, card) => {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target === card && card.dataset.plate) {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target === card) {
             e.preventDefault();
-            navigate(vehicleHref(card.dataset.plate));
+            openCard(card);
         }
     });
 }

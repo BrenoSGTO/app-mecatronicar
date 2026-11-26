@@ -74,6 +74,11 @@ export function createMenu(trigger, { render: renderContent, onAction, align = '
         open() {
             if (openMenu && openMenu !== menu) openMenu.close();
             menu.refresh();
+            // Aberto de dentro de um modal (ex.: cotação da OS): precisa ficar acima dele.
+            // O gatilho pode ser uma "âncora" que não é elemento (ex.: menu de status do pátio,
+            // que reaproveita um menu só para todos os cards): sem closest(), não está em modal.
+            const inModal = typeof trigger.closest === 'function' && Boolean(trigger.closest('.modal'));
+            el.classList.toggle('is-over-modal', inModal);
             el.hidden = false;
             position();
             openMenu = menu;

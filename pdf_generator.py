@@ -812,34 +812,169 @@ def _checklist_css():
         .rodagem { display: flex; flex-direction: column; gap: 2.2mm; margin: 3mm 0 1mm; font-size: 12pt; font-weight: 600; }
         .rodagem .opt { display: inline-flex; align-items: center; gap: 3mm; }
         .rodagem .check-box { width: 7mm; height: 7mm; margin: 0; }
+
+        /* Uma folha A4, sempre. A densidade sobe conforme a quantidade de itens
+           (classe no <body>) e o script de ajuste reduz o conjunto se ainda faltar espaço. */
+        .fit-clip { overflow: hidden; }
+        .fit { transform-origin: top left; }
+        .scanner-more { margin-top: 1mm; font-size: 8pt; color: var(--muted); font-style: italic; }
+
+        body.d-compact .hero { gap: 5mm; margin-bottom: 3mm; }
+        body.d-compact .plate--xl { font-size: 4.4mm; }
+        body.d-compact .hero-model { font-size: 16pt; }
+        body.d-compact .hero-sub { font-size: 11pt; }
+        body.d-compact .hero-line { margin-top: 1.4mm; }
+        body.d-compact .hero-line b { font-size: 12pt; }
+        body.d-compact .complaint { margin-bottom: 3mm; padding: 2.2mm 3.5mm 2.4mm 4.5mm; }
+        body.d-compact .complaint-text { font-size: 14pt; }
+        body.d-compact table.items { margin-bottom: 3.5mm; }
+        body.d-compact table.todo td { padding: 1.5mm 2mm; }
+        body.d-compact table.todo td.desc { font-size: 11.5pt; }
+        body.d-compact table.todo .qty { font-size: 13pt; }
+        body.d-compact .check-box { width: 7.5mm; height: 7.5mm; }
+        body.d-compact .notes-lines div { height: 7mm; }
+        body.d-compact .field { height: 8mm; }
+        body.d-compact .rodagem { gap: 1.6mm; margin: 2mm 0 1mm; font-size: 11pt; }
+
+        body.d-tight .doc-header { margin-bottom: 2.5mm; padding-bottom: 2mm; }
+        body.d-tight .brand img { width: 10mm; height: 10mm; }
+        body.d-tight .brand-name { font-size: 11.5pt; }
+        body.d-tight .doc-number { font-size: 14pt; }
+        body.d-tight .hero { gap: 4mm; margin-bottom: 2.2mm; }
+        body.d-tight .plate--xl { font-size: 3.6mm; }
+        body.d-tight .hero-model { font-size: 14pt; }
+        body.d-tight .hero-sub { font-size: 10pt; margin-top: .4mm; }
+        body.d-tight .hero-line { margin-top: 1mm; font-size: 10pt; }
+        body.d-tight .hero-line span { display: inline; margin-right: 2mm; }
+        body.d-tight .hero-line b { font-size: 11pt; }
+        body.d-tight .complaint { margin-bottom: 2.2mm; padding: 1.6mm 3mm 1.8mm 4mm; }
+        body.d-tight .complaint-text { font-size: 12pt; }
+        body.d-tight table.items { margin-bottom: 2.4mm; }
+        body.d-tight table.items tr.sec th { font-size: 9pt; padding-bottom: 1mm; }
+        body.d-tight table.todo td { padding: 1mm 1.6mm; }
+        body.d-tight table.todo td.desc { font-size: 10.5pt; line-height: 1.2; }
+        body.d-tight table.todo .qty { font-size: 11pt; width: 12mm; }
+        body.d-tight table.todo .chk { width: 11mm; }
+        body.d-tight .check-box { width: 6mm; height: 6mm; border-width: .45mm; }
+        body.d-tight .item-note { font-size: 8.5pt; margin-top: .3mm; }
+        body.d-tight .notes-lines div { height: 6.5mm; }
+        body.d-tight .field { height: 7mm; }
+        body.d-tight .rodagem { gap: 1.2mm; margin: 1.5mm 0 .5mm; font-size: 10pt; }
+        body.d-tight .rodagem .check-box { width: 5mm; height: 5mm; }
+        body.d-tight .closing { gap: 6mm; margin-top: 1mm; }
+
+        /* Muitos itens: dois por linha */
+        table.todo.two-up td.desc { width: 50%; }
+        table.todo.two-up td.chk + td.qty + td.desc { border-right: .25mm solid var(--line-soft); }
+        table.todo.two-up td.gap { border-bottom: 0; }
+
+        @media print {
+            html, body { height: auto; }
+            /* Garantia final: nunca transborda para uma 2ª folha. */
+            .sheet { max-height: 265mm; overflow: hidden; }
+        }
 """
 
 
-def _checklist_rows(items, empty_text):
+def _checklist_cells(it):
+    note = f'<div class="item-note">Obs.: {_esc(it.get("comment"))}</div>' if it.get("comment") else ""
+    return (
+        '<td class="chk"><div class="check-box"></div></td>'
+        f'<td class="qty">{_esc(it.get("quantity") or "1")}</td>'
+        f'<td class="desc">{_desc(it)}{note}</td>'
+    )
+
+
+def _checklist_rows(items, empty_text, two_up=False):
+    cols = 6 if two_up else 3
     if not items:
-        return f'<tr><td colspan="3" class="empty">{_esc(empty_text)}</td></tr>'
+        return f'<tr><td colspan="{cols}" class="empty">{_esc(empty_text)}</td></tr>'
+    if not two_up:
+        return "".join(f"<tr>{_checklist_cells(it)}</tr>" for it in items)
     rows = []
-    for it in items:
-        note = f'<div class="item-note">Obs.: {_esc(it.get("comment"))}</div>' if it.get("comment") else ""
-        rows.append(
-            "<tr>"
-            '<td class="chk"><div class="check-box"></div></td>'
-            f'<td class="qty">{_esc(it.get("quantity") or "1")}</td>'
-            f'<td class="desc">{_desc(it)}{note}</td>'
-            "</tr>"
-        )
+    for i in range(0, len(items), 2):
+        left = _checklist_cells(items[i])
+        right = _checklist_cells(items[i + 1]) if i + 1 < len(items) else '<td class="gap" colspan="3"></td>'
+        rows.append(f"<tr>{left}{right}</tr>")
     return "".join(rows)
 
 
-def _checklist_table(title, desc_header, items, empty_text):
+def _checklist_table(title, desc_header, items, empty_text, two_up=False):
+    head = f'<th class="chk" style="text-align:center">OK</th><th class="qty">Qtd.</th><th class="desc">{_esc(desc_header)}</th>'
     return f"""
-        <table class="items todo">
+        <table class="items todo{' two-up' if two_up and items else ''}">
             <thead>
-                <tr class="sec"><th colspan="3">{_esc(title)}<small>{len(items)} {'item' if len(items) == 1 else 'itens'}</small></th></tr>
-                <tr class="cols"><th class="chk" style="text-align:center">OK</th><th class="qty">Qtd.</th><th class="desc">{_esc(desc_header)}</th></tr>
+                <tr class="sec"><th colspan="{6 if two_up and items else 3}">{_esc(title)}<small>{len(items)} {'item' if len(items) == 1 else 'itens'}</small></th></tr>
+                <tr class="cols">{head}{head if two_up and len(items) > 1 else ('<th colspan="3"></th>' if two_up and items else '')}</tr>
             </thead>
-            <tbody>{_checklist_rows(items, empty_text)}</tbody>
+            <tbody>{_checklist_rows(items, empty_text, two_up and bool(items))}</tbody>
         </table>"""
+
+
+def _checklist_density(n_items, complaint, scanner_text):
+    """Escolhe a densidade da folha para caber tudo em UMA página A4."""
+    load = n_items + len(complaint or "") / 90.0 + (len((scanner_text or "").splitlines()) / 3.0 if scanner_text else 0)
+    if n_items > 20:
+        return "tight", True
+    if load <= 8:
+        return "normal", False
+    if load <= 13:
+        return "compact", False
+    return "tight", False
+
+
+_SCANNER_LINES = {"normal": 16, "compact": 10, "tight": 6}
+
+
+def _clip_report(text, max_lines, width=110):
+    """Corta o relatório do scanner em `max_lines` linhas visuais (o completo fica no orçamento)."""
+    out, used = [], 0
+    for line in str(text or "").splitlines() or [""]:
+        cost = max(1, -(-len(line) // width))
+        if used + cost > max_lines:
+            room = max_lines - used
+            if room > 0:
+                out.append(line[: room * width].rstrip() + "…")
+            return "\n".join(out), True
+        out.append(line)
+        used += cost
+    return "\n".join(out), False
+
+
+_FIT_SCRIPT = """<script>
+(function () {
+    // Ajuste final: se a folha ainda passar da altura util do A4 (297 mm menos as margens
+    // do @page), reduz o conteudo por igual (scale) e alarga a caixa na mesma proporcao.
+    // A impressao sai sempre em UMA pagina.
+    var MM = 96 / 25.4, MAX_H = 264 * MM, W = 182;
+    function fit() {
+        var clip = document.querySelector('.fit-clip');
+        var box = clip && clip.querySelector('.fit');
+        if (!box) return;
+        box.style.transform = '';
+        box.style.width = '';
+        clip.style.height = '';
+        var h = box.offsetHeight;
+        if (h <= MAX_H) return;
+        // Maior escala que ainda cabe (alargar a caixa reduz a altura, por isso a busca).
+        function heightAt(scale) { box.style.width = (W / scale) + 'mm'; return box.offsetHeight; }
+        var lo = 0.4, hi = 1;
+        for (var i = 0; i < 9; i++) {
+            var mid = (lo + hi) / 2;
+            if (heightAt(mid) * mid <= MAX_H) lo = mid; else hi = mid;
+        }
+        var s = lo;
+        h = heightAt(s);
+        if (s < 1) {
+            box.style.transform = 'scale(' + s + ')';
+            clip.style.height = (h * s) + 'px';
+        }
+    }
+    fit();
+    window.addEventListener('load', fit);
+    window.addEventListener('beforeprint', fit);
+})();
+</script>"""
 
 
 def _split_checklist_items(d, custom_items, pecas, servicos):
@@ -912,6 +1047,8 @@ def render_checklist_html(parsed_data, auto_print=False, include_scanner=True, c
     include_scanner = bool(include_scanner)
 
     pecas, servicos = _split_checklist_items(d, custom_items, pecas, servicos)
+    scanner_src = complaint_comment if include_scanner else ""
+    density, two_up = _checklist_density(len(pecas) + len(servicos), complaint, scanner_src)
 
     doc_title = _file_stem("Checklist", d.get("plate") or plate_disp)
     running = f"Checklist · OS nº {visit_num} · {plate_disp}"
@@ -920,13 +1057,15 @@ def render_checklist_html(parsed_data, auto_print=False, include_scanner=True, c
 
     scanner_html = ""
     if include_scanner and complaint_comment:
+        report, clipped = _clip_report(complaint_comment, _SCANNER_LINES[density] if not two_up else 4)
+        more = '<div class="scanner-more">Relatório resumido para caber na folha. O completo está no orçamento.</div>' if clipped else ""
         scanner_html = f"""
-        <div class="section" style="margin-top:5mm">
+        <div class="section" style="margin-top:{'5' if density == 'normal' else '2.5'}mm">
             <div class="section-title"><span>CÓDIGOS DE FALHA (SCANNER) E ANOTAÇÕES DE DIAGNÓSTICO</span></div>
-            <pre class="report">{_esc(complaint_comment)}</pre>
+            <pre class="report">{_esc(report)}</pre>{more}
         </div>"""
 
-    note_lines = "".join("<div></div>" for _ in range(6))
+    note_lines = "".join("<div></div>" for _ in range({"normal": 6, "compact": 4, "tight": 3}[density]))
     switch_href = "/api/orcamento_pdf?file_path=" + quote(str(d.get("file_path", "")))
 
     return f"""<!DOCTYPE html>
@@ -939,11 +1078,12 @@ def render_checklist_html(parsed_data, auto_print=False, include_scanner=True, c
     <style>{_base_css(running)}{_checklist_css()}
     </style>
 </head>
-<body>
+<body class="d-{density}">
     {_toolbar("Checklist", f"{plate_disp} — {car_full} ({client_name})",
-              (switch_href, "Ver orçamento completo"), "Imprimir checklist")}
+              (switch_href, "Ver orçamento completo"), "Imprimir checklist · 1 folha A4")}
 
     <div class="sheet">
+      <div class="fit-clip"><div class="fit">
         <header class="doc-header">
             {_brand_block(compact=True)}
             <div class="doc-id">
@@ -968,9 +1108,9 @@ def render_checklist_html(parsed_data, auto_print=False, include_scanner=True, c
             <div class="complaint-text">{_esc(complaint)}</div>
         </div>
 
-        {_checklist_table("Peças aprovadas", "Peça / componente", pecas, "Nenhuma peça selecionada para este checklist.")}
+        {_checklist_table("Peças aprovadas", "Peça / componente", pecas, "Nenhuma peça selecionada para este checklist.", two_up)}
 
-        {_checklist_table("Serviços e mão de obra aprovados", "Serviço a executar", servicos, "Nenhum serviço selecionado para este checklist.")}
+        {_checklist_table("Serviços e mão de obra aprovados", "Serviço a executar", servicos, "Nenhum serviço selecionado para este checklist.", two_up)}
 
         <div class="closing keep">
             <div>
@@ -991,7 +1131,9 @@ def render_checklist_html(parsed_data, auto_print=False, include_scanner=True, c
         </div>
 
         {scanner_html}
+      </div></div>
     </div>
+    {_FIT_SCRIPT}
     {_auto_print_script(auto_print)}
 </body>
 </html>

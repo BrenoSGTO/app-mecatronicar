@@ -366,7 +366,7 @@ internal class InstallerForm : Form
                 {
                     ProcessStartInfo pipInfo = new ProcessStartInfo();
                     pipInfo.FileName = pythonExe;
-                    pipInfo.Arguments = "-m pip install --disable-pip-version-check --quiet openpyxl xlrd flask";
+                    pipInfo.Arguments = "-m pip install --disable-pip-version-check --quiet openpyxl xlrd flask waitress";
                     pipInfo.WorkingDirectory = targetDir;
                     pipInfo.CreateNoWindow = true;
                     pipInfo.UseShellExecute = false;

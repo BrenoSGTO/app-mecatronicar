@@ -37,8 +37,8 @@ class TestTVGrid(unittest.TestCase):
         except Exception:
             pass
 
-    def test_01_single_tv_html_with_status_columns(self):
-        """Existe um único tv.html (static/) e ele contém colunas de status, agenda e modal de gestão."""
+    def test_01_single_tv_html_with_single_grid(self):
+        """Existe um único tv.html (static/) com grade única de cards, legenda, agenda e modal de gestão."""
         static_tv = os.path.join(BASE_DIR, "static", "tv.html")
         template_tv = os.path.join(BASE_DIR, "templates", "tv.html")
 
@@ -48,9 +48,14 @@ class TestTVGrid(unittest.TestCase):
         with open(static_tv, "r", encoding="utf-8") as f:
             content = f.read()
 
-        self.assertIn('id="tv-board"', content, "Deve conter o quadro de colunas")
+        self.assertIn('id="tv-board"', content, "Deve conter o quadro")
+        self.assertIn('id="tv-grid"', content, "Todos os carros ficam numa grade única")
+        self.assertIn('id="tv-legend"', content, "Legenda com a contagem por status")
+        self.assertNotIn('class="tv-col"', content, "Os cards não são mais agrupados em colunas de status")
+        with open(os.path.join(BASE_DIR, "static", "tv.js"), "r", encoding="utf-8") as f:
+            js = f.read()
         for phase in ("diagnostico", "orcamento", "aprovacao", "pecas", "execucao", "pronto", "terceiro"):
-            self.assertIn(f'data-phase="{phase}"', content, f"Deve conter a coluna {phase}")
+            self.assertIn(f"key: '{phase}'", js, f"Status {phase} continua reconhecido no card")
         self.assertIn("tv-empty", content, "Deve conter o estado vazio")
         self.assertIn("tv-agenda", content, "Deve conter a agenda do dia")
         self.assertIn("tv-manage-modal", content, "Deve conter o modal de gerenciamento")

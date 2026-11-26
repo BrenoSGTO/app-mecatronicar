@@ -45,7 +45,6 @@
     --ui: clamp(12px, min(1.7vh, 1.05vw), 44px);
     --gap: clamp(6px, 1.1vh, 26px);
     --pad-x: clamp(12px, 1.6vw, 56px);
-    --collapsed-w: clamp(40px, 3.6vw, 120px);
     --ease: cubic-bezier(.2, .7, .2, 1);
 }
 
@@ -175,127 +174,75 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
     min-width: 0;
     min-height: 0;
     position: relative;
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: var(--gap);
 }
 
-.tv-board[data-empty="true"] .tv-col,
-.tv-board[data-empty="loading"] .tv-col { display: none; }
+.tv-board[data-empty="true"] .tv-grid,
+.tv-board[data-empty="loading"] .tv-grid,
+.tv-board[data-empty="true"] .tv-legend,
+.tv-board[data-empty="loading"] .tv-legend { visibility: hidden; }
 
-/* ---------- Colunas de status ---------- */
-.tv-col {
-    --st: var(--tv-text-muted);
-    position: relative;
+/* Legenda: quantos carros em cada status (só informativa, não agrupa os cards) */
+.tv-legend {
+    flex: none;
     display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    background: var(--tv-surface);
-    border: 1px solid var(--tv-border);
-    border-radius: .75em;
-}
-.tv-col[data-phase="diagnostico"] { --st: var(--status-diagnostico); }
-.tv-col[data-phase="orcamento"]   { --st: var(--status-orcamento); }
-.tv-col[data-phase="aprovacao"]   { --st: var(--status-aprovacao); }
-.tv-col[data-phase="pecas"]       { --st: var(--status-pecas); }
-.tv-col[data-phase="execucao"]    { --st: var(--status-execucao); }
-.tv-col[data-phase="pronto"]      { --st: var(--status-pronto); }
-.tv-col[data-phase="terceiro"]    { --st: var(--status-terceiro); }
-
-.tv-col-head {
-    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: .6em;
-    padding: .75em .95em .7em;
-    border-top: 3px solid var(--st);
-    border-radius: .75em .75em 0 0;
-    min-width: 0;
+    gap: .45em .6em;
+    min-height: 2em;
 }
-.tv-col-icon { color: var(--st); }
-.tv-col[data-narrow="1"]:not([data-empty="true"]) .tv-col-head { flex-wrap: wrap; align-content: flex-start; row-gap: .25em; min-height: 5.2em; }
-.tv-col[data-narrow="1"]:not([data-empty="true"]) .tv-col-count { order: 2; margin-left: auto; }
-.tv-col[data-narrow="1"]:not([data-empty="true"]) .tv-col-name { order: 3; flex: 1 0 100%; white-space: normal; font-size: 1em; line-height: 1.15; }
-.tv-col-name {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    font-size: 1.05em;
-    font-weight: 600;
-    letter-spacing: .005em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.tv-col-count {
-    min-width: 1.9em;
-    padding: .1em .55em;
-    border-radius: 999px;
-    background: var(--tv-surface-2);
+.tv-legend:empty { display: none; }
+.tv-legend-item {
+    --st: var(--tv-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: .45em;
+    padding: .25em .75em .25em .6em;
     border: 1px solid var(--tv-border-strong);
-    color: var(--st);
-    font-weight: 700;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+    border-radius: 999px;
+    background: var(--tv-surface);
+    font-size: .92em;
+    color: var(--tv-text-muted);
+    white-space: nowrap;
 }
+.tv-legend-item .tv-icon { width: 1em; height: 1em; color: var(--st); }
+.tv-legend-item b { color: var(--tv-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tv-legend-item[data-phase="diagnostico"] { --st: var(--status-diagnostico); }
+.tv-legend-item[data-phase="orcamento"]   { --st: var(--status-orcamento); }
+.tv-legend-item[data-phase="aprovacao"]   { --st: var(--status-aprovacao); }
+.tv-legend-item[data-phase="pecas"]       { --st: var(--status-pecas); }
+.tv-legend-item[data-phase="execucao"]    { --st: var(--status-execucao); }
+.tv-legend-item[data-phase="pronto"]      { --st: var(--status-pronto); }
+.tv-legend-item[data-phase="terceiro"]    { --st: var(--status-terceiro); }
 
-.tv-col-body {
-    --u: 14px;
-    --c: 1;
+/* Grade única: o JS define nº de colunas e o tamanho (--u); a proporção do card é fixa */
+.tv-grid {
+    --u: 16px;
     flex: 1 1 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(var(--c), var(--trackw, minmax(0, 1fr)));
-    grid-auto-rows: var(--rowh, auto);
-    align-content: start;
-    justify-content: start;
+    grid-template-columns: repeat(auto-fill, calc(var(--u) * 17.6));
+    grid-auto-rows: calc(var(--u) * 10.8);
+    justify-content: center;
+    align-content: center;
     gap: var(--gap);
-    padding: 0 var(--gap) var(--gap);
     font-size: var(--u);
-}
-
-/* Coluna vazia: vira uma faixa estreita com o contador */
-.tv-col[data-empty="true"] { background: transparent; border-style: dashed; border-color: var(--tv-border); }
-.tv-col[data-empty="true"] .tv-col-body { display: none; }
-.tv-col[data-empty="true"] .tv-col-head {
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: .55em;
-    padding: .9em 0;
-    opacity: .6;
-    border-top-width: 3px;
-}
-.tv-col[data-empty="true"] .tv-col-name {
-    flex: 1;
-    writing-mode: vertical-rl;
-    text-overflow: clip;
-    font-size: .95em;
-    font-weight: 500;
-    color: var(--tv-text-muted);
-}
-.tv-col[data-empty="true"] .tv-col-count { order: 2; background: transparent; border-color: transparent; color: var(--tv-text-dim); padding: 0; }
-
-/* Retirada por terceiro: destaque elegante */
-.tv-col[data-phase="terceiro"]:not([data-empty="true"]) {
-    border-color: rgba(244, 114, 182, .5);
-    background: linear-gradient(180deg, rgba(244, 114, 182, .09), rgba(244, 114, 182, 0) 38%), var(--tv-surface);
 }
 
 /* ---------- Card do carro ---------- */
 .tv-card {
     --st: var(--tv-text-muted);
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: .45em;
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    align-content: start;
+    row-gap: .5em;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    padding: .65em .8em .65em 1.05em;
+    padding: .6em .8em .6em 1.05em;
     background: var(--tv-surface-2);
     border: 1px solid var(--tv-border);
     border-radius: .7em;
@@ -315,7 +262,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
 
 .tv-card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: .32em; background: var(--st); }
 
-.tv-card-top { display: flex; align-items: center; gap: .55em; min-width: 0; }
+/* Status do carro (era a coluna): pílula colorida + tempo neste status */
+.tv-card-status { position: relative; display: flex; align-items: center; justify-content: space-between; gap: .5em; min-width: 0; }
+.tv-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+    min-width: 0;
+    padding: .18em .65em .18em .5em;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--st) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--st) 55%, transparent);
+    color: var(--st);
+    font-size: .84em;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap;
+}
+.tv-status-pill .tv-icon { width: 1.05em; height: 1.05em; }
+.tv-status-pill span { overflow: hidden; text-overflow: ellipsis; }
+
+.tv-card-top { position: relative; display: flex; align-items: center; gap: .55em; min-width: 0; }
 .tv-card-model {
     flex: 1;
     min-width: 0;
@@ -339,11 +306,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
     background: var(--tv-surface-3);
     color: var(--tv-text-muted);
 }
+.brand-logo-container.has-img { background: #ffffff; padding: .14em .18em; }
 .brand-logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
-.tv-card-mid { display: flex; align-items: center; justify-content: space-between; gap: .4em; min-width: 0; }
-/* Formato largo: a placa cede um pouco de espaco para o tempo no status caber inteiro */
-.tv-col-body[data-layout="wide"] .tv-card-mid .mercosul-plate { font-size: .9em; }
+.tv-card-mid { position: relative; display: flex; align-items: center; gap: .8em; min-width: 0; }
 
 .tv-since {
     display: inline-flex;
@@ -358,56 +324,40 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
 .tv-since .tv-icon { width: 1em; height: 1em; }
 .tv-since.is-stale { color: var(--tv-warn); }
 
-.tv-card-client {
+.tv-who {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: .6em;
+    gap: .4em;
     min-width: 0;
-    font-size: 1.08em;
+    font-size: 1.05em;
     color: #CBD5E1;
 }
-.tv-who { display: flex; align-items: center; gap: .4em; min-width: 0; max-width: 100%; }
 .tv-who .tv-icon { width: 1em; height: 1em; color: var(--tv-text-dim); }
-.tv-who span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.tv-card-box { flex: 0 1 auto; max-width: 36%; font-size: .74em; color: var(--tv-text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tv-who span {
+    min-width: 0;
+    overflow: hidden;
+    line-height: 1.15;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+}
 
 .tv-card-notes {
-    display: none;
-    margin-top: auto;
-    font-size: .88em;
+    position: relative;
+    align-self: end;
+    display: flex;
+    align-items: baseline;
+    gap: .6em;
+    min-width: 0;
+    font-size: .86em;
     color: var(--tv-text-dim);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
-.tv-col-body[data-notes="1"] .tv-card-notes { display: block; }
-.tv-col-body[data-size="s"] .tv-card-client,
-.tv-col-body[data-size="s"] .tv-card-notes { display: none; }
-
-/* Formato empilhado (colunas estreitas) */
-.tv-col-body[data-layout="tall"] .tv-pickup > .tv-icon { display: none; }
-.tv-col-body[data-layout="tall"] .tv-card-model {
-    white-space: normal;
-    line-height: 1.12;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-size: 1.25em;
-}
-.tv-col-body[data-layout="tall"] .tv-card-mid { flex-direction: column; align-items: flex-start; gap: .4em; }
-.tv-col-body[data-layout="tall"] .tv-card-client { flex-direction: column; align-items: stretch; gap: .15em; }
-.tv-col-body[data-layout="tall"] .tv-card-box { max-width: 100%; }
-.tv-col-body[data-layout="tall"] .tv-pickup-name { -webkit-line-clamp: 3; }
-.tv-col-body[data-layout="tall"] .tv-who { align-items: flex-start; }
-.tv-col-body[data-layout="tall"] .tv-who > span {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-height: 1.15;
-}
+.tv-card-box { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; color: var(--tv-text-muted); font-weight: 600; }
+.tv-card-notes-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tv-grid[data-size="s"] .tv-card-notes,
+.tv-grid[data-size="s"] .tv-who { display: none; }
 
 /* Placa Mercosul */
 .mercosul-plate {
@@ -454,11 +404,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
     bottom: .4em;
     width: 46%;
     max-height: 62%;
-    opacity: .09;
+    opacity: .08;
     pointer-events: none;
 }
 .car-silhouette-img { width: 100%; height: 100%; object-fit: contain; object-position: right bottom; filter: grayscale(1) brightness(2.4); display: block; }
-.tv-col-body[data-sil="1"] .car-silhouette-container { display: block; }
+.tv-grid:not([data-size="s"]) .car-silhouette-container { display: block; }
 
 /* Liberado p/ retirada por terceiro */
 .tv-card[data-phase="terceiro"] {
@@ -467,29 +417,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
 }
 .tv-pickup {
     position: relative;
+    align-self: end;
     display: flex;
     align-items: center;
-    gap: .7em;
+    gap: .55em;
     min-width: 0;
-    padding: .5em .7em;
-    border-radius: .55em;
+    padding: .25em .6em;
+    border-radius: .5em;
     background: rgba(244, 114, 182, .16);
     border: 1px solid rgba(244, 114, 182, .5);
 }
-.tv-pickup > .tv-icon { width: 1.9em; height: 1.9em; color: var(--status-terceiro); }
+.tv-pickup > .tv-icon { width: 1.5em; height: 1.5em; color: var(--status-terceiro); }
 .tv-pickup-text { display: flex; flex-direction: column; min-width: 0; }
-.tv-pickup-label { font-size: .7em; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--status-terceiro); }
-.tv-pickup-name {
-    font-size: 1.4em;
-    font-weight: 700;
-    line-height: 1.15;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow-wrap: anywhere;
-}
-.tv-pickup-doc { font-size: .85em; color: var(--tv-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-pickup-label { font-size: .68em; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--status-terceiro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-pickup-doc { letter-spacing: .02em; text-transform: none; font-weight: 600; color: var(--tv-text-muted); font-variant-numeric: tabular-nums; }
+.tv-pickup-name { min-width: 0; font-size: 1.05em; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- Animações de mudança ---------- */
 .tv-card.is-moving { z-index: 5; }
@@ -508,7 +450,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
     0%, 100% { opacity: 1; }
     50%      { opacity: .35; }
 }
-.tv-col[data-phase="terceiro"] .tv-pickup { animation: tv-breathe 4.5s ease-in-out infinite; }
+.tv-card[data-phase="terceiro"] .tv-pickup { animation: tv-breathe 4.5s ease-in-out infinite; }
 
 /* ---------- Estado vazio ---------- */
 .tv-empty {
@@ -728,7 +670,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, .tv-card:focus-
 /* ---------- Movimento reduzido ---------- */
 @media (prefers-reduced-motion: reduce) {
     .tv-card.is-changed { animation: none; box-shadow: 0 0 0 .14em var(--st); }
-    .tv-col[data-phase="terceiro"] .tv-pickup,
+    .tv-card[data-phase="terceiro"] .tv-pickup,
     .tv-conn[data-state="retry"] .tv-conn-dot,
     .tv-conn[data-state="connecting"] .tv-conn-dot,
     .tv-toast { animation: none; }

@@ -117,7 +117,7 @@ function mount(el) {
     render(el, html`
         <header class="page-header">
             <div class="page-heading">
-                <h1 class="page-title" data-field="title">Veículos</h1>
+                <h1 class="page-title" data-field="title">Histórico de veículos</h1>
                 <p class="page-subtitle" data-field="subtitle">Busque por placa, nome do cliente ou modelo na barra superior.</p>
             </div>
             <div class="page-actions">
@@ -256,7 +256,7 @@ function renderDirectory() {
     const subtitle = q
         ? `${list.length} de ${plural(cars.length, 'veículo')}. Use a busca (/) para procurar também dentro das visitas.`
         : `${plural(cars.length, 'veículo')} nas planilhas. Use a busca (/) para procurar também dentro das visitas.`;
-    setHeader('Veículos', subtitle, { tools: true, hint: list.length > 0 });
+    setHeader('Histórico de veículos', subtitle, { tools: true, hint: list.length > 0 });
 
     if (!list.length) {
         render(resultsEl, html`<div class="card"><div class="empty-state">
@@ -460,7 +460,7 @@ async function runSearch(q) {
 
 export default {
     id: 'busca',
-    title: 'Busca',
+    title: 'Histórico',
     mount,
     enter(params, query) {
         currentQuery = (query.q || '').trim();

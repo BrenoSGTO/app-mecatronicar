@@ -216,7 +216,7 @@ function headerMarkup(visits) {
     const minKm = kms.length ? Math.min(...kms) : 0;
     const lastKm = maxKm ? formatKm(maxKm) : (latest.odometer ? formatKm(latest.odometer) : '—');
     const kmDiff = kms.length > 1 && maxKm > minKm ? `+${(maxKm - minKm).toLocaleString('pt-BR')} km` : (kms.length ? '1 registro' : '—');
-    const info = identifyCar(latest.car_model);
+    const info = identifyCar(latest.car_model, d.car_brand);
 
     return html`
         <section class="card veiculo-header">
@@ -240,9 +240,9 @@ function headerMarkup(visits) {
                     </div>
                 </div>
                 <div class="veiculo-vehicle" aria-label="Montadora e modelo">
-                    ${silhouette(latest.car_model)}
+                    ${silhouette(latest.car_model, d.car_brand)}
                     <div class="veiculo-vehicle-caption">
-                        ${brandLogo(latest.car_model, 'sm')}
+                        ${brandLogo(latest.car_model, 'sm', d.car_brand)}
                         <span class="veiculo-vehicle-name truncate">${info.brandName}${info.modelName && info.modelName !== info.brandName && info.modelName !== 'Veículo' ? ` · ${info.modelName}` : ''}</span>
                     </div>
                 </div>

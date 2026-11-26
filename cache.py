@@ -564,6 +564,7 @@ def _init_db_schema(path):
     _setup_nf_table(cur)
     _setup_agendamentos_table(cur)
     _setup_agenda_table(cur)
+    _setup_cotacao_tables(cur)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_patio_updated ON patio_status(updated_at)")
     _setup_change_tracking(cur)
 
@@ -1487,6 +1488,15 @@ def update_patio_status(
     elif file_path:
         cur.execute("SELECT * FROM patio_status WHERE file_path = ?", (file_path,))
         existing = cur.fetchone()
+        if not existing and p_clean:
+            # OS nova de um carro que já está no pátio (entrou sem ficha): vincula a ficha
+            # ao registro ativo em vez de criar um segundo card para o mesmo carro.
+            cur.execute("""
+            SELECT * FROM patio_status
+            WHERE plate_clean = ? AND COALESCE(status, '') != 'Entregue'
+            ORDER BY updated_at DESC, id DESC LIMIT 1
+            """, (p_clean,))
+            existing = cur.fetchone()
     elif p_clean:
         cur.execute("SELECT * FROM patio_status WHERE plate_clean = ? ORDER BY id DESC LIMIT 1", (p_clean,))
         existing = cur.fetchone()
@@ -2234,6 +2244,10 @@ def index_single_file(fpath, db_path=None, old_fpath=None):
     try:
         if old_fpath and old_fpath != fpath:
             cur.execute("DELETE FROM files WHERE file_path = ?", (old_fpath,))
+            # A planilha foi renomeada: o card do pátio e a cotação seguem a ficha.
+            cur.execute("UPDATE patio_status SET file_path = ? WHERE file_path = ?", (fpath, old_fpath))
+            cur.execute("DELETE FROM cotacoes WHERE file_path = ? AND EXISTS (SELECT 1 FROM cotacoes WHERE file_path = ?)", (fpath, old_fpath))
+            cur.execute("UPDATE cotacoes SET file_path = ? WHERE file_path = ?", (fpath, old_fpath))
         _upsert_file_row(cur, row)
         conn.commit()
     finally:
@@ -3340,3 +3354,262 @@ def seed_sample_patio_if_empty(db_path=None):
             )
     return list_patio_status(db_path=path)
 
+
+
+# ==============================================================================
+# COTAÇÃO DE PEÇAS (uso interno da secretária)
+# Fica só no banco local: nunca vai para a planilha, o orçamento, o checklist ou a NF.
+# ==============================================================================
+
+COTACAO_MAX_SUPPLIERS = 12
+COTACAO_MAX_PARTS = 60
+
+
+def _setup_cotacao_tables(cur):
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS autopecas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        attendant TEXT DEFAULT '',
+        discount_pct REAL DEFAULT 0.0,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS cotacoes (
+        file_path TEXT PRIMARY KEY,
+        plate_clean TEXT,
+        data_json TEXT,
+        updated_at TEXT
+    )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_cotacoes_plate ON cotacoes(plate_clean)")
+
+
+def _to_float(value, default=None):
+    if value is None or value == "" or isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        f = float(value)
+    else:
+        try:
+            f = parse_currency_float(str(value))
+        except Exception:
+            return default
+        if f is None:
+            return default
+    if f != f or f in (float("inf"), float("-inf")):  # NaN / infinito
+        return default
+    return f
+
+
+def _clean_discount(value):
+    pct = _to_float(value, 0.0)
+    if pct is None or pct < 0 or pct > 100:
+        raise ValueError("O desconto precisa ficar entre 0% e 100%.")
+    return round(pct, 2)
+
+
+def _format_autopeca(row):
+    d = dict(row)
+    d["discount_pct"] = float(d.get("discount_pct") or 0.0)
+    d["attendant"] = d.get("attendant") or ""
+    return d
+
+
+def list_autopecas(db_path=None):
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM autopecas ORDER BY name COLLATE NOCASE, id")
+        return [_format_autopeca(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def get_autopeca(autopeca_id, db_path=None):
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM autopecas WHERE id = ?", (autopeca_id,))
+        row = cur.fetchone()
+        return _format_autopeca(row) if row else None
+    finally:
+        conn.close()
+
+
+def save_autopeca(data, db_path=None):
+    """Cria (sem id) ou atualiza (com id) uma autopeça do catálogo."""
+    data = data or {}
+    name = str(data.get("name") or "").strip()[:120]
+    if not name:
+        raise ValueError("Informe o nome da autopeça.")
+    attendant = str(data.get("attendant") or "").strip()[:120]
+    discount = _clean_discount(data.get("discount_pct"))
+    try:
+        rec_id = int(data.get("id") or 0)
+    except (TypeError, ValueError):
+        raise ValueError("Autopeça inválida.")
+    now = _now_str()
+
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM autopecas WHERE name = ? COLLATE NOCASE AND id != ?", (name, rec_id))
+        if cur.fetchone():
+            raise ValueError(f"Já existe uma autopeça chamada {name}.")
+        if rec_id:
+            cur.execute(
+                "UPDATE autopecas SET name = ?, attendant = ?, discount_pct = ?, updated_at = ? WHERE id = ?",
+                (name, attendant, discount, now, rec_id),
+            )
+            if cur.rowcount == 0:
+                raise LookupError("Autopeça não encontrada.")
+            saved_id = rec_id
+        else:
+            cur.execute(
+                "INSERT INTO autopecas (name, attendant, discount_pct, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (name, attendant, discount, now, now),
+            )
+            saved_id = cur.lastrowid
+        conn.commit()
+    finally:
+        conn.close()
+    return get_autopeca(saved_id, db_path=path)
+
+
+def delete_autopeca(autopeca_id, db_path=None):
+    """Remove do catálogo. Cotações antigas mantêm o nome e o desconto gravados nelas."""
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM autopecas WHERE id = ?", (autopeca_id,))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def normalize_cotacao(data):
+    """
+    Valida e limpa a cotação vinda da tela:
+      {"suppliers": [{"id": "3", "name": "...", "attendant": "...", "discount_pct": 12}],
+       "parts": [{"desc": "...", "qty": 1, "prices": {"3": 120.5}}]}
+    Os preços são o valor cheio (de balcão) por unidade; o desconto de cada autopeça
+    é aplicado na tela. O desconto fica gravado na coluna (foto do momento da cotação).
+    """
+    if not isinstance(data, dict):
+        raise ValueError("Cotação inválida.")
+    suppliers = []
+    seen = set()
+    for s in data.get("suppliers") or []:
+        if not isinstance(s, dict):
+            continue
+        sid = str(s.get("id") or "").strip()[:20]
+        name = str(s.get("name") or "").strip()[:120]
+        if not sid or not name or sid in seen:
+            continue
+        seen.add(sid)
+        suppliers.append({
+            "id": sid,
+            "name": name,
+            "attendant": str(s.get("attendant") or "").strip()[:120],
+            "discount_pct": _clean_discount(s.get("discount_pct")),
+        })
+    if len(suppliers) > COTACAO_MAX_SUPPLIERS:
+        raise ValueError(f"A cotação comporta no máximo {COTACAO_MAX_SUPPLIERS} autopeças.")
+
+    parts = []
+    for p in data.get("parts") or []:
+        if not isinstance(p, dict):
+            continue
+        desc = str(p.get("desc") or "").strip()[:200]
+        prices = {}
+        raw_prices = p.get("prices") if isinstance(p.get("prices"), dict) else {}
+        for sid, val in raw_prices.items():
+            sid = str(sid)
+            if sid not in seen:
+                continue
+            f = _to_float(val)
+            if f is None:
+                continue
+            if f < 0:
+                raise ValueError("Preço negativo na cotação.")
+            prices[sid] = round(f, 2)
+        if not desc and not prices:
+            continue
+        qty = _to_float(p.get("qty"), 1.0)
+        if qty is None or qty <= 0:
+            qty = 1.0
+        parts.append({"desc": desc, "qty": round(qty, 3), "prices": prices})
+    if len(parts) > COTACAO_MAX_PARTS:
+        raise ValueError(f"A cotação comporta no máximo {COTACAO_MAX_PARTS} peças.")
+    return {"suppliers": suppliers, "parts": parts}
+
+
+def get_cotacao(file_path, db_path=None):
+    if not file_path:
+        return None
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT data_json, updated_at FROM cotacoes WHERE file_path = ?", (file_path,))
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    try:
+        data = json.loads(row[0] or "{}")
+    except (TypeError, ValueError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("suppliers", [])
+    data.setdefault("parts", [])
+    data["updated_at"] = row[1]
+    return data
+
+
+def save_cotacao(file_path, data, plate=None, db_path=None):
+    """Grava (ou apaga, se ficou vazia) a cotação de uma OS. Retorna a cotação limpa."""
+    if not file_path:
+        raise ValueError("A OS precisa estar salva para guardar a cotação.")
+    clean = normalize_cotacao(data)
+    path = db_path or get_db_path()
+    init_db(path)
+    conn = _connect(path)
+    now = _now_str()
+    try:
+        cur = conn.cursor()
+        if not clean["suppliers"] and not clean["parts"]:
+            cur.execute("DELETE FROM cotacoes WHERE file_path = ?", (file_path,))
+        else:
+            p_clean = clean_plate(plate) if plate else ""
+            if not p_clean:
+                cur.execute("SELECT plate_clean FROM files WHERE file_path = ?", (file_path,))
+                r = cur.fetchone()
+                p_clean = (r[0] if r else "") or ""
+            cur.execute("""
+            INSERT INTO cotacoes (file_path, plate_clean, data_json, updated_at) VALUES (?, ?, ?, ?)
+            ON CONFLICT(file_path) DO UPDATE SET plate_clean = excluded.plate_clean,
+                data_json = excluded.data_json, updated_at = excluded.updated_at
+            """, (file_path, p_clean, json.dumps(clean, ensure_ascii=False), now))
+        conn.commit()
+    finally:
+        conn.close()
+    clean["updated_at"] = now
+    return clean

@@ -56,13 +56,13 @@ Criado para ser 100% automático, sem necessidade de descompactar pastas ou roda
 | `nf_copilot.py` | Copiloto Fiscal: separa NFS-e (serviços) e NF-e (peças). |
 | `calendar_sync.py` | Agendamentos. |
 | `updater.py` + `version.json` | Botão "Verificar atualizações" (lê o `version.json` da `main`). |
-| `config.py` / `config.json` | Configuração local (pasta das planilhas). `config.json` não vai para o Git. |
-| `static/` | A interface: `index.html`, `js/` (telas em `js/views/`), `css/` (telas em `css/views/`), logos (`brands/`), silhuetas (`models/`) e a TV (`tv.*`). |
+| `config.py` / `config.json` | Configuração local (pasta das planilhas). `config.json` não vai para o Git. Agenda, Copiloto Fiscal e Analytics só aparecem com `"modulos_em_teste": true` nele. |
+| `static/` | A interface: `index.html`, `js/` (telas em `js/views/`), `css/` (telas em `css/views/`), logos das marcas (`brands/`), silhuetas (`models/`), catálogo FIPE de marcas/modelos (`vehicle_catalog.js`) e a TV (`tv.*`). |
 | `templates/` | Modelo de planilha usado para OS novas e página da TV. |
 | `planilhas_exemplo/` | Planilhas fictícias para testar sem tocar nas reais. |
 | `tests/` | Testes automáticos (`python -m pytest -q`). |
 | `docs/` | Planos, roadmap, notas de release, prints e issues antigas. |
-| `scripts/` | Ferramentas de desenvolvimento (gerar release, benchmark, gerar ícones). |
+| `scripts/` | Ferramentas de desenvolvimento (gerar release, benchmark, gerar ícones, baixar logos e a tabela FIPE: `vehicle_brands.py`, `fetch_fipe_catalog.py`, `build_vehicle_catalog.py`). |
 | `packaging/` | Código do instalador e do atalho `.exe`. |
 | `gerar_massa_dados.py` | Gera planilhas fictícias em massa para testes. |
 | `gui_desktop.py`, `criar_atalho_desktop.py`, `iniciar_app*.bat/.vbs`, `Instalar-MecatroniCar.bat` | Atalhos e alternativas de inicialização no Windows. |
